@@ -1,7 +1,7 @@
 version: '3'
 services:
   app:
-    image: bitcoin
+    image: game
     build:
       context: .
       dockerfile: Dockerfile
