@@ -27,19 +27,18 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 ##  local
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/bitcoin?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-#    url: jdbc:mysql://localhost:3306/bitcoin
-    username: root
-    password: 87654321
-
-  ##  aws-ec21
 #  datasource:
 #    driver-class-name: com.mysql.cj.jdbc.Driver
-#    url: jdbc:mysql://bitcoin.ctcwc6so032k.ap-northeast-2.rds.amazonaws.com:3306/bitcoin?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-#    username: admin
+#    url: jdbc:mysql://localhost:3306/bitcoin?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+#    username: root
 #    password: 87654321
+
+  ##  aws-ec21
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://bitcoin.ctcwc6so032k.ap-northeast-2.rds.amazonaws.com:3306/bitcoin?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: admin
+    password: 87654321
 
 
 #  kakao:
@@ -58,8 +57,8 @@ spring:
       dialect: org.hibernate.dialect.MySQL8InnoDBDialect
 
     resources:
-      static-locations: classpath:/static/,file:C:/workspace/uploads/
-#      static-locations: classpath:/static/,file:/home/uploads/
+#      static-locations: classpath:/static/,file:C:/workspace/uploads/
+      static-locations: classpath:/static/,file:/home/uploads/
 
   servlet:
     multipart:
@@ -67,8 +66,8 @@ spring:
       max-request-size: 10MB
 
 file:
-  upload-dir: C:/workspace/uploads/
-#  upload-dir: /home/uploads/
+#  upload-dir: C:/workspace/uploads/
+  upload-dir: /home/uploads/
 
 logging:
   level:
