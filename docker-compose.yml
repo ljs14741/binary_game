@@ -1,0 +1,24 @@
+version: '3'
+services:
+  app:
+    image: bitcoin
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/ec2-user/uploads:/home/uploads
+    environment:
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+  # Docker Compose는 여러 컨테이너를 하나의 서비스처럼 관리
+
+  # 볼륨은 도커 컨테이너와 호스트 간의 파일 공유를 위한 도구
+  # 컨테이너 내부의 특정 디렉터리를 호스트의 특정 디렉터리로 연결
+
+  # Docker 컨테이너 내부에서 /home/uploads로 접근하면
+  # AWS host의 home/ec2-user/uploads 폴더로 접근하게 끔 설정

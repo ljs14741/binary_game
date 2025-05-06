@@ -1,0 +1,133 @@
+body {
+    font-family: 'Orbitron', sans-serif;
+    background: #000;
+    color: #00ffe7;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container {
+    max-width: 1200px;
+    padding: 40px 20px;
+}
+
+header {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#game-container {
+    width: 800px;
+    height: 600px;
+    margin: 0 auto;
+    background: #111;
+    box-shadow: 0 0 20px rgba(0, 255, 231, 0.4);
+    border-radius: 12px;
+}
+
+.description {
+    margin-top: 40px;
+    background: #111;
+    padding: 20px;
+    border-radius: 12px;
+    color: #ccc;
+    line-height: 1.6;
+    font-size: 1rem;
+    box-shadow: 0 0 10px rgba(0,255,231,0.2);
+}
+
+.back-btn {
+    margin-bottom: 20px;
+    background: #00ffe7;
+    color: #000;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0, 255, 231, 0.5);
+}
+
+.game-bgm {
+    margin: 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ccc;
+}
+
+.icon-container {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.link-icon {
+    width: 40px;
+    height: 40px;
+    display: inline-block;
+    background-size: cover;
+    position: relative;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+}
+
+.link-icon.twitter {
+    background-image: url(../img/icon-twitter.png);
+}
+
+.link-icon.facebook {
+    background-image: url(../img/icon-facebook.png);
+}
+
+.link-icon.kakao {
+    background-image: url(../img/icon-kakao.png);
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 20px 10px;
+    }
+
+    header {
+        font-size: 1.5rem;
+    }
+
+    #game-container {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3; /* 화면 비율 유지 */
+        border-radius: 8px;
+    }
+
+    .game-bgm {
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.9rem;
+    }
+
+    .icon-container {
+        flex-wrap: wrap;
+    }
+
+    .link-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .description {
+        font-size: 0.95rem;
+        padding: 15px;
+    }
+
+    .back-btn {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+    }
+}

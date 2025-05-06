@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <title>핀볼 랜덤 뽑기 - Binary World</title>
+    <meta name="description" content="30명까지 가능한 랜덤 경주 핀볼! 공을 쏴서 누가 먼저 골인할지 확인해보세요.">
+    <meta name="keywords" content="핀볼, 랜덤 뽑기, 숫자 추첨, 미니게임, Binary World, 룰렛, 사다리">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="핀볼 랜덤 뽑기 - Binary World">
+    <meta property="og:description" content="핀볼 방식의 랜덤 숫자 추첨 게임! 경주형 룰렛 게임으로 친구들과 즐기세요.">
+    <meta property="og:image" content="https://game.binaryworld.kr/images/pinball.jpg">
+    <meta property="og:url" content="https://game.binaryworld.kr/pinball">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="핀볼 랜덤 뽑기 - Binary World">
+    <meta name="twitter:description" content="30명까지 참여 가능한 경주형 핀볼 랜덤 뽑기!">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/images/pinball.jpg">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <link rel="stylesheet" th:href="@{/css/game.css}" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-btn">← 홈으로</a>
+    <header>🎲 핀볼 랜덤 뽑기</header>
+
+    <div class="game-bgm">
+        <button id="bgmToggle">BGM 끄기/켜기</button>
+        <label for="volumeControl">BGM 볼륨:</label>
+        <input type="range" id="volumeControl" min="0" max="100" value="100">
+    </div>
+
+    <div id="game-container"></div>
+
+    <div class="icon-container">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
+    </div>
+
+    <div class="description">
+        <h2>게임 설명</h2>
+        <p>
+            핀볼 랜덤 뽑기는 참가자를 설정하고 장애물을 통과해 최종 목적지에 먼저 도달하는 사람을 뽑는 게임입니다.<br>
+            진자, 왕복 장애물, 난기류 등 다양한 방해 요소를 넘으며 랜덤으로 승자가 결정됩니다.<br>
+            닉네임 입력 후 최대 30명까지 참가할 수 있으며, 완전히 공정한 '운'으로 승자가 가려집니다!
+        </p>
+    </div>
+</div>
+
+<script th:src="@{/js/phaser.min.js}"></script>
+<script th:src="@{/js/pinball.js}"></script>
+<script>
+    const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+    function shareTwitter() {
+        const sendText = "핀볼 랜덤 뽑기 게임";
+        const sendUrl = "https://game.binaryworld.kr/pinball";
+        window.open("https://twitter.com/intent/tweet?text=" + sendText + "&url=" + sendUrl);
+    }
+
+    function shareFacebook() {
+        const sendUrl = "https://game.binaryworld.kr/pinball";
+        window.open("http://www.facebook.com/sharer/sharer.php?u=" + sendUrl);
+    }
+
+    function shareKakao() {
+        Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
+        Kakao.Share.createDefaultButton({
+            container: '#btnKakao',
+            objectType: 'feed',
+            content: {
+                title: '핀볼 랜덤 뽑기',
+                description: '누가 뽑힐까? 완전 랜덤 뽑기 게임! 친구들과 즐겨보세요~',
+                imageUrl: 'https://game.binaryworld.kr/images/pinball',
+                link: {
+                    mobileWebUrl: 'https://game.binaryworld.kr/pinball',
+                    webUrl: 'https://game.binaryworld.kr/pinball'
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

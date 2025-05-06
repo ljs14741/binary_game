@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <title>총알 피하기 - Binary World</title>
+    <meta name="description" content="빠르게 날아오는 총알을 피하며 최대한 오래 살아남는 총알 피하기 미니게임.">
+    <meta name="keywords" content="총알 피하기, 미니게임, 생존 게임, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="총알 피하기 - Binary World">
+    <meta property="og:description" content="빠르게 날아오는 적을 피해 생존 점수를 겨뤄보세요.">
+    <meta property="og:image" content="https://game.binaryworld.kr/images/dodge.jpg">
+    <meta property="og:url" content="https://game.binaryworld.kr/dodge">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="총알 피하기 - Binary World">
+    <meta name="twitter:description" content="빠르게 날아오는 총알을 피하며 생존 점수를 기록하세요.">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/images/dodge.jpg">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <link rel="stylesheet" th:href="@{/css/game.css}" />
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-btn">← 홈으로</a>
+    <header>🎯 총알 피하기</header>
+
+    <div class="game-bgm">
+        <button id="bgmToggle">BGM 끄기/켜기</button>
+        <label for="volumeControl">BGM 볼륨:</label>
+        <input type="range" id="volumeControl" min="0" max="100" value="100">
+    </div>
+
+    <div id="game-container"></div>
+
+    <div class="icon-container">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
+    </div>
+
+    <div class="description">
+        <h2>게임 설명</h2>
+        <p>
+            총알 피하기는 빠르게 날아오는 적을 회피하며 생존하는 미니게임입니다.<br>
+            키보드 또는 터치로 캐릭터를 조작하며 적을 피해 점수를 높이세요!<br>
+            파워업과 폭탄 아이템도 활용해 보세요.
+        </p>
+    </div>
+</div>
+
+<script th:src="@{/js/phaser.min.js}"></script>
+<script th:src="@{/js/dodge.js}"></script>
+<script>
+    const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+    function shareTwitter() {
+        var sendText = "총알피하기 게임";
+        var sendUrl = "https://game.binaryworld.kr/dodge";
+        window.open("https://twitter.com/intent/tweet?text=" + sendText + "&url=" + sendUrl);
+    }
+
+    function shareFacebook() {
+        var sendUrl = "https://game.binaryworld.kr/dodge";
+        window.open("http://www.facebook.com/sharer/sharer.php?u=" + sendUrl);
+    }
+
+    function shareKakao() {
+        Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
+        Kakao.Share.createDefaultButton({
+            container: '#btnKakao',
+            objectType: 'feed',
+            content: {
+                title: '총알피하기 게임',
+                description: '친구들과 경쟁해보세요~',
+                imageUrl: 'https://game.binaryworld.kr/images/dodge',
+                link: {
+                    mobileWebUrl: 'https://game.binaryworld.kr/dodge',
+                    webUrl: 'https://game.binaryworld.kr/dodge'
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

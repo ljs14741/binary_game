@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <title>김치 랜덤 디펜스 - Binary World</title>
+    <meta name="description" content="타워를 랜덤으로 뽑아 방어선을 구축하고 적의 침략을 막는 김치 디펜스 게임!">
+    <meta name="keywords" content="타워 디펜스, 김치 디펜스, 랜덤 타워, 미니게임, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="김치 랜덤 디펜스 - Binary World">
+    <meta property="og:description" content="랜덤으로 생성되는 타워로 적을 방어하세요! 김치 타워 디펜스 게임.">
+    <meta property="og:image" content="https://game.binaryworld.kr/images/kimchi.jpg">
+    <meta property="og:url" content="https://game.binaryworld.kr/kimchi">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="김치 랜덤 디펜스 - Binary World">
+    <meta name="twitter:description" content="전략적인 타워 배치와 운이 필요한 랜덤 디펜스 게임!">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/images/kimchi.jpg">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <link rel="stylesheet" th:href="@{/css/game.css}" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-btn">← 홈으로</a>
+    <header>🛡️ 김치 랜덤 디펜스</header>
+
+    <div class="game-bgm">
+        <button id="bgmToggle">BGM 끄기/켜기</button>
+        <label for="volumeControl">BGM 볼륨:</label>
+        <input type="range" id="volumeControl" min="0" max="100" value="100">
+        <label for="sfxVolumeControl">효과음 볼륨:</label>
+        <input type="range" id="sfxVolumeControl" min="0" max="100" value="100">
+    </div>
+
+    <div id="game-container"></div>
+
+    <div class="icon-container">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
+    </div>
+
+    <div class="description">
+        <h2>게임 설명</h2>
+        <p>
+            김치 랜덤 디펜스는 다양한 등급의 타워를 랜덤으로 구매해 적을 막는 디펜스 게임입니다.<br>
+            타워는 일반부터 전설까지 총 5등급이 있으며 각기 다른 공격력과 사거리를 가집니다.<br>
+            적은 라운드마다 점점 강해지며, 마지막 보스를 처치하면 게임을 클리어합니다.<br>
+            타워를 전략적으로 설치하고, 업그레이드하며 최종 라운드를 돌파해보세요!
+        </p>
+        <h3>🎯 타워 등급 및 출현 확률</h3>
+        <ul>
+            <li>전설 ⭐⭐⭐⭐⭐ : 1%</li>
+            <li>유물 ⭐⭐⭐⭐ : 5%</li>
+            <li>영웅 ⭐⭐⭐ : 10%</li>
+            <li>레어 ⭐⭐ : 33%</li>
+            <li>일반 ⭐ : 51%</li>
+        </ul>
+    </div>
+</div>
+
+<script th:src="@{/js/phaser.min.js}"></script>
+<script th:src="@{/js/kimchi.js}"></script>
+<script>
+    const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+    function shareTwitter() {
+        var sendText = "김치 랜덤 디펜스 게임";
+        var sendUrl = "https://game.binaryworld.kr/kimchi";
+        window.open("https://twitter.com/intent/tweet?text=" + sendText + "&url=" + sendUrl);
+    }
+
+    function shareFacebook() {
+        var sendUrl = "https://game.binaryworld.kr/kimchi";
+        window.open("http://www.facebook.com/sharer/sharer.php?u=" + sendUrl);
+    }
+
+    function shareKakao() {
+        Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
+        Kakao.Share.createDefaultButton({
+            container: '#btnKakao',
+            objectType: 'feed',
+            content: {
+                title: '김치 랜덤 디펜스',
+                description: '김치로 지키는 나만의 디펜스! 친구들과 경쟁해보세요~',
+                imageUrl: 'https://game.binaryworld.kr/images/kimchi',
+                link: {
+                    mobileWebUrl: 'https://game.binaryworld.kr/kimchi',
+                    webUrl: 'https://game.binaryworld.kr/kimchi'
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
