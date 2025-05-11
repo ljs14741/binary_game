@@ -1,36 +1,37 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <title>Binary World - 미니게임 포털</title>
-    <meta name="description" content="다양한 무료 미니게임을 즐길 수 있는 Binary World! 지금 바로 총알피하기, 김치디펜스, 핀볼 랜덤 뽑기를 체험하세요.">
-    <meta name="keywords" content="미니게임, 게임 포털, HTML5 게임, Binary World, 총알 피하기, 김치 디펜스, 핀볼 랜덤 뽑기">
+    <title>웹게임 & 랜덤뽑기 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- ✅ SEO -->
+    <meta name="description" content="Binary World는 총알 피하기, 김치 디펜스, 핀볼 랜덤뽑기, 사다리타기, 제비뽑기 등 다양한 웹게임과 랜덤뽑기 게임을 즐길 수 있는 포털입니다. 브라우저에서 지금 바로 무료 플레이하세요!">
+    <meta name="keywords" content="웹게임, 랜덤뽑기, 핀볼 뽑기, 사다리타기, 제비뽑기, 무료 게임, HTML5 게임, Binary World, 미니게임">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
-    <!-- Open Graph -->
+    <!-- ✅ Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Binary World - 미니게임 포털">
-    <meta property="og:description" content="총알피하기, 김치디펜스, 핀볼랜덤뽑기 등 다양한 무료 미니게임 제공!">
+    <meta property="og:title" content="웹게임 & 랜덤뽑기 | Binary World">
+    <meta property="og:description" content="사다리타기, 제비뽑기, 핀볼랜덤뽑기 등 다양한 무료 웹게임 제공! 지금 즐겨보세요.">
     <meta property="og:image" content="https://game.binaryworld.kr/images/og-main.jpg">
     <meta property="og:url" content="https://game.binaryworld.kr/">
 
-    <!-- Twitter -->
+    <!-- ✅ Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Binary World - 미니게임 포털">
-    <meta name="twitter:description" content="재미있는 미니게임을 지금 바로 즐기세요!">
+    <meta name="twitter:title" content="웹게임 & 랜덤뽑기 | Binary World">
+    <meta name="twitter:description" content="재미있는 미니게임과 랜덤뽑기! 브라우저에서 바로 즐기세요.">
     <meta name="twitter:image" content="https://game.binaryworld.kr/images/og-main.jpg">
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ✅ Fonts & CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Roboto&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/main.css}" />
 
-    <!-- 기본 파비콘 -->
+    <!-- ✅ 파비콘 (모든 디바이스용 포함) -->
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
-
-    <!-- 다양한 디바이스 아이콘 -->
     <link rel="apple-touch-icon" sizes="57x57" href="/img/favicon/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="/img/favicon/apple-icon-60x60.png">
     <link rel="apple-touch-icon" sizes="72x72" href="/img/favicon/apple-icon-72x72.png">
@@ -44,16 +45,16 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16x16.png">
-
-    <!-- manifest와 윈도우용 타일 설정 -->
     <link rel="manifest" href="/img/favicon/manifest.json">
     <meta name="msapplication-TileColor" content="#ffffff">
-    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+    <meta name="msapplication-TileImage" content="/img/favicon/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 </head>
 <body>
-<h1>🕹️ BINARY WORLD</h1>
-<div class="subtitle">지금 바로 즐길 수 있는 미니 게임 포털!</div>
+<!-- ✅ h1도 제목과 일치 -->
+<h1>웹게임 & 랜덤뽑기 | Binary World</h1>
+<div class="subtitle">지금 바로 즐길 수 있는 미니게임과 제비뽑기, 사다리타기 게임!</div>
+
 <div class="game-grid">
     <a href="/dodge" class="game-card">
         <img th:src="@{/img/dodge.png}" alt="총알 피하기">
