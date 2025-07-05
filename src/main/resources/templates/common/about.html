@@ -1,31 +1,33 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <title>웹게임 & 랜덤뽑기 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About | Binary World</title>
 
-    <!-- ✅ SEO -->
-    <meta name="description" content="Binary World는 총알 피하기, 김치 디펜스, 핀볼 랜덤뽑기, 사다리타기, 제비뽑기 등 다양한 웹게임과 랜덤뽑기 게임을 즐길 수 있는 포털입니다. 브라우저에서 지금 바로 무료 플레이하세요!">
-    <meta name="keywords" content="웹게임, 랜덤뽑기, 핀볼 뽑기, 사다리타기, 제비뽑기, 무료 게임, HTML5 게임, Binary World, 미니게임">
+    <!-- SEO -->
+    <meta name="description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
+    <meta name="keywords" content="About, 소개, 개발자, Binary World, 개인 프로젝트">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
-    <!-- ✅ Open Graph -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="웹게임 & 랜덤뽑기 | Binary World">
-    <meta property="og:description" content="사다리타기, 제비뽑기, 핀볼랜덤뽑기 등 다양한 무료 웹게임 제공! 지금 즐겨보세요.">
-    <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
-    <meta property="og:url" content="https://game.binaryworld.kr/">
+    <meta property="og:title" content="About | Binary World">
+    <meta property="og:description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
+    <meta property="og:image" content="https://binaryworld.kr/img/radish.png">
+    <meta property="og:url" content="https://binaryworld.kr/about">
 
-    <!-- ✅ Twitter -->
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="웹게임 & 랜덤뽑기 | Binary World">
-    <meta name="twitter:description" content="재미있는 미니게임과 랜덤뽑기! 브라우저에서 바로 즐기세요.">
-    <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
+    <meta name="twitter:title" content="About | Binary World">
+    <meta name="twitter:description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
+    <meta name="twitter:image" content="https://binaryworld.kr/img/radish.png">
 
-    <!-- ✅ 파비콘 (모든 디바이스용 포함) -->
+    <!-- 기본 파비콘 -->
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+
+    <!-- 다양한 디바이스 아이콘 -->
     <link rel="apple-touch-icon" sizes="57x57" href="/img/favicon/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="/img/favicon/apple-icon-60x60.png">
     <link rel="apple-touch-icon" sizes="72x72" href="/img/favicon/apple-icon-72x72.png">
@@ -39,43 +41,31 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16x16.png">
+
+    <!-- manifest와 윈도우용 타일 설정 -->
     <link rel="manifest" href="/img/favicon/manifest.json">
     <meta name="msapplication-TileColor" content="#ffffff">
-    <meta name="msapplication-TileImage" content="/img/favicon/ms-icon-144x144.png">
+    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
-
-    <!-- ✅ Fonts & CSS -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Roboto&display=swap" rel="stylesheet">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
 </head>
 <body>
-
 <th:block th:include="common/header"></th:block>
-<div class="page-title">
-    <h1>웹게임 & 랜덤뽑기 | Binary World</h1>
-    <p>지금 바로 즐길 수 있는 미니게임과 제비뽑기, 사다리타기 게임!</p>
-</div>
 
-<div class="game-grid">
-    <a href="/dodge" class="game-card">
-        <img th:src="@{/img/dodge.png}" alt="총알 피하기">
-        <h2>총알 피하기</h2>
-    </a>
-    <a href="/kimchi" class="game-card">
-        <img th:src="@{/img/kimchi.png}" alt="김치 디펜스">
-        <h2>김치 디펜스</h2>
-    </a>
-    <a href="/pinball" class="game-card">
-        <img th:src="@{/img/pinball.png}" alt="핀볼 랜덤 뽑기">
-        <h2>핀볼 랜덤 뽑기</h2>
-    </a>
-</div>
+<main class="page-content">
+    <div class="container">
+        <h1>About</h1>
+        <p>Binary World는 1인 개발자가 운영하는 개인 웹 프로젝트 공간으로, 미니게임, 익명 투표, 랜덤 음식 추천, 상식 테스트, AI 외모 평가, 죽음 예측 테스트, 로또추첨기 등 다양한 웹 서비스를 제공하고 있습니다.</p>
+        <p>개발자: 이진수 (Binary)</p>
+        <p>盡人事待天命</p>
+    </div>
+</main>
 
-<th:block th:include="common/footer"></th:block>
+<footer th:replace="common/footer :: footer"></footer>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

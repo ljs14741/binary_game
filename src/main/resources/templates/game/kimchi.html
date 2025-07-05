@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
     <title>김치 랜덤 디펜스 - Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <meta name="description" content="타워를 랜덤으로 뽑아 방어선을 구축하고 적의 침략을 막는 김치 디펜스 게임!">
     <meta name="keywords" content="타워 디펜스, 김치 디펜스, 랜덤 타워, 미니게임, Binary World">
     <meta name="robots" content="index, follow">
@@ -11,21 +14,14 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="김치 랜덤 디펜스 - Binary World">
     <meta property="og:description" content="랜덤으로 생성되는 타워로 적을 방어하세요! 김치 타워 디펜스 게임.">
-    <meta property="og:image" content="https://game.binaryworld.kr/images/kimchi.jpg">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
     <meta property="og:url" content="https://game.binaryworld.kr/kimchi">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="김치 랜덤 디펜스 - Binary World">
     <meta name="twitter:description" content="전략적인 타워 배치와 운이 필요한 랜덤 디펜스 게임!">
-    <meta name="twitter:image" content="https://game.binaryworld.kr/images/kimchi.jpg">
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="_csrf" th:content="${_csrf.token}" />
-    <link rel="stylesheet" th:href="@{/css/game.css}" />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
 
     <!-- 기본 파비콘 -->
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
@@ -51,16 +47,29 @@
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
+    <meta name="_csrf" th:content="${_csrf.token}" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
 </head>
 <body>
+<th:block th:include="common/header"></th:block>
+
 <div class="container">
-    <a href="/" class="back-btn">← 홈으로</a>
-    <header>🛡️ 김치 랜덤 디펜스</header>
+
+    <div class="nav-back">
+        <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+    </div>
+
+    <div class="game-title">🛡️ 김치 랜덤 디펜스</div>
 
     <div class="game-bgm">
-        <button id="bgmToggle">BGM 끄기/켜기</button>
+        <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
         <label for="volumeControl">BGM 볼륨:</label>
         <input type="range" id="volumeControl" min="0" max="100" value="100">
         <label for="sfxVolumeControl">효과음 볼륨:</label>
@@ -81,7 +90,7 @@
             김치 랜덤 디펜스는 다양한 등급의 타워를 랜덤으로 구매해 적을 막는 디펜스 게임입니다.<br>
             타워는 일반부터 전설까지 총 5등급이 있으며 각기 다른 공격력과 사거리를 가집니다.<br>
             적은 라운드마다 점점 강해지며, 마지막 보스를 처치하면 게임을 클리어합니다.<br>
-            타워를 전략적으로 설치하고, 업그레이드하며 최종 라운드를 돌파해보세요!
+            타워를 전략적으로 설치하고 업그레이드하며 최종 라운드를 돌파해보세요!
         </p>
         <h3>🎯 타워 등급 및 출현 확률</h3>
         <ul>
@@ -94,10 +103,45 @@
     </div>
 </div>
 
+<th:block th:include="common/footer"></th:block>
+
 <script th:src="@{/js/phaser.min.js}"></script>
 <script th:src="@{/js/kimchi.js}"></script>
 <script>
     const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. 햄버거 메뉴 토글
+        const toggleBtn = document.querySelector('.nav-toggle');
+        const nav = document.querySelector('.nav-links');
+
+        if (toggleBtn && nav) {
+            toggleBtn.addEventListener('click', () => {
+                toggleBtn.classList.toggle('active');
+                nav.classList.toggle('open');
+            });
+        }
+
+        // 2. 테마 토글
+        const themeToggle = document.getElementById('themeToggle');
+        const themeLink = document.getElementById('theme-style');
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+
+        applyTheme(currentTheme);
+
+        if (themeToggle && themeLink) {
+            themeToggle.addEventListener('click', () => {
+                const isDark = themeLink.getAttribute('href').includes('dark');
+                const nextTheme = isDark ? 'light' : 'dark';
+                applyTheme(nextTheme);
+            });
+        }
+
+        function applyTheme(theme) {
+            themeLink.setAttribute('href', `/css/main-${theme}.css`);
+            localStorage.setItem('theme', theme);
+        }
+    });
 
     function shareTwitter() {
         var sendText = "김치 랜덤 디펜스 게임";
@@ -110,15 +154,21 @@
         window.open("http://www.facebook.com/sharer/sharer.php?u=" + sendUrl);
     }
 
-    function shareKakao() {
-        Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
+    function setupKakaoShareButton() {
+        if (!window.Kakao) return;
+        if (!document.querySelector('#btnKakao')) return;
+
+        if (!Kakao.isInitialized()) {
+            Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
+        }
+
         Kakao.Share.createDefaultButton({
             container: '#btnKakao',
             objectType: 'feed',
             content: {
-                title: '김치 랜덤 디펜스',
-                description: '김치로 지키는 나만의 디펜스! 친구들과 경쟁해보세요~',
-                imageUrl: 'https://game.binaryworld.kr/images/kimchi',
+                title: '김치 랜덤 디펜스 게임',
+                description: '전략적으로 타워를 배치해 마지막 보스를 처치해보세요!',
+                imageUrl: 'https://game.binaryworld.kr/img/radish.png',
                 link: {
                     mobileWebUrl: 'https://game.binaryworld.kr/kimchi',
                     webUrl: 'https://game.binaryworld.kr/kimchi'
@@ -126,6 +176,9 @@
             }
         });
     }
+
+    setupKakaoShareButton();
+
 </script>
 </body>
 </html>

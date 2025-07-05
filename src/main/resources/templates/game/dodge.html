@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
     <title>총알 피하기 - Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <meta name="description" content="빠르게 날아오는 총알을 피하며 최대한 오래 살아남는 총알 피하기 미니게임.">
     <meta name="keywords" content="총알 피하기, 미니게임, 생존 게임, Binary World">
     <meta name="robots" content="index, follow">
@@ -11,21 +14,14 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="총알 피하기 - Binary World">
     <meta property="og:description" content="빠르게 날아오는 적을 피해 생존 점수를 겨뤄보세요.">
-    <meta property="og:image" content="https://game.binaryworld.kr/images/dodge.jpg">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
     <meta property="og:url" content="https://game.binaryworld.kr/dodge">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="총알 피하기 - Binary World">
     <meta name="twitter:description" content="빠르게 날아오는 총알을 피하며 생존 점수를 기록하세요.">
-    <meta name="twitter:image" content="https://game.binaryworld.kr/images/dodge.jpg">
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-    <meta name="_csrf" th:content="${_csrf.token}"/>
-    <link rel="stylesheet" th:href="@{/css/game.css}" />
-
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
 
     <!-- 기본 파비콘 -->
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
@@ -51,16 +47,29 @@
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
 </head>
 <body>
+<th:block th:include="common/header"></th:block>
+
 <div class="container">
-    <a href="/" class="back-btn">← 홈으로</a>
-    <header>🎯 총알 피하기</header>
+
+    <div class="nav-back">
+        <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+    </div>
+
+    <div class="game-title">🎯 총알 피하기</div>
 
     <div class="game-bgm">
-        <button id="bgmToggle">BGM 끄기/켜기</button>
+        <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
         <label for="volumeControl">BGM 볼륨:</label>
         <input type="range" id="volumeControl" min="0" max="100" value="100">
     </div>
@@ -76,17 +85,52 @@
     <div class="description">
         <h2>게임 설명</h2>
         <p>
-            총알 피하기는 빠르게 날아오는 적을 회피하며 생존하는 미니게임입니다.<br>
-            키보드 또는 터치로 캐릭터를 조작하며 적을 피해 점수를 높이세요!<br>
-            파워업과 폭탄 아이템도 활용해 보세요.
+            빠르게 날아오는 적을 피하며 생존 시간을 늘리는 미니게임입니다.<br>
+            키보드 또는 터치로 캐릭터를 조작해 적을 피하고 점수를 높이세요!<br>
+            <strong>무적</strong> 아이템과 <strong>폭탄</strong> 아이템을 활용해 최고 기록에 도전해 보세요.
         </p>
     </div>
 </div>
+
+<th:block th:include="common/footer"></th:block>
 
 <script th:src="@{/js/phaser.min.js}"></script>
 <script th:src="@{/js/dodge.js}"></script>
 <script>
     const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. 햄버거 메뉴 토글
+        const toggleBtn = document.querySelector('.nav-toggle');
+        const nav = document.querySelector('.nav-links');
+
+        if (toggleBtn && nav) {
+            toggleBtn.addEventListener('click', () => {
+                toggleBtn.classList.toggle('active');
+                nav.classList.toggle('open');
+            });
+        }
+
+        // 2. 테마 토글
+        const themeToggle = document.getElementById('themeToggle');
+        const themeLink = document.getElementById('theme-style');
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+
+        applyTheme(currentTheme);
+
+        if (themeToggle && themeLink) {
+            themeToggle.addEventListener('click', () => {
+                const isDark = themeLink.getAttribute('href').includes('dark');
+                const nextTheme = isDark ? 'light' : 'dark';
+                applyTheme(nextTheme);
+            });
+        }
+
+        function applyTheme(theme) {
+            themeLink.setAttribute('href', `/css/main-${theme}.css`);
+            localStorage.setItem('theme', theme);
+        }
+    });
 
     function shareTwitter() {
         var sendText = "총알피하기 게임";
@@ -99,15 +143,21 @@
         window.open("http://www.facebook.com/sharer/sharer.php?u=" + sendUrl);
     }
 
-    function shareKakao() {
-        Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
+    function setupKakaoShareButton() {
+        if (!window.Kakao) return;
+        if (!document.querySelector('#btnKakao')) return;
+
+        if (!Kakao.isInitialized()) {
+            Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
+        }
+
         Kakao.Share.createDefaultButton({
             container: '#btnKakao',
             objectType: 'feed',
             content: {
                 title: '총알피하기 게임',
                 description: '친구들과 경쟁해보세요~',
-                imageUrl: 'https://game.binaryworld.kr/images/dodge',
+                imageUrl: 'https://game.binaryworld.kr/img/radish.png',
                 link: {
                     mobileWebUrl: 'https://game.binaryworld.kr/dodge',
                     webUrl: 'https://game.binaryworld.kr/dodge'
@@ -115,6 +165,9 @@
             }
         });
     }
+
+    setupKakaoShareButton();
+
 </script>
 </body>
 </html>
