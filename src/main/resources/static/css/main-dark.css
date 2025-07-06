@@ -183,6 +183,32 @@ body {
     color: #ffffff;
 }
 
+.icon-container {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.link-icon {
+    width: 42px;
+    height: 42px;
+    display: inline-block;
+    background-size: cover;
+    border-radius: 50%;
+    transition: transform 0.3s, opacity 0.3s;
+    opacity: 0.9;
+}
+
+.link-icon:hover {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.link-icon.twitter { background-image: url(../img/icon-twitter.png); }
+.link-icon.facebook { background-image: url(../img/icon-facebook.png); }
+.link-icon.kakao { background-image: url(../img/icon-kakao.png); }
+
 /* ========== Responsive ========== */
 @media (max-width: 768px) {
     .nav-toggle { display: block; }
@@ -306,32 +332,6 @@ body {
     justify-content: center;
     box-shadow: 0 0 20px rgba(144, 202, 249, 0.2);
 }
-
-.icon-container {
-    margin-top: 20px;
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-}
-
-.link-icon {
-    width: 42px;
-    height: 42px;
-    display: inline-block;
-    background-size: cover;
-    border-radius: 50%;
-    transition: transform 0.3s, opacity 0.3s;
-    opacity: 0.9;
-}
-
-.link-icon:hover {
-    transform: scale(1.1);
-    opacity: 1;
-}
-
-.link-icon.twitter { background-image: url(../img/icon-twitter.png); }
-.link-icon.facebook { background-image: url(../img/icon-facebook.png); }
-.link-icon.kakao { background-image: url(../img/icon-kakao.png); }
 
 .description {
     margin-top: 40px;
