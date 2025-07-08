@@ -60,22 +60,39 @@
     <p>지금 바로 즐길 수 있는 미니게임과 제비뽑기, 사다리타기 게임!</p>
 </div>
 
-<div class="game-grid">
-    <a href="/dodge" class="game-card">
-        <img th:src="@{/img/dodge.png}" alt="총알 피하기">
-        <h2>총알 피하기</h2>
-    </a>
-    <a href="/kimchi" class="game-card">
-        <img th:src="@{/img/kimchi.png}" alt="김치 디펜스">
-        <h2>김치 디펜스</h2>
-    </a>
-    <a href="/pinball" class="game-card">
-        <img th:src="@{/img/pinball.png}" alt="핀볼 랜덤 뽑기">
-        <h2>핀볼 랜덤 뽑기</h2>
-    </a>
+<div class="main-content">
+    <div class="game-grid">
+        <a href="/dodge" class="game-card">
+            <img th:src="@{/img/dodge.png}" alt="총알 피하기">
+            <h2>총알 피하기</h2>
+        </a>
+        <a href="/kimchi" class="game-card">
+            <img th:src="@{/img/kimchi.png}" alt="김치 디펜스">
+            <h2>김치 디펜스</h2>
+        </a>
+        <a href="/pinball" class="game-card">
+            <img th:src="@{/img/pinball.png}" alt="핀볼 랜덤 뽑기">
+            <h2>핀볼 랜덤 뽑기</h2>
+        </a>
+    </div>
+</div>
+<th:block th:include="common/footer"></th:block>
+
+<div class="side-ad left-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-ePAs1c7mONqnY32w"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
 </div>
 
-<th:block th:include="common/footer"></th:block>
+<div class="side-ad right-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-qpEsz6jYmwJE0cE7"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

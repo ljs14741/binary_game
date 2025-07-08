@@ -60,50 +60,69 @@
 <body>
 <th:block th:include="common/header"></th:block>
 
-<div class="container">
 
-    <div class="nav-back">
-        <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
-    </div>
+<div class="main-content">
+    <div class="container">
 
-    <div class="game-title">🛡️ 김치 랜덤 디펜스</div>
+        <div class="nav-back">
+            <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+        </div>
 
-    <div class="game-bgm">
-        <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
-        <label for="volumeControl">BGM 볼륨:</label>
-        <input type="range" id="volumeControl" min="0" max="100" value="100">
-        <label for="sfxVolumeControl">효과음 볼륨:</label>
-        <input type="range" id="sfxVolumeControl" min="0" max="100" value="100">
-    </div>
+        <div class="game-title">🛡️ 김치 랜덤 디펜스</div>
 
-    <div id="game-container"></div>
+        <div class="game-bgm">
+            <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
+            <label for="volumeControl">BGM 볼륨:</label>
+            <input type="range" id="volumeControl" min="0" max="100" value="100">
+            <label for="sfxVolumeControl">효과음 볼륨:</label>
+            <input type="range" id="sfxVolumeControl" min="0" max="100" value="100">
+        </div>
 
-    <div class="icon-container">
-        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
-        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
-        <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
-    </div>
+        <div id="game-container"></div>
 
-    <div class="description">
-        <h2>게임 설명</h2>
-        <p>
-            김치 랜덤 디펜스는 다양한 등급의 타워를 랜덤으로 구매해 적을 막는 디펜스 게임입니다.<br>
-            타워는 일반부터 전설까지 총 5등급이 있으며 각기 다른 공격력과 사거리를 가집니다.<br>
-            적은 라운드마다 점점 강해지며, 마지막 보스를 처치하면 게임을 클리어합니다.<br>
-            타워를 전략적으로 설치하고 업그레이드하며 최종 라운드를 돌파해보세요!
-        </p>
-        <h3>🎯 타워 등급 및 출현 확률</h3>
-        <ul>
-            <li>전설 ⭐⭐⭐⭐⭐ : 1%</li>
-            <li>유물 ⭐⭐⭐⭐ : 5%</li>
-            <li>영웅 ⭐⭐⭐ : 10%</li>
-            <li>레어 ⭐⭐ : 33%</li>
-            <li>일반 ⭐ : 51%</li>
-        </ul>
+        <div class="icon-container">
+            <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
+            <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
+            <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
+        </div>
+
+        <div class="description">
+            <h2>게임 설명</h2>
+            <p>
+                김치 랜덤 디펜스는 다양한 등급의 타워를 랜덤으로 구매해 적을 막는 디펜스 게임입니다.<br>
+                타워는 일반부터 전설까지 총 5등급이 있으며 각기 다른 공격력과 사거리를 가집니다.<br>
+                적은 라운드마다 점점 강해지며, 마지막 보스를 처치하면 게임을 클리어합니다.<br>
+                타워를 전략적으로 설치하고 업그레이드하며 최종 라운드를 돌파해보세요!
+            </p>
+            <h3>🎯 타워 등급 및 출현 확률</h3>
+            <ul>
+                <li>전설 ⭐⭐⭐⭐⭐ : 1%</li>
+                <li>유물 ⭐⭐⭐⭐ : 5%</li>
+                <li>영웅 ⭐⭐⭐ : 10%</li>
+                <li>레어 ⭐⭐ : 33%</li>
+                <li>일반 ⭐ : 51%</li>
+            </ul>
+        </div>
     </div>
 </div>
 
 <th:block th:include="common/footer"></th:block>
+
+<div class="side-ad left-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-ePAs1c7mONqnY32w"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
+
+<div class="side-ad right-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-qpEsz6jYmwJE0cE7"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
 
 <script th:src="@{/js/phaser.min.js}"></script>
 <script th:src="@{/js/kimchi.js}"></script>

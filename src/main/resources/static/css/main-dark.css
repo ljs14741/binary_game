@@ -1,17 +1,56 @@
+.side-ad {
+    position: fixed;
+    top: 80px;
+    width: 160px;
+    height: 600px;
+    z-index: 1000;
+}
+
+.left-ad {
+    left: 0;
+}
+
+.right-ad {
+    right: 0;
+}
+
+/* ✅ 화면이 작을 때 광고 숨기기 (반응형 처리) */
+@media (max-width: 1400px) {
+    .side-ad {
+        display: none;
+    }
+}
+
 /*
 ****************************************************************************************************
 🌑 다크 테마 - main-dark.css (공통용)
 header, footer, title, contact
 ****************************************************************************************************
 */
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+}
 
 body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     font-family: 'Pretendard', sans-serif;
     background-color: #121212;
     color: #e0e0e0;
     margin: 0;
     padding-top: 60px;
     line-height: 1.7;
+}
+
+.main-content {
+    flex: 1;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
 }
 
 /* ========== Header ========== */

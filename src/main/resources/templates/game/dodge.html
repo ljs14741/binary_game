@@ -60,39 +60,57 @@
 <body>
 <th:block th:include="common/header"></th:block>
 
-<div class="container">
+<div class="main-content">
+    <div class="container">
 
-    <div class="nav-back">
-        <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
-    </div>
+        <div class="nav-back">
+            <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+        </div>
 
-    <div class="game-title">🎯 총알 피하기</div>
+        <div class="game-title">🎯 총알 피하기</div>
 
-    <div class="game-bgm">
-        <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
-        <label for="volumeControl">BGM 볼륨:</label>
-        <input type="range" id="volumeControl" min="0" max="100" value="100">
-    </div>
+        <div class="game-bgm">
+            <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
+            <label for="volumeControl">BGM 볼륨:</label>
+            <input type="range" id="volumeControl" min="0" max="100" value="100">
+        </div>
 
-    <div id="game-container"></div>
+        <div id="game-container"></div>
 
-    <div class="icon-container">
-        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
-        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
-        <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
-    </div>
+        <div class="icon-container">
+            <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
+            <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
+            <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
+        </div>
 
-    <div class="description">
-        <h2>게임 설명</h2>
-        <p>
-            빠르게 날아오는 적을 피하며 생존 시간을 늘리는 미니게임입니다.<br>
-            키보드 또는 터치로 캐릭터를 조작해 적을 피하고 점수를 높이세요!<br>
-            <strong>무적</strong> 아이템과 <strong>폭탄</strong> 아이템을 활용해 최고 기록에 도전해 보세요.
-        </p>
+        <div class="description">
+            <h2>게임 설명</h2>
+            <p>
+                빠르게 날아오는 적을 피하며 생존 시간을 늘리는 미니게임입니다.<br>
+                키보드 또는 터치로 캐릭터를 조작해 적을 피하고 점수를 높이세요!<br>
+                <strong>무적</strong> 아이템과 <strong>폭탄</strong> 아이템을 활용해 최고 기록에 도전해 보세요.
+            </p>
+        </div>
     </div>
 </div>
 
 <th:block th:include="common/footer"></th:block>
+
+<div class="side-ad left-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-ePAs1c7mONqnY32w"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
+
+<div class="side-ad right-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-qpEsz6jYmwJE0cE7"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
 
 <script th:src="@{/js/phaser.min.js}"></script>
 <script th:src="@{/js/dodge.js}"></script>

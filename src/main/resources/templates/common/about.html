@@ -56,16 +56,34 @@
 <body>
 <th:block th:include="common/header"></th:block>
 
-<main class="page-content">
-    <div class="container">
-        <h1>About</h1>
-        <p>Binary World는 1인 개발자가 운영하는 개인 웹 프로젝트 공간으로, 미니게임, 익명 투표, 랜덤 음식 추천, 상식 테스트, AI 외모 평가, 죽음 예측 테스트, 로또추첨기 등 다양한 웹 서비스를 제공하고 있습니다.</p>
-        <p>개발자: 이진수 (Binary)</p>
-        <p>盡人事待天命</p>
-    </div>
-</main>
+<div class="main-content">
+    <main class="page-content">
+        <div class="container">
+            <h1>About</h1>
+            <p>Binary World는 1인 개발자가 운영하는 개인 웹 프로젝트 공간으로, 미니게임, 익명 투표, 랜덤 음식 추천, 상식 테스트, AI 외모 평가, 죽음 예측 테스트, 로또추첨기 등 다양한 웹 서비스를 제공하고 있습니다.</p>
+            <p>개발자: 이진수 (Binary)</p>
+            <p>盡人事待天命</p>
+        </div>
+    </main>
+</div>
 
 <footer th:replace="common/footer :: footer"></footer>
+
+<div class="side-ad left-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-ePAs1c7mONqnY32w"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
+
+<div class="side-ad right-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-qpEsz6jYmwJE0cE7"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
