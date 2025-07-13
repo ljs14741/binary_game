@@ -13,6 +13,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/guestbook/**")  // ✅ 해당 경로만 CSRF 무시
+                )
                 .authorizeRequests(authorizeRequests -> authorizeRequests
                         .anyRequest().permitAll()  // 모든 요청을 인증 없이 허용
                 );
