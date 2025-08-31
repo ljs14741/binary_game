@@ -274,10 +274,14 @@ function generateNicknameInputs(scene) {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(22)
-            .setInteractive()
-            .on('pointerdown', () => input.setFocus());
 
         if (i === 0) normalizeDomContainerFrom(input);
+
+        const el = input.node;
+        el.style.fontSize = `${Math.max(16, fontPx)}px`;
+        ['touchstart', 'pointerdown', 'mousedown', 'click'].forEach(evt => {
+            el.addEventListener(evt, e => e.stopPropagation(), { passive: true });
+        });
 
         scene.uiLayer?.add(input);     // 레이어에 붙여서 start 시 함께 정리됨
         uiElements.nameInputs.push(input);
