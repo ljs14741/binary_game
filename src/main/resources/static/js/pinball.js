@@ -200,7 +200,85 @@ function createStyledButton(scene, x, y, label, callback, width = 100, color = "
     return btn;
 }
 
+function generateNicknameInputsNative(scene) {
+    uiElements.nicknameButton?.setVisible(false);
+
+    // 이전 것 정리
+    const old = document.getElementById('name-overlay');
+    if (old) old.remove();
+    uiElements.nameInputs = [];
+
+    const s = getMobileScale();            // PC=1, 모바일<1
+    const centerX = BASE_W / 2;
+    const frameW = 740;
+    const frameX = centerX - frameW / 2;
+    const frameY = 270;
+    const padding = 18;
+
+    const cellW = 120, cellH = 36, gap = 12;
+    const cols = Math.max(2, Math.min(6, Math.floor((frameW - padding*2 + gap) / (cellW + gap))));
+    const rows = Math.ceil(playerCount / cols);
+    const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
+
+    // 노란 프레임은 그대로 캔버스에 그림
+    uiElements.nameFrame.setVisible(true).clear()
+        .lineStyle(2, 0xffcc00, 1)
+        .fillStyle(0x000000, 0.20)
+        .fillRoundedRect(frameX, frameY, frameW, frameH, 14)
+        .strokeRoundedRect(frameX, frameY, frameW, frameH, 14);
+
+    uiElements.nameTitle.setVisible(true).setPosition(centerX, frameY - 10);
+
+    const gridW = cols * cellW + (cols - 1)*gap;
+    const startX = frameX + (frameW - gridW)/2 + cellW/2;
+    const startY = frameY + padding + cellH/2;
+
+    // 시드값 유지
+    const seed = Array.isArray(playerNicknames) ? playerNicknames.slice() : [];
+
+    // 오버레이 생성
+    const gc = document.getElementById('game-container');
+    const overlay = document.createElement('div');
+    overlay.id = 'name-overlay';
+    gc.appendChild(overlay);
+
+    // 좌표/사이즈를 컨테이너 실제 픽셀로 변환
+    const px = v => Math.round(v * (s < 1 ? s : 1));
+
+    for (let i = 0; i < playerCount; i++) {
+        const c = i % cols, r = Math.floor(i / cols);
+        const baseX = startX + c*(cellW + gap);
+        const baseY = startY + r*(cellH + gap);
+
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.style.left = px(baseX) + 'px';
+        cell.style.top  = px(baseY) + 'px';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = nickMaxLength;
+        input.placeholder = `P${i+1}`;
+        input.value = seed[i] || '';
+        input.style.width  = px(cellW) + 'px';
+        input.style.height = px(cellH) + 'px';
+        input.style.fontSize = Math.max(16, px(16)) + 'px';
+        input.addEventListener('touchstart', e => e.stopPropagation(), { passive:true });
+        input.addEventListener('pointerdown', e => e.stopPropagation());
+        input.addEventListener('mousedown', e => e.stopPropagation());
+
+        cell.appendChild(input);
+        overlay.appendChild(cell);
+        uiElements.nameInputs.push(input);
+    }
+
+    uiElements.startGameButton.setVisible(true);
+    resizeSetupPanel(scene, { rows, frameH });
+}
+
 function generateNicknameInputs(scene) {
+    if (useNativeInputs()) return generateNicknameInputsNative(scene);
+
     // 열기 버튼 숨김 + 기존 입력 지우기
     uiElements.nicknameButton?.setVisible(false);
     uiElements.nameInputs?.forEach(i => i.destroy());
@@ -287,6 +365,10 @@ function generateNicknameInputs(scene) {
     // 시작 버튼 노출 + 패널 높이 조정
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
+}
+
+function useNativeInputs() {
+    return window.matchMedia('(max-width: 1000px)').matches; // 모바일 구간
 }
 
 function getDomContainer() {
@@ -482,11 +564,16 @@ function hexToCss(hex) {
 }
 
 function startGame(scene) {
-    // 1) 입력칸이 열려있다면 입력값 수집
-    if (Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length) {
+    const overlay = document.getElementById('name-overlay');
+    if (overlay) {
+        // 모바일: HTML 인풋에서 수집
+        const fields = Array.from(overlay.querySelectorAll('input'));
+        playerNicknames = fields.map(inp => (inp.value || '').trim() || ('Player-' + Math.random().toString(36).slice(2,6)));
+    } else if (Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length) {
+        // PC: rexInputText에서 수집
         playerNicknames = uiElements.nameInputs.map(inp => {
-            const v = (inp.text || '').trim();
-            return v || ('Player-' + Math.random().toString(36).slice(2, 6));
+            const v = (inp.text || inp.node?.value || '').trim();
+            return v || ('Player-' + Math.random().toString(36).slice(2,6));
         });
     }
 
@@ -500,6 +587,7 @@ function startGame(scene) {
     console.log("🎮 참가자 리스트:", playerNicknames);
 
     // 3) 설정 UI 싹 정리(레이어 통째로 제거 → 미니맵에도 안 남음)
+    overlay?.remove();
     scene.uiLayer?.destroy();
     uiElements = {};
 
