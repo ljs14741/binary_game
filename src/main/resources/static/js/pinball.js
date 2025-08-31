@@ -49,7 +49,7 @@ function preload() {
 
 function create() {
     if (!backgroundMusic) {
-        backgroundMusic = this.sound.add('backgroundMusic', { loop: true, volume: 0.1});
+        backgroundMusic = this.sound.add('backgroundMusic', { loop: true });
         backgroundMusic.play();
     }
 
