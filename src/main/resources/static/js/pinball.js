@@ -37,6 +37,7 @@ const BALL_OUTLINE_COLOR = 0xffffff; // ← 항상 흰색
 const BALL_INNER_W = 1;      // 안쪽 림 두께(0이면 끔)
 const BALL_INNER_A = 0.75;   // 안쪽 림 알파
 const BASE_W = 1000, BASE_H = 720;
+let _kbLocked = false;
 
 window.onload = () => {
     game = new Phaser.Game(config);
@@ -277,11 +278,7 @@ function generateNicknameInputs(scene) {
 
         if (i === 0) normalizeDomContainerFrom(input);
 
-        const el = input.node;
-        el.style.fontSize = `${Math.max(16, fontPx)}px`;
-        ['touchstart', 'pointerdown', 'mousedown', 'click'].forEach(evt => {
-            el.addEventListener(evt, e => e.stopPropagation(), { passive: true });
-        });
+        wireKeyboardGuard(input.node);
 
         scene.uiLayer?.add(input);     // 레이어에 붙여서 start 시 함께 정리됨
         uiElements.nameInputs.push(input);
@@ -290,6 +287,80 @@ function generateNicknameInputs(scene) {
     // 시작 버튼 노출 + 패널 높이 조정
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
+}
+
+function getDomContainer() {
+    return document.querySelector('#game-container > .dom-container, #game-container > div.dom-container');
+}
+function lockDomContainer() {
+    const gc = document.getElementById('game-container');
+    const domC = getDomContainer();
+    if (!gc || !domC) return;
+    const r = gc.getBoundingClientRect();
+
+    Object.assign(domC.style, {
+        position: 'fixed',
+        left: r.left + 'px',
+        top:  r.top  + 'px',
+        width:  r.width + 'px',
+        height: r.height + 'px',
+        transform: 'none',
+        WebkitTransform: 'none',
+        zIndex:  9999,
+        pointerEvents: 'auto'
+    });
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    _kbLocked = true;
+    // 키보드 열릴 때 뷰포트가 또 바뀌면 계속 맞춰줌
+    if (window.visualViewport) {
+        const _fix = () => {
+            if (!_kbLocked) return;
+            const rr = gc.getBoundingClientRect();
+            Object.assign(domC.style, {
+                left: rr.left + 'px', top: rr.top + 'px',
+                width: rr.width + 'px', height: rr.height + 'px'
+            });
+        };
+        window.visualViewport.addEventListener('resize', _fix, { passive: true });
+        window.visualViewport.addEventListener('scroll', _fix,  { passive: true });
+        domC._vvFix = _fix; // 해제 시 제거용
+    }
+}
+function unlockDomContainer() {
+    const domC = getDomContainer();
+    if (!domC) return;
+    Object.assign(domC.style, {
+        position: 'absolute',
+        left: '0px', top: '0px', width: '100%', height: '100%',
+        zIndex: '2'
+    });
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    _kbLocked = false;
+    // 리스너 제거
+    if (window.visualViewport && domC._vvFix) {
+        window.visualViewport.removeEventListener('resize', domC._vvFix);
+        window.visualViewport.removeEventListener('scroll', domC._vvFix);
+        delete domC._vvFix;
+    }
+}
+
+// 입력 엘리먼트에 포커스/블러 가드 장착
+function wireKeyboardGuard(el) {
+    if (!el) return;
+    el.addEventListener('focus', () => {
+        lockDomContainer();
+    }, { passive: true });
+
+    el.addEventListener('blur', () => {
+        unlockDomContainer();
+    });
+
+    // 터치가 게임으로 전파되지 않도록
+    ['touchstart','touchmove','touchend','pointerdown','pointermove','pointerup','mousedown','mousemove','mouseup','click']
+        .forEach(evt => el.addEventListener(evt, e => { e.stopPropagation(); }, { passive: false }));
 }
 
 // 모바일일 때만(컨테이너 폭이 1000 미만) 스케일값 반환. PC면 1.
