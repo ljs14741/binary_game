@@ -33,5 +33,19 @@
         width: 100%;
         height: 100%;
         display: block;
+        z-index: 0;              /* 바닥 */
+    }
+
+    /* Phaser DOM 컨테이너(= rexInputText의 부모) */
+    #game-container > .dom-container,
+    #game-container > div.dom-container {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 2 !important;               /* 캔버스 위 */
+        transform: none !important;          /* Phaser가 쓰는 matrix 무력화 */
+        -webkit-transform: none !important;
+        pointer-events: auto !important;
     }
 }
