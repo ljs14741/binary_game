@@ -50,7 +50,8 @@
     <meta name="_csrf" th:content="${_csrf.token}" />
 
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <link rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <link rel="stylesheet" th:href="@{/css/pinball.css}">
 
     <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
 
@@ -114,6 +115,7 @@
 </div>
 
 <script th:src="@{/js/phaser.min.js}"></script>
+<script th:src="@{/js/plugins/rexinputtextplugin.min.js}"></script>
 <script th:src="@{/js/pinball.js}"></script>
 <script>
     const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
