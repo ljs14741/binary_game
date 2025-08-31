@@ -36,6 +36,7 @@ const BALL_OUTER_A = 0.95;   // 바깥 테두리 알파
 const BALL_OUTLINE_COLOR = 0xffffff; // ← 항상 흰색
 const BALL_INNER_W = 1;      // 안쪽 림 두께(0이면 끔)
 const BALL_INNER_A = 0.75;   // 안쪽 림 알파
+const BASE_W = 1000, BASE_H = 720;
 
 window.onload = () => {
     game = new Phaser.Game(config);
@@ -199,31 +200,27 @@ function createStyledButton(scene, x, y, label, callback, width = 100, color = "
 }
 
 function generateNicknameInputs(scene) {
-    // 버튼 겹침 방지: 닉네임 입력을 열면 열기 버튼 숨김
+    // 열기 버튼 숨김 + 기존 입력 지우기
     uiElements.nicknameButton?.setVisible(false);
-
-    // 기존 입력 지우기
     uiElements.nameInputs?.forEach(i => i.destroy());
     uiElements.nameInputs = [];
 
-    // 영역 잡기(고정 y 기준)
-    const centerX = config.width / 2;
+    const s = getMobileScale();          // PC=1, 모바일<1
+    const centerX = BASE_W / 2;
     const frameW = 740;
     const frameX = centerX - frameW / 2;
-    const frameY = 270; // 닉네임 버튼(220)과 시각적으로 겹치지 않도록 충분히 아래
+    const frameY = 270;
     const padding = 18;
 
-    // 인풋 셀 사이즈/간격
+    // 인풋 셀 기본(논리 좌표)
     const cellW = 120, cellH = 36, gap = 12;
 
-    // 칼럼/행 계산(반응형)
+    // 칼럼/행 계산(논리 좌표 기준)
     const cols = Math.max(2, Math.min(6, Math.floor((frameW - padding*2 + gap) / (cellW + gap))));
     const rows = Math.ceil(playerCount / cols);
-
-    // 프레임 높이
     const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
 
-    // 노란 프레임/타이틀 표시 & 위치
+    // 프레임(캔버스)은 논리좌표 그대로 — CSS가 캔버스 전체를 축소하므로 OK
     uiElements.nameFrame.setVisible(true).clear()
         .lineStyle(2, 0xffcc00, 1)
         .fillStyle(0x000000, 0.20)
@@ -234,31 +231,42 @@ function generateNicknameInputs(scene) {
         .setVisible(true)
         .setPosition(centerX, frameY - 10);
 
-    // 입력칸 배치
+    // 그리드 시작점(논리 좌표)
     const gridW = cols * cellW + (cols - 1) * gap;
     const startX = frameX + (frameW - gridW) / 2 + cellW / 2;
     const startY = frameY + padding + cellH / 2;
 
-    // 기존값 유지(있으면 최우선)
-    const keep = Array.isArray(uiElements.nameInputs)
-        ? uiElements.nameInputs.map(i => (i?.text || '').trim()) : [];
-    const seed = keep.some(Boolean) ? keep
-        : (Array.isArray(playerNicknames) ? playerNicknames.slice() : []);
+    // 기존값 유지
+    const keep = Array.isArray(uiElements.nameInputs) ? uiElements.nameInputs.map(i => (i?.text || '').trim()) : [];
+    const seed = keep.some(Boolean) ? keep : (Array.isArray(playerNicknames) ? playerNicknames.slice() : []);
+
+    // 도우미: 모바일이면 좌표/사이즈에 s 곱(PC는 그대로)
+    const pos  = v => (s < 1 ? Math.round(v * s) : Math.round(v));
+    const scale = v => (s < 1 ? Math.round(v * s) : Math.round(v));
+    const size = (v, min=1) => (s < 1 ? Math.max(min, Math.round(v * s)) : v);
 
     for (let i = 0; i < playerCount; i++) {
         const c = i % cols, r = Math.floor(i / cols);
-        const x = startX + c * (cellW + gap);
-        const y = startY + r * (cellH + gap);
+        const baseX = startX + c * (cellW + gap);
+        const baseY = startY + r * (cellH + gap);
 
-        const input = scene.add.rexInputText(x, y, cellW, cellH, {
+        const x = scale(startX + c * (cellW + gap));
+        const y = scale(startY + r * (cellH + gap));
+        const w = size(cellW, 40);
+        const h = size(cellH, 24);
+        const fontPx = size(16, 12);
+        const padPx  = size(4, 2);
+        const borderPx = Math.max(1, Math.round(size(1)));
+
+        const input = scene.add.rexInputText(x, y, w, h, {
             type: 'text',
-            text: (seed[i] || ''),     // 비워두면 나중에 랜덤으로 채워짐
-            fontSize: '16px',
+            text: (seed[i] || ''),
+            fontSize: `${size(16, 12)}px`,
             color: '#ffffff',
             backgroundColor: '#333333',
             border: '1px solid #ffcc00',
             align: 'center',
-            padding: 4,
+            padding: size(4, 2),
             placeholder: `P${i+1}`,
             selectAll: true,
             maxLength: nickMaxLength
@@ -269,15 +277,52 @@ function generateNicknameInputs(scene) {
             .setInteractive()
             .on('pointerdown', () => input.setFocus());
 
-        scene.uiLayer?.add(input);
+        if (i === 0) normalizeDomContainerFrom(input);
+
+        scene.uiLayer?.add(input);     // 레이어에 붙여서 start 시 함께 정리됨
         uiElements.nameInputs.push(input);
     }
 
-    // 시작 버튼은 항상 보이게
+    // 시작 버튼 노출 + 패널 높이 조정
     uiElements.startGameButton.setVisible(true);
-
-    // 🔧 파란 패널 높이/시작 버튼 위치를 rows에 맞춰 조정
     resizeSetupPanel(scene, { rows, frameH });
+}
+
+// 모바일일 때만(컨테이너 폭이 1000 미만) 스케일값 반환. PC면 1.
+function getMobileScale() {
+    if (!window.matchMedia('(max-width: 1000px)').matches) return 1; // PC면 1
+    const p = document.getElementById('game-container');
+    return p ? Math.min(1, p.clientWidth / BASE_W) : 1;
+}
+
+function normalizeDomContainerFrom(inputGO) {
+    // rexInputText의 실제 HTML <input>
+    const el = inputGO?.node;
+    const gc = document.getElementById('game-container');
+    if (!el || !gc) return;
+
+    // 이 <input>의 부모가 바로 "Phaser DOM 컨테이너"
+    const domC = el.parentElement;
+    if (!domC) return;
+
+    // 🔧 컨테이너가 #game-container 밖에 있으면 안으로 이동
+    if (domC.parentElement !== gc) {
+        gc.appendChild(domC);
+    }
+
+    // 🔧 좌표계/크기 고정 (부모를 꽉 채우고 (0,0) 기준으로)
+    Object.assign(domC.style, {
+        position: 'absolute',
+        left: '0px',
+        top: '0px',
+        right: '0px',
+        bottom: '0px',
+        width: '100%',
+        height: '100%',
+        transform: 'none',
+        WebkitTransform: 'none',
+        pointerEvents: 'auto'
+    });
 }
 
 function changePlayerCount(delta) {
@@ -442,7 +487,7 @@ function startGame(scene) {
                                 (bodyA === player.body.body && bodyB === obstacle.body) ||
                                 (bodyB === player.body.body && bodyA === obstacle.body)
                             ) {
-                                console.log(`🚀 플레이어 ${playerNicknames[i]} 장애물 충돌!`);
+                                // console.log(`🚀 플레이어 ${playerNicknames[i]} 장애물 충돌!`);
                                 const angularForce = obstacle.body.angularVelocity * 2;
                                 const vx = Phaser.Math.Between(-200, 200) + angularForce;
                                 const vy = Phaser.Math.Between(-300, -100);
@@ -459,7 +504,7 @@ function startGame(scene) {
 }
 
 function createMinimap(scene) {
-    console.log("🗺️ 미니맵 생성");
+    // console.log("🗺️ 미니맵 생성");
 
     // 기존 미니맵이 있으면 제거
     if (scene.minimapCamera) scene.minimapCamera.destroy();
@@ -557,7 +602,7 @@ function createObstacles(scene) {
                         const vx = Phaser.Math.Between(-10, 10);
                         const vy = Phaser.Math.Between(-15, -5);
                         player.body.setVelocity(vx, vy);
-                        console.log('💨 난기류 영향 받음!');
+                        // console.log('💨 난기류 영향 받음!');
                     }
                 });
             });
@@ -649,7 +694,7 @@ function createGoalZone(scene) {
                     const vx = Math.max(velocity.x, 1.5) * bounceForce;
                     const vy = velocity.y < 0.5 ? -2 : velocity.y * -0.5;
                     player.body.setVelocity(vx, vy);
-                    console.log('🔵 좌측 벽 → 오른쪽으로 튕김');
+                    // console.log('🔵 좌측 벽 → 오른쪽으로 튕김');
                 }
 
                 if ((bodyA === pBody && bodyB === rightBarrier.body) || (bodyB === pBody && bodyA === rightBarrier.body)) {
@@ -658,7 +703,7 @@ function createGoalZone(scene) {
                     const vx = -Math.max(velocity.x, 1.5) * bounceForce;
                     const vy = velocity.y < 0.5 ? -2 : velocity.y * -0.5;
                     player.body.setVelocity(vx, vy);
-                    console.log('🔵 우측 벽 → 왼쪽으로 튕김');
+                    // console.log('🔵 우측 벽 → 왼쪽으로 튕김');
                 }
             });
         });

@@ -11,3 +11,27 @@
     position: relative;
     overflow: hidden;
 }
+
+#game-container canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+@media (max-width: 1000px) {
+    #game-container {
+        display: block;        /* main-dark.css의 flex 덮어쓰기 */
+        position: relative;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1000 / 720;
+        overflow: hidden;
+    }
+    #game-container canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+}
