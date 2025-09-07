@@ -35,6 +35,7 @@ window.onload = function() {
     let gameOver = false;
     let gameOverText;
     let restartButton;
+    let gameOverUI;
     let timerText;
     let startTime;
     let pauseStartTime = 0;
@@ -141,18 +142,18 @@ window.onload = function() {
         timerText = this.add.text(16, 16, 'Time: 0', { fontSize: '32px', fill: '#FFF' });
 
         // 게임 오버 텍스트
-        gameOverText = this.add.text(this.cameras.main.width / 2 - 100, this.cameras.main.height / 2 - 50, 'Game Over', { fontSize: '32px', fill: '#FFF' }).setVisible(false);
+        // gameOverText = this.add.text(this.cameras.main.width / 2 - 100, this.cameras.main.height / 2 - 50, 'Game Over', { fontSize: '32px', fill: '#FFF' }).setVisible(false);
 
         // 다시하기 버튼 생성
-        restartButton = this.add.text(this.cameras.main.width / 2 - 50, this.cameras.main.height / 2, 'Restart', { fontSize: '32px', fill: '#FFF' }).setInteractive().setVisible(false);
-        restartButton.on('pointerdown', () => {
-            this.scene.restart();
-            gameOver = false;
-            startTime = this.time.now;
-            enemySpeed = 100;
-            spawnInterval = 1000;
-            totalPausedTime = 0;
-        });
+        // restartButton = this.add.text(this.cameras.main.width / 2 - 50, this.cameras.main.height / 2, 'Restart', { fontSize: '32px', fill: '#FFF' }).setInteractive().setVisible(false);
+        // restartButton.on('pointerdown', () => {
+        //     this.scene.restart();
+        //     gameOver = false;
+        //     startTime = this.time.now;
+        //     enemySpeed = 100;
+        //     spawnInterval = 1000;
+        //     totalPausedTime = 0;
+        // });
 
         // 게임 시작 시간 기록
         startTime = this.time.now;
@@ -381,11 +382,7 @@ window.onload = function() {
         tower.setTint(0xff0000);
         gameOver = true;
         const survivedTime = Math.floor((this.time.now - startTime - totalPausedTime) / 1000);
-        gameOverText.setText('Game Over\n생존시간: ' + survivedTime + ' 초').setVisible(true);
-        restartButton.setVisible(true);
-        submitScore(survivedTime)
-            .then(() => refreshLeaderboards())
-            .catch(console.error);
+        showGameOverUI(this, survivedTime);
     }
 
     function handleVisibilityChange() {
@@ -402,4 +399,147 @@ window.onload = function() {
             }
         }
     }
+
+    function makeUIButton(scene, x, y, label, onClick) {
+        const w = 220, h = 56, r = 16;
+        const container = scene.add.container(x, y).setDepth(1002).setScale(1.0);
+
+        // 1) 버튼 비주얼(그림자+본체)은 그대로 Graphics로
+        const g = scene.add.graphics();
+        g.fillStyle(0x000000, 0.35);                // 그림자
+        g.fillRoundedRect(-w/2 + 4, -h/2 + 6, w, h, r);
+        g.fillStyle(0x2b6fff, 1);                   // 본체
+        g.fillRoundedRect(-w/2, -h/2, w, h, r);
+        const highlight = scene.add.rectangle(-w/2, -h/2, w, h/2, 0xffffff, 0.07)
+            .setOrigin(0, 0);
+
+        const text = scene.add.text(0, 0, label, {
+            fontFamily: 'Pretendard, Noto Sans KR, Arial',
+            fontSize: '22px',
+            color: '#ffffff',
+        }).setOrigin(0.5);
+
+        // 2) 투명한 히트박스(정확한 클릭 영역 담당)
+        const hitBox = scene.add.rectangle(0, 0, w, h, 0x000000, 0.001)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });   // ← 커서 pointer
+
+        // 3) 호버/클릭 애니메이션은 hitBox에만 바인딩
+        hitBox.on('pointerover', () => {
+            scene.tweens.add({ targets: container, scale: 1.04, duration: 120, ease: 'Quad.easeOut' });
+            scene.input.setDefaultCursor('pointer');    // html의 cursor:pointer와 동일
+        });
+        hitBox.on('pointerout', () => {
+            scene.tweens.add({ targets: container, scale: 1.00, duration: 120, ease: 'Quad.easeOut' });
+            scene.input.setDefaultCursor('default');
+        });
+        hitBox.on('pointerdown', () => {
+            scene.tweens.add({ targets: container, scale: 0.98, duration: 80, ease: 'Quad.easeOut' });
+        });
+        hitBox.on('pointerup', () => {
+            scene.tweens.add({ targets: container, scale: 1.02, duration: 100, ease: 'Quad.easeOut' });
+            onClick && onClick();
+        });
+
+        container.add([g, highlight, text, hitBox]);  // hitBox를 맨 위에 두면 정확
+        return container;
+    }
+
+// 게임오버 모달 UI
+    function showGameOverUI(scene, survivedTime) {
+        const { width, height } = scene.cameras.main;
+
+        // 배경 어둡게
+        const dim = scene.add.rectangle(width/2, height/2, width, height, 0x000000, 0.55)
+            .setDepth(1000).setInteractive(); // 바깥 클릭 방지
+
+        // 카드
+        const cardW = Math.min(540, width * 0.9);
+        const cardH = 320;
+        const cardX = (width - cardW) / 2;
+        const cardY = (height - cardH) / 2;
+
+        const card = scene.add.graphics().setDepth(1001);
+        // 카드 그림자
+        card.fillStyle(0x000000, 0.35);
+        card.fillRoundedRect(cardX + 6, cardY + 10, cardW, cardH, 20);
+        // 카드 본체
+        card.fillStyle(0x131313, 1);
+        card.fillRoundedRect(cardX, cardY, cardW, cardH, 20);
+        // 테두리
+        card.lineStyle(2, 0xffffff, 0.12);
+        card.strokeRoundedRect(cardX, cardY, cardW, cardH, 20);
+
+        // 타이틀
+        const title = scene.add.text(width/2, cardY + 70, 'GAME OVER', {
+            fontFamily: 'Orbitron, Pretendard, Arial',
+            fontSize: '48px',
+            color: '#ffffff',
+        }).setOrigin(0.5).setDepth(1002)
+            .setShadow(0, 0, '#ff3b3b', 12); // 은은한 레드 글로우
+
+        // 생존 시간
+        const timeText = scene.add.text(width/2, cardY + 140, `생존시간: ${survivedTime} 초`, {
+            fontFamily: 'Noto Sans KR, Arial',
+            fontSize: '26px',
+            color: '#e9ecef'
+        }).setOrigin(0.5).setDepth(1002);
+
+        // 로컬 최고기록(옵션)
+        let best = Number(localStorage.getItem('dodge_best') || 0);
+        if (survivedTime > best) {
+            best = survivedTime;
+            localStorage.setItem('dodge_best', best);
+        }
+        const bestText = scene.add.text(width/2, cardY + 176, `최고기록: ${best} 초`, {
+            fontFamily: 'Noto Sans KR, Arial',
+            fontSize: '16px',
+            color: '#8ab4ff'
+        }).setOrigin(0.5).setDepth(1002);
+
+        // 버튼들
+        const restartBtn = makeUIButton(scene, width/2, cardY + cardH - 66, '다시하기 (R)', () => {
+            doRestart(scene);
+        });
+
+
+        // 등장 애니메이션
+        [dim, card, title, timeText, bestText, restartBtn].forEach(obj => obj.setAlpha(0));
+        [title, timeText, bestText, restartBtn].forEach(obj => obj.setScale(0.9));
+
+        scene.tweens.add({ targets: dim, alpha: 0.55, duration: 200, ease: 'Quad.easeOut' });
+        scene.tweens.add({ targets: [card], alpha: 1, duration: 220, delay: 60 });
+        scene.tweens.add({ targets: [title, timeText, bestText, restartBtn], alpha: 1, scale: 1.0, duration: 260, delay: 100, ease: 'Back.Out' });
+
+        // 키보드 R로 재시작
+        scene.input.keyboard.once('keydown-R',     () => doRestart(scene));
+        scene.input.keyboard.once('keydown-ENTER', () => doRestart(scene));
+        scene.input.keyboard.once('keydown-SPACE', () => doRestart(scene));
+
+        // 메모리 정리용 핸들
+        gameOverUI = { dim, card, title, timeText, bestText, restartBtn };
+    }
+
+    function doRestart(scene) {
+        // (선택) 페이드아웃 후 재시작
+        const targets = gameOverUI ? [
+            gameOverUI.dim, gameOverUI.card, gameOverUI.title,
+            gameOverUI.timeText, gameOverUI.bestText, gameOverUI.restartBtn
+        ] : [];
+
+        scene.tweens.add({
+            targets,
+            alpha: 0,
+            duration: 160,
+            onComplete: () => {
+                scene.scene.restart();
+                gameOver = false;
+                startTime = scene.time.now;
+                enemySpeed = 100;
+                spawnInterval = 1000;
+                totalPausedTime = 0;
+            }
+        });
+    }
+
 };
