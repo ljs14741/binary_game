@@ -74,6 +74,7 @@
             <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
             <label for="volumeControl">BGM 볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="100">
+            <button id="fsToggle" title="전체화면 전환">⛶ 전체화면</button>
         </div>
 
         <div id="game-container"></div>
@@ -152,6 +153,68 @@
             localStorage.setItem('theme', theme);
         }
     });
+
+    const gc = document.getElementById('game-container');
+
+    function isMobile(){ return matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; }
+    function nativeFSOK(){ return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
+    function isFS(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); }
+    function reqFS(el){ const f = el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen; return f? f.call(el): Promise.reject(); }
+    function exitFS(){ const f = document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; return f? f.call(document): Promise.reject(); }
+
+    async function enterFullscreen(){
+        try{
+            if(nativeFSOK()){
+                await reqFS(gc);
+                if(isMobile() && screen.orientation?.lock){ screen.orientation.lock('landscape').catch(()=>{}); }
+            }else{
+                gc.classList.add('fake-fullscreen');
+                document.documentElement.style.overflow='hidden';
+                document.body.style.overflow='hidden';
+            }
+        }catch(e){
+            gc.classList.add('fake-fullscreen');
+            document.documentElement.style.overflow='hidden';
+            document.body.style.overflow='hidden';
+        }
+        updateBtn();
+    }
+    async function exitFullscreenAll(){
+        if(isFS()){ try{ await exitFS(); }catch(e){} }
+        gc.classList.remove('fake-fullscreen');
+        document.documentElement.style.overflow='';
+        document.body.style.overflow='';
+        try{ screen.orientation?.unlock?.(); }catch(e){}
+        updateBtn();
+    }
+    function toggleFS(){ (isFS() || gc.classList.contains('fake-fullscreen')) ? exitFullscreenAll() : enterFullscreen(); }
+    function updateBtn(){
+        const b = document.getElementById('fsToggle'); if(!b) return;
+        const on = isFS() || gc.classList.contains('fake-fullscreen');
+        b.textContent = on ? '🗗 일반 화면' : '⛶ 전체화면';
+    }
+
+    // 모바일에서만 닫기 버튼 DOM 생성(표시는 CSS가 전체화면 때만)
+    function ensureExitButton(){
+        if(!isMobile()) return;
+        if(gc.querySelector('.fs-exit')) return;
+        const btn = document.createElement('button');
+        btn.className = 'fs-exit'; btn.type = 'button'; btn.textContent = '닫기 ✕';
+        btn.addEventListener('click', exitFullscreenAll);
+        gc.appendChild(btn);
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+        document.getElementById('fsToggle')?.addEventListener('click', toggleFS);
+        ensureExitButton();             // 모바일 전용 닫기 버튼 생성
+        updateBtn();
+    });
+    ['fullscreenchange','webkitfullscreenchange','msfullscreenchange']
+        .forEach(ev=>document.addEventListener(ev, updateBtn));
+
+    // 필요하면 외부에서 호출 가능
+    window.toggleFullscreen = toggleFS;
+    window.exitFullscreenAll = exitFullscreenAll;
 
     function shareTwitter() {
         const sendText = "핀볼 랜덤 뽑기 게임";
