@@ -383,6 +383,9 @@ window.onload = function() {
         gameOver = true;
         const survivedTime = Math.floor((this.time.now - startTime - totalPausedTime) / 1000);
         showGameOverUI(this, survivedTime);
+        submitScore(survivedTime)
+            .then(() => refreshLeaderboards())
+            .catch(console.error);
     }
 
     function handleVisibilityChange() {
