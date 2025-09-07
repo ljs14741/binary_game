@@ -568,6 +568,130 @@ body {
     margin-bottom: 30px;
 }
 
+/* 총알피하기 추가 */
+.leaderboards {
+    max-width: 800px;
+    margin: 16px auto 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+@media (max-width: 768px) {
+    .leaderboards { grid-template-columns: 1fr; }
+}
+
+/* 카드 */
+.board-card {
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(144, 202, 249, 0.08);
+    padding: 16px;
+    text-align: left;
+}
+.board-card h3 {
+    margin: 0 0 10px;
+    color: #90CAF9;           /* 포인트 블루 */
+    font-weight: 700;
+    font-size: 1.15rem;
+}
+
+/* 테이블 */
+.board-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+.board-table th, .board-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #2a2a2a;
+}
+.board-table th {
+    color: #cfe9ff;           /* 밝은 블루 톤 */
+    background: #20252b;      /* 살짝 어두운 헤더 배경 */
+    text-align: left;
+    font-weight: 700;
+}
+.board-table td { color: #dddddd; }
+.board-table .rank {
+    width: 52px;
+    color: #90CAF9;
+    font-weight: 700;
+}
+.board-table .score {
+    font-weight: 700;
+    color: #ffffff;
+}
+.board-empty {
+    text-align: center;
+    color: #aaaaaa;
+    padding: 16px 8px;
+}
+
+/* 닉네임 바 */
+.nickname-bar {
+    margin: 12px 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.nickname-bar input {
+    padding: 6px 10px;
+    background: #2c2c2c;
+    color: #f0f0f0;
+    border: 1px solid #555;
+    border-radius: 6px;
+    max-width: 220px;
+}
+.nickname-bar input::placeholder { color: #9aa0a6; }
+.nickname-bar button {
+    background: #90CAF9;
+    color: #121212;
+    border: 0;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background-color .2s, color .2s;
+}
+.nickname-bar button:hover {
+    background: #ffffff;
+    color: #121212;
+}
+.nickname-bar .hint { opacity: .85; font-size: .95rem; color: #bdbdbd; }
+
+/* 내부 스크롤은 쓰지 않으니 그대로 */
+.board-table-wrap { max-height: none; overflow: visible; }
+
+/* 페이저 */
+.board-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+.board-pager .prev, .board-pager .next {
+    padding: 6px 12px;
+    border: 1px solid #444;
+    background: #2c2c2c;
+    color: #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color .2s, border-color .2s;
+}
+.board-pager .prev:hover, .board-pager .next:hover {
+    background: #3a3a3a;
+    border-color: #666;
+}
+.board-pager .prev:disabled, .board-pager .next:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+.board-pager .info { opacity: .85; color: #cfcfcf; }
+
+/* 총알피하기 추가 끝 */
+
 /* ✅ 모바일 대응 */
 @media (max-width: 768px) {
     .container { padding: 20px 10px; }

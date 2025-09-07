@@ -67,12 +67,78 @@
             <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
         </div>
 
+        <section class="leaderboards">
+            <!-- 명예의 전당 Top10 -->
+            <div class="board-card">
+                <h3>🏆 명예의 전당 Top 10</h3>
+                <div class="board-table-wrap">
+                    <table class="board-table" id="hallTable" th:if="${hallOfFame != null}">
+                        <thead>
+                        <tr><th class="rank">#</th><th>닉네임</th><th>점수</th></tr>
+                        </thead>
+                        <tbody>
+                        <!-- ✅ 각 행에 class="rank-row" 필수 -->
+                        <tr class="rank-row" th:each="s,iter : ${hallOfFame}">
+                            <td class="rank" th:text="${iter.index + 1}">1</td>
+                            <td th:text="${s.nickname}">player</td>
+                            <td class="score" th:text="${s.score}">999</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(hallOfFame)}">
+                            <td colspan="3" class="board-empty">아직 기록이 없어요.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div class="board-empty" th:if="${hallOfFame == null}">랭킹을 불러오는 중입니다…</div>
+                </div>
+                <div class="board-pager" id="hallPager">
+                    <button class="prev">이전</button>
+                    <span class="info">1/2</span>
+                    <button class="next">다음</button>
+                </div>
+            </div>
+
+            <!-- 월간 Top30 -->
+            <div class="board-card">
+                <h3 th:text="'📅 ' + (${currentMonth} != null ? ${currentMonth} : '이번 달') + ' Top 30'">📅 이번 달 Top 30</h3>
+                <div class="board-table-wrap">
+                    <table class="board-table" id="monthTable" th:if="${monthly != null}">
+                        <thead>
+                        <tr><th class="rank">#</th><th>닉네임</th><th>점수</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr class="rank-row" th:each="s,iter : ${monthly}">
+                            <td class="rank" th:text="${iter.index + 1}">1</td>
+                            <td th:text="${s.nickname}">player</td>
+                            <td class="score" th:text="${s.score}">777</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(monthly)}">
+                            <td colspan="3" class="board-empty">이번 달 기록이 없어요.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div class="board-empty" th:if="${monthly == null}">랭킹을 불러오는 중입니다…</div>
+                </div>
+                <div class="board-pager" id="monthPager">
+                    <button class="prev">이전</button>
+                    <span class="info">1/6</span>
+                    <button class="next">다음</button>
+                </div>
+            </div>
+        </section>
+
         <div class="game-title">🎯 총알 피하기</div>
 
         <div class="game-bgm">
             <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
             <label for="volumeControl">BGM 볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="100">
+        </div>
+
+        <div class="nickname-bar" style="margin:12px 0 20px; display:flex; gap:8px; justify-content:center; align-items:center;">
+            <label for="nicknameInput">닉네임</label>
+            <input id="nicknameInput" type="text" maxlength="10" placeholder="닉네임(최대 10자)" style="padding:6px 10px;">
+            <button id="nicknameSave" type="button" style="padding:6px 12px;">저장</button>
+            <span id="nickStatus" style="opacity:.8;">미설정 ⚠️</span>
         </div>
 
         <div id="game-container"></div>
@@ -148,6 +214,126 @@
             themeLink.setAttribute('href', `/css/main-${theme}.css`);
             localStorage.setItem('theme', theme);
         }
+    });
+
+    // 닉네임 저장/로드
+    const NICK_KEY = 'dodge_nickname';
+    const nickInput = document.getElementById('nicknameInput');
+    const nickSaveBtn = document.getElementById('nicknameSave');
+    const nickStatus = document.getElementById('nickStatus');
+    function loadNickname() {
+        const nick = localStorage.getItem(NICK_KEY) || '';
+        if (nickInput) nickInput.value = nick;
+        if (nickStatus) nickStatus.textContent = nick ? '저장됨 ✅' : '미설정 ⚠️';
+    }
+    function saveNickname() {
+        const val = (nickInput?.value || '').trim().substring(0,10);
+        if (!val) { nickStatus.textContent = '빈 닉네임은 저장되지 않아요.'; return; }
+        localStorage.setItem(NICK_KEY, val);
+        nickStatus.textContent = '저장됨 ✅';
+    }
+    nickSaveBtn?.addEventListener('click', saveNickname);
+    loadNickname();
+
+    function submitScore(score) {
+        const nickname = (localStorage.getItem('dodge_nickname') || '닉네임(최대 10자)')
+            .trim().substring(0,10);
+
+        const token = document.querySelector('meta[name="_csrf"]')?.content;
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['X-CSRF-TOKEN'] = token;
+
+        // ✅ fetch Promise를 반환!
+        return fetch('api/scores', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ nickname, score })
+        });
+    }
+
+    async function refreshLeaderboards() {
+        try {
+            const res = await fetch('api/scores/leaderboards', { cache: 'no-store' });
+            const data = await res.json();
+
+            // 1) 명예의 전당 테이블 바디 교체
+            const hallBody = document.querySelector('#hallTable tbody');
+            if (hallBody) {
+                hallBody.innerHTML = (data.hallOfFame || []).map((s, i) => `
+          <tr class="rank-row">
+            <td class="rank">${i + 1}</td>
+            <td>${s.nickname ?? ''}</td>
+            <td class="score">${s.score ?? 0}</td>
+          </tr>
+        `).join('') || `<tr><td colspan="3" class="board-empty">아직 기록이 없어요.</td></tr>`;
+
+                // 페이저 이벤트 중복 방지: 노드 교체 후 재바인딩
+                const hallPagerOld = document.getElementById('hallPager');
+                if (hallPagerOld) {
+                    const hallPagerNew = hallPagerOld.cloneNode(true);
+                    hallPagerOld.replaceWith(hallPagerNew);
+                    // 5개씩 페이징 재설정
+                    setupTablePager('#hallTable', '#hallPager', 5);
+                }
+            }
+
+            // 2) 월간 Top30 테이블 바디 교체
+            const monthBody = document.querySelector('#monthTable tbody');
+            if (monthBody) {
+                monthBody.innerHTML = (data.monthly || []).map((s, i) => `
+          <tr class="rank-row">
+            <td class="rank">${i + 1}</td>
+            <td>${s.nickname ?? ''}</td>
+            <td class="score">${s.score ?? 0}</td>
+          </tr>
+        `).join('') || `<tr><td colspan="3" class="board-empty">이번 달 기록이 없어요.</td></tr>`;
+
+                const monthPagerOld = document.getElementById('monthPager');
+                if (monthPagerOld) {
+                    const monthPagerNew = monthPagerOld.cloneNode(true);
+                    monthPagerOld.replaceWith(monthPagerNew);
+                    setupTablePager('#monthTable', '#monthPager', 5);
+                }
+            }
+        } catch (e) {
+            console.error('refreshLeaderboards failed', e);
+        }
+    }
+
+    function setupTablePager(tableSelector, pagerSelector, pageSize = 5) {
+        const table = document.querySelector(tableSelector);
+        const pager = document.querySelector(pagerSelector);
+        if (!table || !pager) return;
+
+        const rows = Array.from(table.querySelectorAll('tbody tr.rank-row'));
+        const prevBtn = pager.querySelector('.prev');
+        const nextBtn = pager.querySelector('.next');
+        const info = pager.querySelector('.info');
+
+        // 행이 pageSize 이하라면 페이저 숨김
+        if (rows.length <= pageSize) { pager.style.display = 'none'; return; }
+
+        let page = 0;
+        const total = Math.max(1, Math.ceil(rows.length / pageSize));
+
+        function render() {
+            rows.forEach((tr, i) => {
+                tr.style.display = (i >= page * pageSize && i < (page + 1) * pageSize) ? '' : 'none';
+            });
+            info.textContent = `${page + 1}/${total}`;
+            prevBtn.disabled = (page === 0);
+            nextBtn.disabled = (page >= total - 1);
+        }
+
+        prevBtn.addEventListener('click', () => { if (page > 0) { page--; render(); }});
+        nextBtn.addEventListener('click', () => { if (page < total - 1) { page++; render(); }});
+
+        render();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        setupTablePager('#hallTable',  '#hallPager',  5); // Top10 → 2페이지
+        setupTablePager('#monthTable', '#monthPager', 5); // Top30 → 6페이지
     });
 
     function shareTwitter() {

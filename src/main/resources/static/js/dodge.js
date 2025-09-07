@@ -383,37 +383,9 @@ window.onload = function() {
         const survivedTime = Math.floor((this.time.now - startTime - totalPausedTime) / 1000);
         gameOverText.setText('Game Over\n생존시간: ' + survivedTime + ' 초').setVisible(true);
         restartButton.setVisible(true);
-
-        // 게임 데이터 서버에 전송
-        const gameData = {
-            gameName: "총알 피하기",
-            kakaoId: 9999,
-            score: survivedTime
-        };
-
-        fetch('/save', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify(gameData)
-        }).then(response => {
-            if (response.ok) {
-                return response.text().then(text => {
-                    if (text) {
-                        return JSON.parse(text);
-                    }
-                    return {}; // 비어 있는 응답 처리
-                });
-            }
-            throw new Error('Network response was not ok ' + response.statusText);
-        }).then(data => {
-            console.log('Success:', data);
-            updateGameScores(data);
-        }).catch(error => {
-            console.error('Error:', error);
-        });
+        submitScore(survivedTime)
+            .then(() => refreshLeaderboards())
+            .catch(console.error);
     }
 
     function handleVisibilityChange() {
@@ -429,38 +401,5 @@ window.onload = function() {
                 backgroundMusic.resume();
             }
         }
-    }
-
-    function updateGameScores(games) {
-        const tbody = document.querySelector('table tbody');
-        tbody.innerHTML = '';
-
-        games.forEach((game, index) => {
-            const row = document.createElement('tr');
-
-            const rankCell = document.createElement('td');
-            rankCell.textContent = index + 1;
-            row.appendChild(rankCell);
-
-            const nameCell = document.createElement('td');
-            nameCell.textContent = game.gameName;
-            row.appendChild(nameCell);
-
-            const nicknameCell = document.createElement('td');
-            nicknameCell.textContent = game.changeNickname;
-            row.appendChild(nicknameCell);
-
-            const scoreCell = document.createElement('td');
-            scoreCell.textContent = game.score;
-            row.appendChild(scoreCell);
-
-            const dateCell = document.createElement('td');
-            const createdDate = new Date(game.createdDate);
-            const formattedDate = `${createdDate.getFullYear()}년 ${createdDate.getMonth() + 1}월 ${createdDate.getDate()}일`;
-            dateCell.textContent = formattedDate;
-            row.appendChild(dateCell);
-
-            tbody.appendChild(row);
-        });
     }
 };
