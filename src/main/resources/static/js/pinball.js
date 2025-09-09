@@ -85,6 +85,8 @@ function create() {
     this.cameras.main.setBounds(0, 0, config.width, 4000);
     this.matter.world.setBounds(0, 0, config.width, 4000);
 
+    applyTheme(this);
+
     registerCollisionHandlers(this);
 
     this.uiLayer = this.add.layer();
@@ -94,6 +96,37 @@ function create() {
 
     createGameSetupUI(this);
     this.cannon = this.add.image(config.width / 2, 4000, 'cannon').setOrigin(0.5, 1);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 테마 적용: 배경 컬러 + 은은한 스타필드
+function applyTheme(scene) {
+    // 배경색 교체(깊은 네이비)
+    scene.cameras.main.setBackgroundColor('#0b1220');
+
+    // 작은 점 텍스처 보장
+    if (!scene.textures.exists('starDot')) {
+        const g = scene.add.graphics();
+        g.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 2);
+        g.generateTexture('starDot', 2, 2);
+        g.destroy();
+    }
+
+    // 스타필드 파티클 (스크린 고정, 은은하게)
+    scene._starfield?.destroy();
+    const stars = scene.add.particles(0, 0, 'starDot', {
+        x: { min: 0, max: scene.scale.width },
+        y: { min: 0, max: scene.scale.height },
+        lifespan: 8000,
+        speedX: { min: -6, max: 6 },
+        speedY: { min: 10, max: 24 },
+        quantity: 1,
+        frequency: 80,
+        scale: { start: 1, end: 0.4 },
+        alpha: { start: 0.35, end: 0 }
+    });
+    stars.setScrollFactor(0).setDepth(-10);
+    scene._starfield = stars;
 }
 
 // UI 버튼 생성, 닉네임 입력, 참가자 수 조절 기능
@@ -692,79 +725,268 @@ function createMinimap(scene) {
 // 확장된 장애물 구성 (진자, 왕복, 난기류 다양하게 배치)
 function createObstacles(scene) {
     scene.obstacles = [];
-    scene.swirlBodies = [];
+
+    // 존 레지스트리
+    scene.swirlMap    = new Map();  // body -> {strength, tangential, outward}
+    scene.conveyorMap = new Map();  // body -> {dir, force}
+    scene.stickySet   = new Set();  // Set of bodies
+    scene.updraftMap  = new Map();  // body -> {strength}
+    scene.pegBodies   = new Set();  // 플링코 핀
 
     const MatterJS = Phaser.Physics.Matter.Matter;
 
-    // ── 공통: 폭 w, 높이 20px 막대 텍스처를 만들고 Matter Image로 쓴다
+    // ── 공용 텍스처
+    const ensureTextures = () => {
+        // 소용돌이 링
+        if (!scene.textures.exists('ring')) {
+            const g = scene.add.graphics();
+            g.lineStyle(6, 0x5eead4, 0.85); g.strokeCircle(64, 64, 56);
+            g.lineStyle(3, 0x22d3ee, 0.85); g.strokeCircle(64, 64, 44);
+            g.generateTexture('ring', 128, 128); g.destroy();
+        }
+        // 궤도 점
+        if (!scene.textures.exists('orbitDot')) {
+            const g = scene.add.graphics();
+            g.fillStyle(0x7dd3fc, 1).fillCircle(4,4,4);
+            g.generateTexture('orbitDot', 8, 8); g.destroy();
+        }
+        // 컨베이어 타일
+        if (!scene.textures.exists('arrowTile')) {
+            const g = scene.add.graphics();
+            g.fillStyle(0x0b1220, 0).fillRect(0,0,64,32);
+            g.lineStyle(4, 0x7dd3fc, 0.9);
+            const A=(x,y)=>{ g.beginPath(); g.moveTo(x-10,y); g.lineTo(x+10,y); g.lineTo(x+4,y-6);
+                g.moveTo(x+10,y); g.lineTo(x+4,y+6); g.strokePath(); };
+            A(12,16); A(32,16); A(52,16);
+            g.generateTexture('arrowTile',64,32); g.destroy();
+        }
+        // 업드래프트 ↑ 타일
+        if (!scene.textures.exists('upTile')) {
+            const g = scene.add.graphics();
+            g.fillStyle(0x0b1220, 0).fillRect(0,0,48,48);
+            g.lineStyle(4, 0x93c5fd, 0.95);
+            const U=(x,y)=>{ g.beginPath(); g.moveTo(x,y+10); g.lineTo(x,y-10);
+                g.moveTo(x,y-10); g.lineTo(x-6,y-4);
+                g.moveTo(x,y-10); g.lineTo(x+6,y-4); g.strokePath(); };
+            U(12,32); U(24,24); U(36,16);
+            g.generateTexture('upTile',48,48); g.destroy();
+        }
+        // 끈적존
+        if (!scene.textures.exists('goo')) {
+            const g = scene.add.graphics();
+            g.fillStyle(0x9d7dff, 0.22).fillEllipse(100, 32, 200, 64);
+            g.lineStyle(3, 0xc4b5fd, 0.7).strokeEllipse(100, 32, 200, 64);
+            g.generateTexture('goo', 200, 64); g.destroy();
+        }
+        // 플링코 핀
+        if (!scene.textures.exists('pegDot')) {
+            const g = scene.add.graphics();
+            g.fillStyle(0x79c0ff, 1).fillCircle(6, 6, 6);
+            g.lineStyle(2, 0xffffff, 0.9).strokeCircle(6, 6, 6);
+            g.generateTexture('pegDot', 12, 12); g.destroy();
+        }
+        // ❗팬(업드래프트) — 좌표 회전 계산으로 블레이드 그림 (translate/rotate 사용 안함)
+        if (!scene.textures.exists('fan')) {
+            const g = scene.add.graphics();
+            const cx = 48, cy = 48;
+            g.lineStyle(3, 0x7dd3fc, 0.9).strokeCircle(cx, cy, 44);
+            g.fillStyle(0x7dd3fc, 0.9);
+
+            const drawBlade = (angleDeg) => {
+                const a = Phaser.Math.DegToRad(angleDeg);
+                const cos = Math.cos(a), sin = Math.sin(a);
+                const rot = (x, y) => ({ x: cx + x*cos - y*sin, y: cy + x*sin + y*cos });
+                // 삼각형 블레이드
+                const p1 = rot(0, 0);
+                const p2 = rot(32, 8);
+                const p3 = rot(32, -8);
+                g.fillTriangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+            };
+
+            drawBlade(0); drawBlade(90); drawBlade(180); drawBlade(270);
+            g.generateTexture('fan', 96, 96);
+            g.destroy();
+        }
+        // 바람 점
+        if (!scene.textures.exists('windDot')) {
+            const g = scene.add.graphics(); g.fillStyle(0xffffff,1).fillRect(0,0,2,2);
+            g.generateTexture('windDot',2,2); g.destroy();
+        }
+    };
+    ensureTextures();
+
+    // ── 도우미: 바
     function makeBarImage(x, y, w, color) {
         const key = `bar_${w}_${color.toString(16)}`;
         makeSolidTexture(scene, key, w, 20, color, 1);
-        const img = scene.matter.add.image(x, y, key, null, { restitution: 0.5 });
-        img.setOrigin(0.5);
-        img.setFriction(0).setFrictionStatic(0).setFrictionAir(0);
+        const img = scene.matter.add.image(x, y, key, null, { restitution: 0.6 });
+        img.setOrigin(0.5).setFriction(0).setFrictionStatic(0).setFrictionAir(0);
         return img;
     }
 
-    // ✅ 진자: 월드 포인트에 힌지로 고정 + 각속도 부여
-    function createPendulum(x, y, width, angularVelocity, color = 0xff6600) {
-        const bar = makeBarImage(x, y, width, color);
-        const hinge = MatterJS.Constraint.create({
-            pointA: { x, y }, bodyB: bar.body, pointB: { x: 0, y: 0 }, length: 0, stiffness: 1
-        });
-        scene.matter.world.add(hinge);
-        // 살짝 회전 시작(감쇠 없도록 위에서 마찰 0으로 설정)
-        bar.setAngularVelocity(angularVelocity);
-        scene.obstacles.push(bar);
+    // 스피너/왕복
+    function createSpinner(x, y, armLen = 220, angVel = 0.11, color = 0xff7bd6, cross = true) {
+        const bar1 = makeBarImage(x, y, armLen, color);
+        const h1 = MatterJS.Constraint.create({ pointA:{x,y}, bodyB:bar1.body, pointB:{x:0,y:0}, length:0, stiffness:1 });
+        scene.matter.world.add(h1); bar1.setAngularVelocity(angVel).setIgnoreGravity(true); scene.obstacles.push(bar1);
+        if (cross) {
+            const bar2 = makeBarImage(x, y, armLen, color);
+            const h2 = MatterJS.Constraint.create({ pointA:{x,y}, bodyB:bar2.body, pointB:{x:0,y:0}, length:0, stiffness:1 });
+            scene.matter.world.add(h2); bar2.setAngularVelocity(-angVel*1.05).setAngle(90).setIgnoreGravity(true); scene.obstacles.push(bar2);
+        }
+    }
+    function createMover(x, y, width, range, duration, color = 0x67e8f9) {
+        const go = makeBarImage(x, y, width, color); go.setStatic(true); scene.obstacles.push(go);
+        scene.tweens.add({ targets: go, x:`+=${range}`, duration, yoyo:true, repeat:-1, ease:'Sine.easeInOut',
+            onUpdate: ()=> MatterJS.Body.setPosition(go.body, {x:go.x, y:go.y}) });
     }
 
-    // ✅ 왕복: 정적 바디 + 트윈으로 이동, 바디 위치 동기화
-    function createMover(x, y, width, range, duration, color = 0x00ffff) {
-        const go = makeBarImage(x, y, width, color);
-        go.setStatic(true); // 정적
-        scene.obstacles.push(go);
+    // 플링코
+    // 화면 폭을 끝까지 채우는 플링코
+    function createPegFieldFullWidth(y, rows = 7, rowGap = 70, margin = 24, r = 10, rest = 0.85) {
+        const left = margin;
+        const right = config.width - margin;
+        const width = right - left;
 
-        scene.tweens.add({
-            targets: go,
-            x: `+=${range}`,
-            duration,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-            onUpdate: () => {
-                MatterJS.Body.setPosition(go.body, { x: go.x, y: go.y });
+        // 목표 간격(대략 90px)이 되도록 컬럼 수 계산
+        const targetGap = 90;
+        let cols = Math.max(5, Math.round(width / targetGap) + 1);
+        const gap = width / (cols - 1);           // 실제 간격 재계산
+
+        for (let ry = 0; ry < rows; ry++) {
+            // 홀수 행은 반 칸 오프셋(벌집 배열)
+            const offset = (ry % 2) ? gap / 2 : 0;
+            for (let c = 0; c < cols; c++) {
+                let x = left + c * gap + offset;
+                // 가장 왼/오른쪽이 화면 밖으로 나가지 않게 보정
+                if (x < left + r) x = left + r;
+                if (x > right - r) x = right - r;
+
+                const body = scene.matter.add.circle(x, y + ry * rowGap, r, {
+                    isStatic: true, restitution: rest, friction: 0, frictionStatic: 0
+                });
+                scene.pegBodies.add(body);
+                scene.obstacles.push(scene.add.image(x, y + ry * rowGap, 'pegDot'));
             }
-        });
+        }
     }
 
-    // function createSwirl(x, y, size = 100) {
-    //     // 센서 물리 바디 (충돌만 탐지)
-    //     const body = scene.matter.add.rectangle(x, y, size, size, {
-    //         isStatic: true,
-    //         isSensor: true
-    //     });
-    //
-    //     // 🔥 화면에 보이는 건 Graphics → Rectangle (노란, 반투명)
-    //     const graphic = scene.add.rectangle(x, y, size, size, 0xffff00, 0.3).setOrigin(0.5);
-    //
-    //     // 그래픽을 Matter Body에 붙이기
-    //     scene.matter.add.gameObject(graphic, body);
-    //
-    //     // 배열 등록
-    //     scene.obstacles.push(graphic);
-    //     scene.swirlBodies.push(body);
-    // }
+    // 소용돌이(난기류)
+    function createSwirl(x, y, radius = 120, strength = 0.0016, tangential = 1.0, outward = -0.10) {
+        const body = scene.matter.add.circle(x, y, radius, { isStatic:true, isSensor:true });
+        scene.swirlMap.set(body, { strength, tangential, outward });
+
+        const ring1 = scene.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.85);
+        const ring2 = scene.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.6).setScale(0.72);
+        scene.tweens.add({ targets: ring1, angle:360, duration:3600, repeat:-1, ease:'Linear' });
+        scene.tweens.add({ targets: ring2, angle:-360, duration:5000, repeat:-1, ease:'Linear' });
+
+        const orbit = scene.add.container(x, y);
+        for (let i=0;i<8;i++){
+            const dot = scene.add.image(0,0,'orbitDot').setAlpha(0.9);
+            const a = (i/8)*Math.PI*2; dot.x = Math.cos(a)* (radius-14); dot.y = Math.sin(a)*(radius-14);
+            orbit.add(dot);
+        }
+        scene.tweens.add({ targets: orbit, angle: 360, duration: 3000, repeat:-1, ease:'Linear' });
+
+        scene.obstacles.push(ring1, ring2, orbit);
+    }
+
+    // 컨베이어
+    function createConveyor(x, y, w, h, dir = +1, force = 0.0010) {
+        const body = scene.matter.add.rectangle(x, y, w, h, { isStatic:true, isSensor:true });
+        scene.conveyorMap.set(body, { dir: Math.sign(dir) || +1, force });
+        const tile = scene.add.tileSprite(x,y,w,h,'arrowTile').setAlpha(0.85).setTint(0x7dd3fc);
+        scene.tweens.add({ targets: tile, tilePositionX: dir>0? 64 : -64, duration:800, repeat:-1, ease:'Linear' });
+        scene.obstacles.push(tile);
+    }
+
+    // 끈적존
+    function createSticky(x, y, w) {
+        const h = 24;
+        const body = scene.matter.add.rectangle(x, y, w, h, { isStatic:true, isSensor:true });
+        scene.stickySet.add(body);
+        const goo = scene.add.image(x,y,'goo').setDisplaySize(w, h*2).setAlpha(0.85);
+        scene.tweens.add({ targets: goo, scaleY: {from: goo.scaleY*0.95, to: goo.scaleY*1.05}, duration:1200, yoyo:true, repeat:-1, ease:'Sine.inOut' });
+        scene.obstacles.push(goo);
+    }
+
+    // 업드래프트(위로 부는 바람)
+    // 업드래프트(위로 부는 바람) — 펄스형
+    function createUpdraft(x, y, w, h, strength = 0.0040, onMs = 1100, offMs = 700, phaseMs = 0) {
+        const body = scene.matter.add.rectangle(x, y, w, h, { isStatic: true, isSensor: true });
+
+        // 비주얼
+        const tile = scene.add.tileSprite(x, y, w, h, 'upTile').setAlpha(0.9);
+        scene.tweens.add({ targets: tile, tilePositionY: -48, duration: 700, repeat: -1, ease: 'Linear' });
+
+        const fan = scene.add.image(x, y + h/2 + 26, 'fan').setAlpha(0.95).setTint(0x7dd3fc);
+        scene.tweens.add({ targets: fan, angle: 360, duration: 1000, repeat: -1, ease: 'Linear' });
+
+        const emitter = scene.add.particles(0,0,'windDot', {
+            x: { min: x - w/2 + 8, max: x + w/2 - 8 },
+            y: y + h/2,
+            lifespan: 900,
+            speedY: { min: -160, max: -240 },
+            speedX: { min: -15, max: 15 },
+            quantity: 2,
+            frequency: 60,
+            alpha: { start: 0.7, end: 0 },
+            scale: { start: 1, end: 0.4 }
+        });
+        emitter.setDepth(10);
+
+        // 존 레지스트리에 물리/시각 상태 모두 저장
+        if (!scene.updraftMap) scene.updraftMap = new Map();
+        scene.updraftMap.set(body, {
+            strength, on: onMs, off: offMs, t0: scene.time.now + phaseMs,
+            tile, fan, emitter, _emitting: true
+        });
+
+        // 매 프레임 ON/OFF에 맞춰 비주얼 갱신(한 번만 훅킹)
+        if (!scene._updraftUpdater) {
+            scene._updraftUpdater = (time) => {
+                if (!scene.updraftMap) return;
+                const now = scene.time.now;
+                scene.updraftMap.forEach((z) => {
+                    const T = (z.on || 1000) + (z.off || 1000);
+                    const t = ((now - (z.t0 || 0)) % T + T) % T;
+                    const active = t < (z.on || 1000);
+
+                    // 시각 효과 토글
+                    if (z.tile) z.tile.setAlpha(active ? 0.95 : 0.35);
+                    if (z.fan)  z.fan.setTint(active ? 0xffffff : 0x5b8ab0);
+                    if (z.emitter) {
+                        if (active && !z._emitting) { z.emitter.start(); z._emitting = true; }
+                        else if (!active && z._emitting) { z.emitter.stop();  z._emitting = false; }
+                    }
+                });
+            };
+            scene.events.on('update', scene._updraftUpdater);
+        }
+
+        scene.obstacles.push(tile, fan, emitter);
+    }
 
     // ── 배치
-    createPendulum(config.width / 2,       800, 200,  0.08);
-    createMover   (config.width / 2,      1200, 150, 150, 1500);
-    createPendulum(config.width / 2 - 100, 1600, 150, -0.12, 0xff0000);
-    createMover   (config.width / 2 + 100, 2000, 100, 200, 1000);
-    // createSwirl   (config.width / 2,      2500);
-    createPendulum(config.width / 2,      3000, 220,  0.10, 0x00ff00);
-    createMover   (config.width / 2,      3200, 180, 180, 1800, 0xff00ff);
-    // createSwirl   (config.width / 2,      3500);
-}
+    createSpinner(config.width/2, 900, 240, 0.10, 0xff8bd1, true);
+    createMover  (config.width/2, 1200, 180, 180, 1700, 0x93c5fd);
+
+    createPegFieldFullWidth(1650, 7, 70, 24, 10, 0.85);
+
+    createSwirl   (config.width/2 - 140, 2300, 130, 0.0016,  1.0, -0.10);
+    createSwirl   (config.width/2 + 140, 2500, 130, 0.0016, -1.0, -0.10);
+    createConveyor(config.width/2,       2650, 360, 22, +1,   0.0010);
+    createSticky  (config.width/2,       2800, 420);
+
+    createSpinner (config.width/2, 3050, 280, -0.11, 0x34d399, true);
+    createMover   (config.width/2 - 120, 3300, 140, 220, 1400, 0xfca5a5);
+    createMover   (config.width/2 + 120, 3450, 140, -220, 1400, 0xfca5a5);
+
+    // ── 피니시 업드래프트 (Y-레일 내부, 펄스형)
+    createUpdraft(config.width/2 - 60, 3840, 120, 240, 0.0060, 1000, 700,   0);   // 왼쪽, 먼저 ON
+    createUpdraft(config.width/2 + 60, 3840, 120, 240, 0.0060, 1000, 700, 500);   // 오른쪽, 반 박자 뒤 ON
+} // ← 이 괄호 바로 위에 배치 블록이 들어가야 합니다.
 
 function createGoalZone(scene) {
     const goalX = config.width / 2;
@@ -827,101 +1049,162 @@ function createGoalZone(scene) {
 }
 
 function registerCollisionHandlers(scene) {
-    if (scene._collisionsReady) return;  // 중복 등록 방지
+    if (scene._collisionsReady) return;
     scene._collisionsReady = true;
 
     const MatterJS = Phaser.Physics.Matter.Matter;
 
-    // Matter.Body → 우리 players[]의 플레이어 객체 찾기
+    // 업드래프트 ON/OFF 판정
+    function isUpdraftActive(z, scene) {
+        const now = scene.time.now;
+        const T = (z.on || 1000) + (z.off || 1000);
+        const t = ((now - (z.t0 || 0)) % T + T) % T;
+        return t < (z.on || 1000);
+    }
+
+    // 플레이어 바디 찾기
     function asPlayer(body) {
         return players.find(p => p?.body?.body === body) || null;
     }
 
-    // 상단 파란 바(좌/우)와 처음 부딪힐 때 방향 반전 튕김
+    // 상단 파란 바 접촉 시 초기 튕김
     function bounceOnBarrier(playerObj, which) {
         const mBody = playerObj.body.body;
         const v = mBody.velocity;
-        const push = 1.15;
-        const minX = 0.9;
+        const push = 1.1;
+        const minX = 0.8;
         const nextVX = (which === 'L')
             ? Math.max(Math.abs(v.x), minX) * push
             : -Math.max(Math.abs(v.x), minX) * push;
-        const nextVY = (v.y < 0.5 ? -1.2 : v.y * -0.35);
+        const nextVY = (v.y < 0.5 ? -1.0 : v.y * -0.33);
         MatterJS.Body.setVelocity(mBody, { x: nextVX, y: nextVY });
     }
 
-    // 골인/바리어 첫 접촉 처리
+    // ▶ 업드래프트 "입장 킥" : 영역에 갓 들어왔고 ON이면 한 번에 위로 차올림
+    function kickUpdraft(p, otherBody) {
+        if (!p || !scene.updraftMap) return;
+        const z = scene.updraftMap.get(otherBody);
+        if (!z || !isUpdraftActive(z, scene)) return;
+
+        const mBody = p.body.body;
+        const v = mBody.velocity;
+
+        // 충분히 내려오고 있을 때만 강하게 반전
+        if (v.y > 1.2) {
+            const targetVy = Math.min(-6.0, -v.y * 0.55); // 한 번에 위로
+            MatterJS.Body.setVelocity(mBody, { x: v.x, y: targetVy });
+        }
+    }
+
+    // ─── collisionstart: 골인/바리어/업드래프트 입장 킥 ───
     scene.matter.world.on('collisionstart', (event) => {
         for (const { bodyA, bodyB } of event.pairs) {
             const pA = asPlayer(bodyA);
             const pB = asPlayer(bodyB);
 
-            // 플레이어 ↔ 골인지역
+            // 골인 처리
             if (pA && scene.goalZone?.body === bodyB) onPlayerFinish(scene, pA, pA.name);
             else if (pB && scene.goalZone?.body === bodyA) onPlayerFinish(scene, pB, pB.name);
 
-            // 플레이어 ↔ 상단 바리어(튕김)
+            // 상단 바 첫 접촉 튕김
             if (pA && bodyB === scene.leftBarrierBody)  bounceOnBarrier(pA, 'L');
             if (pA && bodyB === scene.rightBarrierBody) bounceOnBarrier(pA, 'R');
             if (pB && bodyA === scene.leftBarrierBody)  bounceOnBarrier(pB, 'L');
             if (pB && bodyA === scene.rightBarrierBody) bounceOnBarrier(pB, 'R');
+
+            // ⬇ 추가: 업드래프트 입장 킥
+            if (pA) kickUpdraft(pA, bodyB);
+            if (pB) kickUpdraft(pB, bodyA);
         }
     });
 
-    // --- 상단 바 위 멈춤 방지: 지속 nudge + 일정 시간 후 킥 ---
-    const VTOP_MIN_SPEED   = 0.6;   // '거의 정지' 판정 속도
-    const VTOP_PUSH_X      = 0.002; // 접촉 유지 동안 계속 미는 힘(X)
-    const VTOP_PUSH_UP     = 0.0005; // 살짝 위로 들어올리는 힘(Y)
-    const VTOP_KICK_AFTER  = 18;    // 정지 프레임 누적 임계(≈ 0.2s @60fps)
-    const VTOP_KICK_VX     = 1.8;   // 킥 시 X 속도
-    const VTOP_KICK_VY     = -0.6;  // 킥 시 Y 속도(아주 약간 위)
+    // ─── collisionactive: 폴스존(난기류/컨베이어/끈적/업드래프트 연속 밀기) + 멈춤 방지 ───
+    const VTOP_MIN_SPEED = 0.6;
+    const VTOP_PUSH_X    = 0.002;
+    const VTOP_PUSH_UP   = 0.0005;
+    const VTOP_KICK_AFTER= 18;
+    const VTOP_KICK_VX   = 1.8;
+    const VTOP_KICK_VY   = -0.6;
 
     scene.matter.world.on('collisionactive', (event) => {
         for (const { bodyA, bodyB } of event.pairs) {
             const pA = asPlayer(bodyA);
             const pB = asPlayer(bodyB);
 
-            // 필요 시 스월(난기류) 힘도 적용
-            const maybeSwirl = (p, otherBody) => {
-                if (!p || !scene.swirlBodies || scene.swirlBodies.length === 0) return;
-                if (scene.swirlBodies.includes(otherBody)) {
-                    MatterJS.Body.applyForce(p.body.body, p.body.body.position, {
-                        x: (Math.random() - 0.5) * 0.0004,
-                        y: -0.0012
-                    });
-                }
+            // 난기류(소용돌이)
+            const applySwirl = (p, other) => {
+                const z = p && scene.swirlMap && scene.swirlMap.get(other);
+                if (!z) return;
+                const mBody = p.body.body, pos = mBody.position;
+                const cx = other.position.x, cy = other.position.y;
+                const dx = pos.x - cx, dy = pos.y - cy;
+                const dist = Math.max(1, Math.hypot(dx, dy));
+                const nx = dx / dist, ny = dy / dist;   // 중심→플레이어
+                const tx = -ny, ty = nx;                // 접선
+                const falloff = Math.min(1, (other.circleRadius || 120) / dist);
+                const fx = (z.tangential * tx + z.outward * nx) * z.strength * falloff;
+                const fy = (z.tangential * ty + z.outward * ny) * z.strength * falloff;
+                if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
+                MatterJS.Body.applyForce(mBody, pos, { x: fx, y: fy });
             };
 
-            // 바 위 멈춤 예방 nudge/kick
+            // 컨베이어
+            const applyConveyor = (p, other) => {
+                const z = p && scene.conveyorMap && scene.conveyorMap.get(other);
+                if (!z) return;
+                const mBody = p.body.body;
+                if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
+                MatterJS.Body.applyForce(mBody, mBody.position, { x: z.dir * z.force, y: 0 });
+            };
+
+            // 끈적존(감속)
+            const applySticky = (p, other) => {
+                if (!p || !scene.stickySet || !scene.stickySet.has(other)) return;
+                const mBody = p.body.body;
+                const v = mBody.velocity;
+                MatterJS.Body.applyForce(mBody, mBody.position, { x: -v.x * 0.0009, y: -v.y * 0.0009 });
+            };
+
+            // 업드래프트 연속 밀기(속도 비례 강화)
+            const applyUpdraft = (p, other) => {
+                const z = p && scene.updraftMap && scene.updraftMap.get(other);
+                if (!z || !isUpdraftActive(z, scene)) return;
+
+                const mBody = p.body.body;
+                if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
+
+                const vy = mBody.velocity.y; // + 아래로
+                const scale = Phaser.Math.Clamp(vy * 0.02, 0, 0.08);
+                const base  = z.strength;
+                const jitter = (Math.random() - 0.5) * base * 0.4;
+
+                MatterJS.Body.applyForce(mBody, mBody.position, { x: jitter, y: -(base + scale) });
+            };
+
             const nudgeIfNeeded = (p, otherBody) => {
-                if (!p || otherBody == null) return;
+                if (!p || !otherBody) return;
 
-                // 스월 처리(선택적)
-                maybeSwirl(p, otherBody);
+                // 폴스존 적용
+                applySwirl(p, otherBody);
+                applyConveyor(p, otherBody);
+                applySticky(p, otherBody);
+                applyUpdraft(p, otherBody);
 
-                // 상단 바리어가 아니면 스킵
+                // 상단 바 거의 멈춤 방지
                 const isLeft  = (otherBody === scene.leftBarrierBody);
                 const isRight = (otherBody === scene.rightBarrierBody);
                 if (!isLeft && !isRight) return;
 
                 const mBody = p.body.body;
                 const v = mBody.velocity;
-
-                // 잠들었으면 깨우기
-                if (mBody.isSleeping && MatterJS.Sleeping) {
-                    MatterJS.Sleeping.set(mBody, false);
-                }
+                if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
 
                 const almostStill = Math.abs(v.x) < VTOP_MIN_SPEED && Math.abs(v.y) < VTOP_MIN_SPEED;
                 if (almostStill) {
-                    const dir = isLeft ? +1 : -1; // 중앙을 향하는 방향
-                    // 지속적인 미세 밀기
+                    const dir = isLeft ? +1 : -1;
                     MatterJS.Body.applyForce(mBody, mBody.position, {
-                        x: dir * VTOP_PUSH_X,
-                        y: -VTOP_PUSH_UP
+                        x: dir * VTOP_PUSH_X, y: -VTOP_PUSH_UP
                     });
-
-                    // 누적 정지 프레임 → 한 번 강하게 차내리기
                     p._stuckFrames = (p._stuckFrames || 0) + 1;
                     if (p._stuckFrames > VTOP_KICK_AFTER) {
                         MatterJS.Body.setVelocity(mBody, { x: dir * VTOP_KICK_VX, y: VTOP_KICK_VY });
@@ -936,6 +1219,13 @@ function registerCollisionHandlers(scene) {
             nudgeIfNeeded(pB, bodyA);
         }
     });
+}
+
+function isUpdraftActive(z, scene) {
+    const now = scene.time.now;
+    const T = (z.on || 1000) + (z.off || 1000);
+    const t = ((now - (z.t0 || 0)) % T + T) % T;
+    return t < (z.on || 1000);
 }
 
 function makeSolidTexture(scene, key, w, h, color = 0xffffff, alpha = 1) {
@@ -977,33 +1267,30 @@ function onPlayerFinish(scene, p, name) {
 }
 
 function createLeaderboard(scene) {
-    // 제거/재생성
     scene.lbLayer?.destroy();
     const layer = scene.add.layer().setDepth(8000);
     scene.lbLayer = layer;
 
-    // 미니맵에 보이지 않게
     if (scene.minimapCamera) scene.minimapCamera.ignore(layer);
 
-    const w = 180, h = config.height - 20;
+    const w = 190, h = config.height - 20;
     const x = config.width - w - 10, y = 10;
 
     const bg = scene.add.graphics().setScrollFactor(0);
-    bg.fillStyle(0x0d1116, 0.85).fillRoundedRect(x, y, w, h, 12);
-    bg.lineStyle(2, 0x00c3ff, 1).strokeRoundedRect(x, y, w, h, 12);
+    bg.fillStyle(0x0f1729, 0.82).fillRoundedRect(x, y, w, h, 12);
+    bg.lineStyle(2, 0x5eead4, 1).strokeRoundedRect(x, y, w, h, 12); // 민트 네온
     layer.add(bg);
 
     const title = scene.add.text(x + 12, y + 10, "📜 순위", {
-        fontSize: '16px', fontFamily: 'Orbitron', color: '#a8e5ff'
+        fontSize: '16px', fontFamily: 'Orbitron', color: '#c7d2fe'
     }).setScrollFactor(0);
     layer.add(title);
 
-    // 리스트 배치정보 & 아이템 배열
     scene._lbStartX = x + 12;
     scene._lbStartY = y + 36;
     scene._lbWidth  = w - 24;
-    scene._lbLineH  = 18;          // 14px 폰트 기준 줄 간격
-    scene.lbItems   = [];          // [{rankTx,nameTx,flagTx}]
+    scene._lbLineH  = 18;
+    scene.lbItems   = [];
 }
 
 function updateLeaderboard(scene) {
