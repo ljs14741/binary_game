@@ -37,6 +37,8 @@ const BALL_OUTLINE_COLOR = 0xffffff; // ← 항상 흰색
 const BALL_INNER_W = 1;      // 안쪽 림 두께(0이면 끔)
 const BALL_INNER_A = 0.75;   // 안쪽 림 알파
 const BASE_W = 1000, BASE_H = 720;
+const MatterJS = Phaser.Physics.Matter.Matter;
+const bodyToPlayer = new Map();
 let _kbLocked = false;
 
 window.onload = () => {
@@ -83,8 +85,12 @@ function create() {
     this.cameras.main.setBounds(0, 0, config.width, 4000);
     this.matter.world.setBounds(0, 0, config.width, 4000);
 
+    registerCollisionHandlers(this);
+
     this.uiLayer = this.add.layer();
     this.uiLayer.setDepth(1000);
+
+    this.matter.world.engine.enableSleeping = false;
 
     createGameSetupUI(this);
     this.cannon = this.add.image(config.width / 2, 4000, 'cannon').setOrigin(0.5, 1);
@@ -586,7 +592,7 @@ function startGame(scene) {
 
     console.log("🎮 참가자 리스트:", playerNicknames);
 
-    // 3) 설정 UI 싹 정리(레이어 통째로 제거 → 미니맵에도 안 남음)
+    // 3) 설정 UI 정리
     overlay?.remove();
     scene.uiLayer?.destroy();
     uiElements = {};
@@ -596,7 +602,6 @@ function startGame(scene) {
     lastWinner = null;
     scene.winner = null;
 
-    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
     const startX = config.width / 2;
     const startY = 3800;
     const launchSpeed = 110;
@@ -610,8 +615,8 @@ function startGame(scene) {
         const player = scene.matter.add.gameObject(ballImg);
         player.setCircle(BALL_RADIUS);
         player.setBounce(0.8);
-        player.setFrictionAir(0.02);
-        player.setFixedRotation();
+        + player.setFriction(0).setFrictionStatic(0).setFrictionAir(0.02); // ← 추가
+        + player.setFixedRotation();
         player.setIgnoreGravity(true);
 
         const label = scene.add.text(startX, startY - 25, playerNicknames[i], {
@@ -629,39 +634,22 @@ function startGame(scene) {
             rank: null
         });
 
-        // 2초 후 발사
+        // 2초 후 개별 발사 (루프 안: OK)
         scene.time.delayedCall(2000, () => {
-            player.setIgnoreGravity(false); // 중력 적용
-            player.setVelocity(0, -launchSpeed); // 위로 발사
-
-            // 1100ms 후 충돌 및 구성 설정
-            scene.time.delayedCall(1100, () => {
-                if (scene.cannon?.destroy) scene.cannon.destroy();
-
-                createGoalZone(scene);
-                createObstacles(scene);
-                checkWin(scene);
-
-                // 장애물 충돌 이벤트 등록
-                scene.matter.world.on('collisionstart', (event) => {
-                    event.pairs.forEach(({ bodyA, bodyB }) => {
-                        scene.obstacles.forEach(obstacle => {
-                            if (
-                                (bodyA === player.body.body && bodyB === obstacle.body) ||
-                                (bodyB === player.body.body && bodyA === obstacle.body)
-                            ) {
-                                // console.log(`🚀 플레이어 ${playerNicknames[i]} 장애물 충돌!`);
-                                const angularForce = obstacle.body.angularVelocity * 2;
-                                const vx = Phaser.Math.Between(-200, 200) + angularForce;
-                                const vy = Phaser.Math.Between(-300, -100);
-                                player.setVelocity(vx, vy);
-                            }
-                        });
-                    });
-                });
-            });
+            player.setIgnoreGravity(false);
+            player.setVelocity(0, -launchSpeed);
         });
     }
+
+    // ✅ 장애물/골인지역/승리판정은 "한 번만" 생성 (루프 밖)
+    //    2초 발사 + 1.1초 대기 = 3100ms 후에 한 번만 생성
+    scene.time.delayedCall(3100, () => {
+        if (scene.cannon?.destroy) scene.cannon.destroy();
+        createGoalZone(scene);
+        createObstacles(scene);
+        checkWin(scene);
+    });
+
     createMinimap(scene);
     createLeaderboard(scene);
 }
@@ -704,83 +692,78 @@ function createMinimap(scene) {
 // 확장된 장애물 구성 (진자, 왕복, 난기류 다양하게 배치)
 function createObstacles(scene) {
     scene.obstacles = [];
+    scene.swirlBodies = [];
 
-    const Matter = Phaser.Physics.Matter.Matter;
+    const MatterJS = Phaser.Physics.Matter.Matter;
 
-    // ✅ 진자형 장애물 생성 함수
-    function createPendulum(x, y, width, angularVelocity, color = 0xff6600) {
-        const body = scene.matter.add.rectangle(x, y, width, 20, {
-            chamfer: { radius: 5 }, restitution: 0.5
-        });
-        const constraint = Matter.Constraint.create({
-            pointA: { x, y },
-            bodyB: body,
-            pointB: { x: 0, y: 0 },
-            length: 0,
-            stiffness: 1
-        });
-        scene.matter.world.add(constraint);
-        Matter.Body.setAngularVelocity(body, angularVelocity);
-
-        const graphic = scene.add.rectangle(x, y, width, 20, color).setOrigin(0.5);
-        scene.matter.add.gameObject(graphic, body);
-        scene.obstacles.push(graphic);
+    // ── 공통: 폭 w, 높이 20px 막대 텍스처를 만들고 Matter Image로 쓴다
+    function makeBarImage(x, y, w, color) {
+        const key = `bar_${w}_${color.toString(16)}`;
+        makeSolidTexture(scene, key, w, 20, color, 1);
+        const img = scene.matter.add.image(x, y, key, null, { restitution: 0.5 });
+        img.setOrigin(0.5);
+        img.setFriction(0).setFrictionStatic(0).setFrictionAir(0);
+        return img;
     }
 
-    // ✅ 왕복 장애물 생성 함수
+    // ✅ 진자: 월드 포인트에 힌지로 고정 + 각속도 부여
+    function createPendulum(x, y, width, angularVelocity, color = 0xff6600) {
+        const bar = makeBarImage(x, y, width, color);
+        const hinge = MatterJS.Constraint.create({
+            pointA: { x, y }, bodyB: bar.body, pointB: { x: 0, y: 0 }, length: 0, stiffness: 1
+        });
+        scene.matter.world.add(hinge);
+        // 살짝 회전 시작(감쇠 없도록 위에서 마찰 0으로 설정)
+        bar.setAngularVelocity(angularVelocity);
+        scene.obstacles.push(bar);
+    }
+
+    // ✅ 왕복: 정적 바디 + 트윈으로 이동, 바디 위치 동기화
     function createMover(x, y, width, range, duration, color = 0x00ffff) {
-        const body = scene.matter.add.rectangle(x, y, width, 20, { isStatic: true });
-        const graphic = scene.add.rectangle(x, y, width, 20, color).setOrigin(0.5);
-        scene.matter.add.gameObject(graphic, body);
-        scene.obstacles.push(graphic);
+        const go = makeBarImage(x, y, width, color);
+        go.setStatic(true); // 정적
+        scene.obstacles.push(go);
 
         scene.tweens.add({
-            targets: graphic,
+            targets: go,
             x: `+=${range}`,
             duration,
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut',
             onUpdate: () => {
-                scene.matter.body.setPosition(body, { x: graphic.x, y: graphic.y });
+                MatterJS.Body.setPosition(go.body, { x: go.x, y: go.y });
             }
         });
     }
 
-    // ✅ 난기류 장애물 생성 함수
-    function createSwirl(x, y, size = 100) {
-        const body = scene.matter.add.rectangle(x, y, size, size, {
-            isStatic: true,
-            isSensor: true
-        });
-        const graphic = scene.add.rectangle(x, y, size, size, 0xffff00, 0.3).setOrigin(0.5);
-        scene.matter.add.gameObject(graphic, body);
-        scene.obstacles.push(graphic);
+    // function createSwirl(x, y, size = 100) {
+    //     // 센서 물리 바디 (충돌만 탐지)
+    //     const body = scene.matter.add.rectangle(x, y, size, size, {
+    //         isStatic: true,
+    //         isSensor: true
+    //     });
+    //
+    //     // 🔥 화면에 보이는 건 Graphics → Rectangle (노란, 반투명)
+    //     const graphic = scene.add.rectangle(x, y, size, size, 0xffff00, 0.3).setOrigin(0.5);
+    //
+    //     // 그래픽을 Matter Body에 붙이기
+    //     scene.matter.add.gameObject(graphic, body);
+    //
+    //     // 배열 등록
+    //     scene.obstacles.push(graphic);
+    //     scene.swirlBodies.push(body);
+    // }
 
-        scene.matter.world.on('collisionstart', event => {
-            event.pairs.forEach(({ bodyA, bodyB }) => {
-                players.forEach(player => {
-                    const pBody = player.body.body;
-                    if ((bodyA === pBody && bodyB === body) || (bodyB === pBody && bodyA === body)) {
-                        const vx = Phaser.Math.Between(-10, 10);
-                        const vy = Phaser.Math.Between(-15, -5);
-                        player.body.setVelocity(vx, vy);
-                        // console.log('💨 난기류 영향 받음!');
-                    }
-                });
-            });
-        });
-    }
-
-    // 👉 장애물 배치
-    createPendulum(config.width / 2, 800, 200, 0.08);            // 큰 진자
-    createMover(config.width / 2, 1200, 150, 150, 1500);          // 느린 왕복
-    createPendulum(config.width / 2 - 100, 1600, 150, -0.12, 0xff0000); // 빨간 진자
-    createMover(config.width / 2 + 100, 2000, 100, 200, 1000);          // 빠른 왕복
-    createSwirl(config.width / 2, 2500);                          // 난기류
-    createPendulum(config.width / 2, 3000, 220, 0.1, 0x00ff00);   // 녹색 진자
-    createMover(config.width / 2, 3200, 180, 180, 1800, 0xff00ff); // 보라 왕복
-    createSwirl(config.width / 2, 3500);                          // 마지막 난기류
+    // ── 배치
+    createPendulum(config.width / 2,       800, 200,  0.08);
+    createMover   (config.width / 2,      1200, 150, 150, 1500);
+    createPendulum(config.width / 2 - 100, 1600, 150, -0.12, 0xff0000);
+    createMover   (config.width / 2 + 100, 2000, 100, 200, 1000);
+    // createSwirl   (config.width / 2,      2500);
+    createPendulum(config.width / 2,      3000, 220,  0.10, 0x00ff00);
+    createMover   (config.width / 2,      3200, 180, 180, 1800, 0xff00ff);
+    // createSwirl   (config.width / 2,      3500);
 }
 
 function createGoalZone(scene) {
@@ -797,102 +780,174 @@ function createGoalZone(scene) {
     const slideLength = Phaser.Math.Distance.Between(leftPathStartX, leftPathStartY, mergePointX, mergePointY);
     const slideHeight = 10;
 
-    const leftAngleRad = Math.atan2(mergePointY - leftPathStartY, mergePointX - leftPathStartX);
-    const rightAngleRad = Math.atan2(mergePointY - rightPathStartY, mergePointX - rightPathStartX);
+    const leftAngleDeg  = Phaser.Math.RadToDeg(Math.atan2(mergePointY - leftPathStartY,  mergePointX - leftPathStartX));
+    const rightAngleDeg = Phaser.Math.RadToDeg(Math.atan2(mergePointY - rightPathStartY, mergePointX - rightPathStartX));
 
-    const leftSlide = scene.matter.add.rectangle(
-        goalX - 60, goalY - 200,
-        slideLength, slideHeight,
-        {
-            isStatic: true,
-            angle: leftAngleRad
-        }
-    );
-    scene.add.rectangle(goalX - 60, goalY - 200, slideLength, slideHeight, 0xffff00).setAngle(Phaser.Math.RadToDeg(leftAngleRad));
+    // ── 슬라이드(정적 바디)
+    const slideKey = `slide_${Math.round(slideLength)}`;
+    makeSolidTexture(scene, slideKey, Math.round(slideLength), slideHeight, 0xffff00, 1);
 
-    const rightSlide = scene.matter.add.rectangle(
-        goalX + 60, goalY - 200,
-        slideLength, slideHeight,
-        {
-            isStatic: true,
-            angle: rightAngleRad
-        }
-    );
-    scene.add.rectangle(goalX + 60, goalY - 200, slideLength, slideHeight, 0xffff00).setAngle(Phaser.Math.RadToDeg(rightAngleRad));
+    const leftSlide = scene.matter.add.image(goalX - 60, goalY - 200, slideKey, null, { isStatic: true });
+    leftSlide.setOrigin(0.5).setAngle(leftAngleDeg);
 
+    const rightSlide = scene.matter.add.image(goalX + 60, goalY - 200, slideKey, null, { isStatic: true });
+    rightSlide.setOrigin(0.5).setAngle(rightAngleDeg);
+
+    // ── 상단 가로 바리어(좌/우)
     const barrierY = leftPathStartY - 5;
     const barrierThickness = 10;
 
-    const leftWidth = leftPathStartX;
-    const leftBarrier = scene.add.rectangle(leftWidth / 2, barrierY, leftWidth, barrierThickness, 0x0000ff, 0.4);
-    scene.matter.add.gameObject(leftBarrier, {
-        isStatic: true,
-        restitution: 1.2,
-        friction: 0
-    });
-
+    const leftWidth  = leftPathStartX;
     const rightWidth = config.width - rightPathStartX;
-    const rightBarrier = scene.add.rectangle(rightPathStartX + rightWidth / 2, barrierY, rightWidth, barrierThickness, 0x0000ff, 0.4);
-    scene.matter.add.gameObject(rightBarrier, {
-        isStatic: true,
-        restitution: 1.2,
-        friction: 0
+
+    const leftKey  = `barrier_L_${leftWidth}`;
+    const rightKey = `barrier_R_${rightWidth}`;
+    makeSolidTexture(scene, leftKey,  leftWidth,  barrierThickness, 0x0000ff, 0.4);
+    makeSolidTexture(scene, rightKey, rightWidth, barrierThickness, 0x0000ff, 0.4);
+
+    const leftBarrier  = scene.matter.add.image(leftWidth / 2, barrierY, leftKey,  null, { isStatic: true, restitution: 1.2, friction: 0 });
+    const rightBarrier = scene.matter.add.image(rightPathStartX + rightWidth / 2, barrierY, rightKey, null, { isStatic: true, restitution: 1.2, friction: 0 });
+
+    // ✅ 중앙(갭) 방향으로 아주 살짝 경사
+    leftBarrier.setAngle(+2);   // 오른쪽(중앙)으로 내려가도록
+    rightBarrier.setAngle(-2);  // 왼쪽(중앙)으로 내려가도록
+
+    scene.leftBarrierBody  = leftBarrier.body;
+    scene.rightBarrierBody = rightBarrier.body;
+
+    // 골인 이미지(장식)
+    scene.goalImage = scene.add.image(goalX, goalY, 'goal').setDisplaySize(200, 200);
+
+    // 골인 센서
+    const goalKey = `goalSensor`;
+    makeSolidTexture(scene, goalKey, 100, 100, 0x00ff00, 0); // 보이지 않는 센서
+    const goalGO = scene.matter.add.image(goalX, goalY, goalKey, null, { isStatic: true, isSensor: true });
+    goalGO.setOrigin(0.5);
+    scene.goalZone = goalGO;
+}
+
+function registerCollisionHandlers(scene) {
+    if (scene._collisionsReady) return;  // 중복 등록 방지
+    scene._collisionsReady = true;
+
+    const MatterJS = Phaser.Physics.Matter.Matter;
+
+    // Matter.Body → 우리 players[]의 플레이어 객체 찾기
+    function asPlayer(body) {
+        return players.find(p => p?.body?.body === body) || null;
+    }
+
+    // 상단 파란 바(좌/우)와 처음 부딪힐 때 방향 반전 튕김
+    function bounceOnBarrier(playerObj, which) {
+        const mBody = playerObj.body.body;
+        const v = mBody.velocity;
+        const push = 1.15;
+        const minX = 0.9;
+        const nextVX = (which === 'L')
+            ? Math.max(Math.abs(v.x), minX) * push
+            : -Math.max(Math.abs(v.x), minX) * push;
+        const nextVY = (v.y < 0.5 ? -1.2 : v.y * -0.35);
+        MatterJS.Body.setVelocity(mBody, { x: nextVX, y: nextVY });
+    }
+
+    // 골인/바리어 첫 접촉 처리
+    scene.matter.world.on('collisionstart', (event) => {
+        for (const { bodyA, bodyB } of event.pairs) {
+            const pA = asPlayer(bodyA);
+            const pB = asPlayer(bodyB);
+
+            // 플레이어 ↔ 골인지역
+            if (pA && scene.goalZone?.body === bodyB) onPlayerFinish(scene, pA, pA.name);
+            else if (pB && scene.goalZone?.body === bodyA) onPlayerFinish(scene, pB, pB.name);
+
+            // 플레이어 ↔ 상단 바리어(튕김)
+            if (pA && bodyB === scene.leftBarrierBody)  bounceOnBarrier(pA, 'L');
+            if (pA && bodyB === scene.rightBarrierBody) bounceOnBarrier(pA, 'R');
+            if (pB && bodyA === scene.leftBarrierBody)  bounceOnBarrier(pB, 'L');
+            if (pB && bodyA === scene.rightBarrierBody) bounceOnBarrier(pB, 'R');
+        }
     });
 
-    scene.goalImage = scene.add.image(goalX, goalY, 'goal');
-    scene.goalImage.setDisplaySize(200, 200);
+    // --- 상단 바 위 멈춤 방지: 지속 nudge + 일정 시간 후 킥 ---
+    const VTOP_MIN_SPEED   = 0.6;   // '거의 정지' 판정 속도
+    const VTOP_PUSH_X      = 0.002; // 접촉 유지 동안 계속 미는 힘(X)
+    const VTOP_PUSH_UP     = 0.0005; // 살짝 위로 들어올리는 힘(Y)
+    const VTOP_KICK_AFTER  = 18;    // 정지 프레임 누적 임계(≈ 0.2s @60fps)
+    const VTOP_KICK_VX     = 1.8;   // 킥 시 X 속도
+    const VTOP_KICK_VY     = -0.6;  // 킥 시 Y 속도(아주 약간 위)
 
-    scene.goalZone = scene.add.rectangle(goalX, goalY, 100, 100);
-    scene.matter.add.gameObject(scene.goalZone, { isSensor: true, isStatic: true });
+    scene.matter.world.on('collisionactive', (event) => {
+        for (const { bodyA, bodyB } of event.pairs) {
+            const pA = asPlayer(bodyA);
+            const pB = asPlayer(bodyB);
 
-    // 튕김 반응 처리 (속도 기반 + 최소 튕김 보장)
-    scene.matter.world.on('collisionstart', (event) => {
-        event.pairs.forEach(({ bodyA, bodyB }) => {
-            players.forEach(player => {
-                const pBody = player.body.body;
+            // 필요 시 스월(난기류) 힘도 적용
+            const maybeSwirl = (p, otherBody) => {
+                if (!p || !scene.swirlBodies || scene.swirlBodies.length === 0) return;
+                if (scene.swirlBodies.includes(otherBody)) {
+                    MatterJS.Body.applyForce(p.body.body, p.body.body.position, {
+                        x: (Math.random() - 0.5) * 0.0004,
+                        y: -0.0012
+                    });
+                }
+            };
 
-                if ((bodyA === pBody && bodyB === leftBarrier.body) || (bodyB === pBody && bodyA === leftBarrier.body)) {
-                    const velocity = player.body.body.velocity;
-                    const bounceForce = 1.5;
-                    const vx = Math.max(velocity.x, 1.5) * bounceForce;
-                    const vy = velocity.y < 0.5 ? -2 : velocity.y * -0.5;
-                    player.body.setVelocity(vx, vy);
-                    // console.log('🔵 좌측 벽 → 오른쪽으로 튕김');
+            // 바 위 멈춤 예방 nudge/kick
+            const nudgeIfNeeded = (p, otherBody) => {
+                if (!p || otherBody == null) return;
+
+                // 스월 처리(선택적)
+                maybeSwirl(p, otherBody);
+
+                // 상단 바리어가 아니면 스킵
+                const isLeft  = (otherBody === scene.leftBarrierBody);
+                const isRight = (otherBody === scene.rightBarrierBody);
+                if (!isLeft && !isRight) return;
+
+                const mBody = p.body.body;
+                const v = mBody.velocity;
+
+                // 잠들었으면 깨우기
+                if (mBody.isSleeping && MatterJS.Sleeping) {
+                    MatterJS.Sleeping.set(mBody, false);
                 }
 
-                if ((bodyA === pBody && bodyB === rightBarrier.body) || (bodyB === pBody && bodyA === rightBarrier.body)) {
-                    const velocity = player.body.body.velocity;
-                    const bounceForce = 1.5;
-                    const vx = -Math.max(velocity.x, 1.5) * bounceForce;
-                    const vy = velocity.y < 0.5 ? -2 : velocity.y * -0.5;
-                    player.body.setVelocity(vx, vy);
-                    // console.log('🔵 우측 벽 → 왼쪽으로 튕김');
+                const almostStill = Math.abs(v.x) < VTOP_MIN_SPEED && Math.abs(v.y) < VTOP_MIN_SPEED;
+                if (almostStill) {
+                    const dir = isLeft ? +1 : -1; // 중앙을 향하는 방향
+                    // 지속적인 미세 밀기
+                    MatterJS.Body.applyForce(mBody, mBody.position, {
+                        x: dir * VTOP_PUSH_X,
+                        y: -VTOP_PUSH_UP
+                    });
+
+                    // 누적 정지 프레임 → 한 번 강하게 차내리기
+                    p._stuckFrames = (p._stuckFrames || 0) + 1;
+                    if (p._stuckFrames > VTOP_KICK_AFTER) {
+                        MatterJS.Body.setVelocity(mBody, { x: dir * VTOP_KICK_VX, y: VTOP_KICK_VY });
+                        p._stuckFrames = 0;
+                    }
+                } else {
+                    p._stuckFrames = 0;
                 }
-            });
-        });
+            };
+
+            nudgeIfNeeded(pA, bodyB);
+            nudgeIfNeeded(pB, bodyA);
+        }
     });
 }
 
+function makeSolidTexture(scene, key, w, h, color = 0xffffff, alpha = 1) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.add.graphics();
+    g.fillStyle(color, alpha).fillRect(0, 0, w, h);
+    g.generateTexture(key, w, h);
+    g.destroy();
+}
 
 function checkWin(scene) {
     scene.finishOrder = [];
-
-    scene.matter.world.on('collisionstart', (event) => {
-        event.pairs.forEach(({ bodyA, bodyB }) => {
-            players.forEach((p, idx) => {
-                const pBody = p.body.body;
-                if (!pBody || p.finished) return;
-
-                const hitGoal =
-                    (bodyA === pBody && bodyB === scene.goalZone.body) ||
-                    (bodyB === pBody && bodyA === scene.goalZone.body);
-
-                if (hitGoal) {
-                    onPlayerFinish(scene, p, p.name || playerNicknames[idx]);
-                }
-            });
-        });
-    });
 }
 
 function onPlayerFinish(scene, p, name) {
