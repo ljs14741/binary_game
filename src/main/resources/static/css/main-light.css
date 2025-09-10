@@ -561,6 +561,152 @@ body {
     margin-bottom: 30px;
 }
 
+/* === Pinball 설명 섹션 강화 (라이트 테마) === */
+.description > h2 {
+    position: relative;
+    margin: 28px auto 14px;
+    padding-left: 12px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    color: #2b3a45;
+}
+.description > h2::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 4px; height: 22px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #7fb5ff, #4682B4);
+    box-shadow: 0 0 10px rgba(70, 130, 180, .25);
+}
+
+/* Ordered list: 단계형(숫자 뱃지) */
+.description ol {
+    counter-reset: step;
+    list-style: none;
+    padding-left: 0;
+    display: grid;
+    gap: 10px;
+    margin: 12px 0 20px;
+}
+.description ol li {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #e6eef6;
+    border-radius: 10px;
+    padding: 12px 12px 12px 52px;
+    text-align: left;
+    color: #2f3e4a;
+    transition: border-color .2s, transform .12s, box-shadow .2s;
+}
+.description ol li:hover {
+    border-color: #cddff0;
+    box-shadow: 0 4px 12px rgba(70,130,180,.10);
+    transform: translateY(-1px);
+}
+.description ol li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-weight: 800;
+    color: #ffffff;
+    background: linear-gradient(135deg, #7fb5ff, #4682B4);
+    box-shadow: 0 0 0 3px rgba(70,130,180,.12);
+}
+
+/* Unordered list: 특징 카드형 + 체크 아이콘 */
+.description ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 12px 0 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.description ul li {
+    position: relative;
+    background: #f9fbff;
+    border: 1px solid #e6eef6;
+    border-radius: 10px;
+    padding: 10px 12px 10px 42px;
+    text-align: left;
+    color: #2f3e4a;
+    transition: box-shadow .2s, transform .12s, border-color .2s;
+}
+.description ul li:hover {
+    border-color: #cddff0;
+    box-shadow: 0 6px 16px rgba(70,130,180,.12);
+    transform: translateY(-1px);
+}
+.description ul li::before {
+    content: "✓";
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    font-weight: 900;
+    color: #4682B4;
+    font-size: 1.05rem;
+}
+
+@media (max-width: 720px) {
+    .description ul { grid-template-columns: 1fr; }
+}
+
+/* FAQ: Q/A 블럭 */
+.description h3 {
+    margin: 16px 0 6px;
+    font-size: 1.08rem;
+    color: #315f7c;
+    position: relative;
+    padding-left: 28px;
+    text-align: left;
+}
+.description h3::before {
+    content: "Q";
+    position: absolute;
+    left: 0; top: 2px;
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    background: #e8f2ff;
+    color: #4682B4;
+    display: grid; place-items: center;
+    font-weight: 800;
+    letter-spacing: .3px;
+    border: 1px solid #d6e9ff;
+}
+.description h3 + p {
+    position: relative;
+    margin: 0 0 10px;
+    background: #f7fbff;
+    border: 1px solid #e3effa;
+    border-radius: 10px;
+    padding: 12px 14px 12px 36px;
+    text-align: left;
+    color: #2f3e4a;
+}
+.description h3 + p::before {
+    content: "A";
+    position: absolute;
+    left: 12px; top: 12px;
+    font-weight: 800;
+    color: #2bbbad; /* 답변 포인트 컬러(티얼) */
+}
+
+/* 작은 캡션/보조문구(선택) */
+.description .note {
+    margin-top: 12px;
+    font-size: .92rem;
+    color: #5e6b76;
+    opacity: .95;
+}
+
+
 /* 총알피하기 랭킹 */
 .leaderboards {
     max-width: 800px;

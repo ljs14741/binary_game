@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <title>핀볼 랜덤 뽑기 - Binary World</title>
+    <title>핀볼 랜덤 뽑기 (최대 30명 · 룰렛/사다리 대체) | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content="30명까지 가능한 랜덤 경주 핀볼! 공을 쏴서 누가 먼저 골인할지 확인해보세요.">
+    <meta name="description" content="최대 30명까지 한 번에! 경주형 핀볼 랜덤 뽑기—룰렛/사다리 대신 공정하고 재밌게 팀/자리/벌칙을 정하세요.">
     <meta name="keywords" content="핀볼, 랜덤 뽑기, 숫자 추첨, 미니게임, Binary World, 룰렛, 사다리">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="핀볼 랜덤 뽑기 - Binary World">
+    <meta property="og:title" content="핀볼 랜덤 뽑기 (최대 30명 · 룰렛/사다리 대체) | Binary World">
     <meta property="og:description" content="핀볼 방식의 랜덤 숫자 추첨 게임! 경주형 룰렛 게임으로 친구들과 즐기세요.">
     <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
     <meta property="og:url" content="https://game.binaryworld.kr/pinball">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="핀볼 랜덤 뽑기 - Binary World">
+    <meta name="twitter:title" content="핀볼 랜덤 뽑기 (최대 30명 · 룰렛/사다리 대체) | Binary World">
     <meta name="twitter:description" content="30명까지 참여 가능한 경주형 핀볼 랜덤 뽑기!">
     <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
 
@@ -49,6 +49,9 @@
 
     <meta name="_csrf" th:content="${_csrf.token}" />
 
+    <link rel="canonical" href="https://game.binaryworld.kr/pinball">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
     <link rel="stylesheet" th:href="@{/css/pinball.css}">
@@ -68,7 +71,7 @@
             <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
         </div>
 
-        <div class="game-title">🎲 핀볼 랜덤 뽑기</div>
+        <h1 class="game-title">🎲 핀볼 랜덤 뽑기</h1>
 
         <div class="game-bgm">
             <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
@@ -86,14 +89,30 @@
         </div>
 
         <div class="description">
-            <h2>게임 설명</h2>
+            <h2>게임 방법</h2>
+            <ol>
+                <li>참가 인원(최대 30명)과 닉네임을 입력합니다.</li>
+                <li>시작 버튼을 누르면 공이 발사되고 핀볼 맵을 통과합니다.</li>
+                <li>가장 먼저 골인한 참여자가 1등으로 자동 기록됩니다.</li>
+                <li>1등으로 걸린 사람이 커피 쏘기 ㅎ_ㅎ</li>
+                <li>사운드 키고 하세요~</li>
+            </ol>
+
+            <h2>핵심 특징</h2>
+            <ul>
+                <li>완전 랜덤 추첨: 물리 엔진 기반 경주형 <strong>랜덤 뽑기</strong></li>
+                <li><strong>룰렛/사다리 대체</strong>로 모임 벌칙/자리배치/팀나누기 활용</li>
+                <li>핸드폰에서도 부드럽게 동작</li>
+                <li>버그 많아서 계속 수정중</li>
+            </ul>
+
+            <h2>공정성 안내</h2>
             <p>
-                핀볼 랜덤 뽑기는 참가자를 설정하고 장애물을 통과해 최종 목적지에 먼저 도달하는 사람을 뽑는 게임입니다.<br>
-                진자, 왕복 장애물, 난기류 등 다양한 방해 요소를 넘으며 랜덤으로 승자가 결정됩니다.<br>
-                닉네임 입력 후 최대 30명까지 참가 가능하며, 완전히 공정한 '운'으로 승자가 가려집니다!
+                결과는 서버 저장 없이 클라이언트에서 실시간 물리 시뮬레이션으로만 결정됩니다.
+                반복 실행 시 매번 다른 결과가 나올 수 있으며, 조작이 불가능하도록 동일 조건에서
+                <strong>확률적으로 공정</strong>한 결과가 나오도록 설계했습니다.
             </p>
         </div>
-
     </div>
 </div>
 
