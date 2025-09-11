@@ -746,43 +746,27 @@ function createMinimap(scene) {
     scene.minimapCamera.ignore(ignoreList);
 }
 
-// 확장된 장애물 구성 (진자, 왕복, 난기류 다양하게 배치)
+// 확장된 장애물 구성 (스피너, 왕복, 플링코만 유지 — 끈적/소용돌이/컨베이어 제거)
 function createObstacles(scene) {
     scene.obstacles = [];
 
-    // 존 레지스트리
-    scene.swirlMap    = new Map();  // body -> {strength, tangential, outward}
-    scene.conveyorMap = new Map();  // body -> {dir, force}
-    scene.stickySet   = new Set();  // Set of bodies
-    scene.updraftMap  = new Map();  // body -> {strength}
+    // 존 레지스트리 (충돌 핸들러 호환을 위해 빈 컨테이너만 유지)
+    scene.swirlMap    = new Map();  // (사용 안함)
+    scene.conveyorMap = new Map();  // (사용 안함)
+    scene.stickySet   = new Set();  // (사용 안함)
+    scene.updraftMap  = new Map();  // 업드래프트는 결승역에서 사용
     scene.pegBodies   = new Set();  // 플링코 핀
 
     const MatterJS = Phaser.Physics.Matter.Matter;
 
-    // ── 공용 텍스처
+    // ── 공용 텍스처 (필요한 것들만 보장)
     const ensureTextures = () => {
-        // 소용돌이 링
-        if (!scene.textures.exists('ring')) {
+        // 플링코 핀
+        if (!scene.textures.exists('pegDot')) {
             const g = scene.add.graphics();
-            g.lineStyle(6, 0x5eead4, 0.85); g.strokeCircle(64, 64, 56);
-            g.lineStyle(3, 0x22d3ee, 0.85); g.strokeCircle(64, 64, 44);
-            g.generateTexture('ring', 128, 128); g.destroy();
-        }
-        // 궤도 점
-        if (!scene.textures.exists('orbitDot')) {
-            const g = scene.add.graphics();
-            g.fillStyle(0x7dd3fc, 1).fillCircle(4,4,4);
-            g.generateTexture('orbitDot', 8, 8); g.destroy();
-        }
-        // 컨베이어 타일
-        if (!scene.textures.exists('arrowTile')) {
-            const g = scene.add.graphics();
-            g.fillStyle(0x0b1220, 0).fillRect(0,0,64,32);
-            g.lineStyle(4, 0x7dd3fc, 0.9);
-            const A=(x,y)=>{ g.beginPath(); g.moveTo(x-10,y); g.lineTo(x+10,y); g.lineTo(x+4,y-6);
-                g.moveTo(x+10,y); g.lineTo(x+4,y+6); g.strokePath(); };
-            A(12,16); A(32,16); A(52,16);
-            g.generateTexture('arrowTile',64,32); g.destroy();
+            g.fillStyle(0x79c0ff, 1).fillCircle(6, 6, 6);
+            g.lineStyle(2, 0xffffff, 0.9).strokeCircle(6, 6, 6);
+            g.generateTexture('pegDot', 12, 12); g.destroy();
         }
         // 업드래프트 ↑ 타일
         if (!scene.textures.exists('upTile')) {
@@ -795,41 +779,21 @@ function createObstacles(scene) {
             U(12,32); U(24,24); U(36,16);
             g.generateTexture('upTile',48,48); g.destroy();
         }
-        // 끈적존
-        if (!scene.textures.exists('goo')) {
-            const g = scene.add.graphics();
-            g.fillStyle(0x9d7dff, 0.22).fillEllipse(100, 32, 200, 64);
-            g.lineStyle(3, 0xc4b5fd, 0.7).strokeEllipse(100, 32, 200, 64);
-            g.generateTexture('goo', 200, 64); g.destroy();
-        }
-        // 플링코 핀
-        if (!scene.textures.exists('pegDot')) {
-            const g = scene.add.graphics();
-            g.fillStyle(0x79c0ff, 1).fillCircle(6, 6, 6);
-            g.lineStyle(2, 0xffffff, 0.9).strokeCircle(6, 6, 6);
-            g.generateTexture('pegDot', 12, 12); g.destroy();
-        }
-        // ❗팬(업드래프트) — 좌표 회전 계산으로 블레이드 그림 (translate/rotate 사용 안함)
+        // 팬(업드래프트)
         if (!scene.textures.exists('fan')) {
             const g = scene.add.graphics();
             const cx = 48, cy = 48;
             g.lineStyle(3, 0x7dd3fc, 0.9).strokeCircle(cx, cy, 44);
             g.fillStyle(0x7dd3fc, 0.9);
-
             const drawBlade = (angleDeg) => {
                 const a = Phaser.Math.DegToRad(angleDeg);
                 const cos = Math.cos(a), sin = Math.sin(a);
                 const rot = (x, y) => ({ x: cx + x*cos - y*sin, y: cy + x*sin + y*cos });
-                // 삼각형 블레이드
-                const p1 = rot(0, 0);
-                const p2 = rot(32, 8);
-                const p3 = rot(32, -8);
+                const p1 = rot(0, 0), p2 = rot(32, 8), p3 = rot(32, -8);
                 g.fillTriangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
             };
-
             drawBlade(0); drawBlade(90); drawBlade(180); drawBlade(270);
-            g.generateTexture('fan', 96, 96);
-            g.destroy();
+            g.generateTexture('fan', 96, 96); g.destroy();
         }
         // 바람 점
         if (!scene.textures.exists('windDot')) {
@@ -839,7 +803,7 @@ function createObstacles(scene) {
     };
     ensureTextures();
 
-    // ── 도우미: 바
+    // ── 도우미: 단색 바 이미지
     function makeBarImage(x, y, w, color) {
         const key = `bar_${w}_${color.toString(16)}`;
         makeSolidTexture(scene, key, w, 20, color, 1);
@@ -865,35 +829,25 @@ function createObstacles(scene) {
             onUpdate: ()=> MatterJS.Body.setPosition(go.body, {x:go.x, y:go.y}) });
     }
 
-    // 플링코
-    // 화면 폭을 끝까지 채우되, 홀수 행은 한 칸 줄여서 가장자리 겹침 방지
-    // 화면 폭을 끝까지 채우되, 가장자리 낑김 방지(안전 여백 + 엣지 스킵)
+    // 플링코: 화면 폭 가득, 엣지 안전 여백 포함
     function createPegFieldFullWidth(y, rows = 7, rowGap = 70, margin = 24, r = 10, rest = 0.85) {
-        // 🔒 가장자리 안전 여백: 공(15) + 핀(10) + 알파 여유
-        const EDGE_PAD = BALL_RADIUS + r + 6;        // = 15 + 10 + 6 = 31px
-
-        // 양쪽 여백(마진) + 안전 여백을 반영한 유효 폭
+        const EDGE_PAD = BALL_RADIUS + r + 6; // 31px
         const left  = margin + EDGE_PAD;
         const right = config.width - margin - EDGE_PAD;
         const width = right - left;
 
-        // 기본 컬럼 수/간격
         const targetGap = 90;
         const baseCols = Math.max(5, Math.round(width / targetGap) + 1);
         const gap = width / (baseCols - 1);
 
         for (let ry = 0; ry < rows; ry++) {
             const odd = (ry % 2) === 1;
-
-            // 짝수 행: 기준 그대로 / 홀수 행: 반 칸 오프셋 + 개수 1 감소
             const startX = odd ? (left + gap / 2) : left;
             const count  = odd ? (baseCols - 1)   : baseCols;
 
             for (let i = 0; i < count; i++) {
                 const x = startX + i * gap;
                 const yy = y + ry * rowGap;
-
-                // ⛔ 가장자리 재확인: 혹시 반올림/오프셋으로 r 이내로 붙으면 스킵
                 if (x < left + r || x > right - r) continue;
 
                 const body = scene.matter.add.circle(x, yy, r, {
@@ -905,52 +859,10 @@ function createObstacles(scene) {
         }
     }
 
-    // 소용돌이(난기류)
-    function createSwirl(x, y, radius = 120, strength = 0.0016, tangential = 1.0, outward = -0.10) {
-        const body = scene.matter.add.circle(x, y, radius, { isStatic:true, isSensor:true });
-        scene.swirlMap.set(body, { strength, tangential, outward });
-
-        const ring1 = scene.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.85);
-        const ring2 = scene.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.6).setScale(0.72);
-        scene.tweens.add({ targets: ring1, angle:360, duration:3600, repeat:-1, ease:'Linear' });
-        scene.tweens.add({ targets: ring2, angle:-360, duration:5000, repeat:-1, ease:'Linear' });
-
-        const orbit = scene.add.container(x, y);
-        for (let i=0;i<8;i++){
-            const dot = scene.add.image(0,0,'orbitDot').setAlpha(0.9);
-            const a = (i/8)*Math.PI*2; dot.x = Math.cos(a)* (radius-14); dot.y = Math.sin(a)*(radius-14);
-            orbit.add(dot);
-        }
-        scene.tweens.add({ targets: orbit, angle: 360, duration: 3000, repeat:-1, ease:'Linear' });
-
-        scene.obstacles.push(ring1, ring2, orbit);
-    }
-
-    // 컨베이어
-    function createConveyor(x, y, w, h, dir = +1, force = 0.0010) {
-        const body = scene.matter.add.rectangle(x, y, w, h, { isStatic:true, isSensor:true });
-        scene.conveyorMap.set(body, { dir: Math.sign(dir) || +1, force });
-        const tile = scene.add.tileSprite(x,y,w,h,'arrowTile').setAlpha(0.85).setTint(0x7dd3fc);
-        scene.tweens.add({ targets: tile, tilePositionX: dir>0? 64 : -64, duration:800, repeat:-1, ease:'Linear' });
-        scene.obstacles.push(tile);
-    }
-
-    // 끈적존
-    function createSticky(x, y, w) {
-        const h = 24;
-        const body = scene.matter.add.rectangle(x, y, w, h, { isStatic:true, isSensor:true });
-        scene.stickySet.add(body);
-        const goo = scene.add.image(x,y,'goo').setDisplaySize(w, h*2).setAlpha(0.85);
-        scene.tweens.add({ targets: goo, scaleY: {from: goo.scaleY*0.95, to: goo.scaleY*1.05}, duration:1200, yoyo:true, repeat:-1, ease:'Sine.inOut' });
-        scene.obstacles.push(goo);
-    }
-
-    // 업드래프트(위로 부는 바람)
-    // 업드래프트(위로 부는 바람) — 펄스형
+    // 업드래프트(피니시 구간, 펄스형)
     function createUpdraft(x, y, w, h, strength = 0.0040, onMs = 1100, offMs = 700, phaseMs = 0) {
         const body = scene.matter.add.rectangle(x, y, w, h, { isStatic: true, isSensor: true });
 
-        // 비주얼
         const tile = scene.add.tileSprite(x, y, w, h, 'upTile').setAlpha(0.9);
         scene.tweens.add({ targets: tile, tilePositionY: -48, duration: 700, repeat: -1, ease: 'Linear' });
 
@@ -970,24 +882,18 @@ function createObstacles(scene) {
         });
         emitter.setDepth(10);
 
-        // 존 레지스트리에 물리/시각 상태 모두 저장
-        if (!scene.updraftMap) scene.updraftMap = new Map();
         scene.updraftMap.set(body, {
             strength, on: onMs, off: offMs, t0: scene.time.now + phaseMs,
             tile, fan, emitter, _emitting: true
         });
 
-        // 매 프레임 ON/OFF에 맞춰 비주얼 갱신(한 번만 훅킹)
         if (!scene._updraftUpdater) {
-            scene._updraftUpdater = (time) => {
-                if (!scene.updraftMap) return;
+            scene._updraftUpdater = () => {
                 const now = scene.time.now;
                 scene.updraftMap.forEach((z) => {
                     const T = (z.on || 1000) + (z.off || 1000);
                     const t = ((now - (z.t0 || 0)) % T + T) % T;
                     const active = t < (z.on || 1000);
-
-                    // 시각 효과 토글
                     if (z.tile) z.tile.setAlpha(active ? 0.95 : 0.35);
                     if (z.fan)  z.fan.setTint(active ? 0xffffff : 0x5b8ab0);
                     if (z.emitter) {
@@ -1002,17 +908,19 @@ function createObstacles(scene) {
         scene.obstacles.push(tile, fan, emitter);
     }
 
-    // ── 배치
+    // ── 배치 ─────────────────────────────────────────────
+    // 상단 스피너/왕복
     createSpinner(config.width/2, 900, 240, 0.10, 0xff8bd1, true);
     createMover  (config.width/2, 1200, 180, 180, 1700, 0x93c5fd);
 
+    // 기존 플링코(첫 구역)
     createPegFieldFullWidth(1650, 7, 70, 24, 10, 0.85);
 
-    createSwirl   (config.width/2 - 140, 2300, 130, 0.0016,  1.0, -0.10);
-    createSwirl   (config.width/2 + 140, 2500, 130, 0.0016, -1.0, -0.10);
-    createConveyor(config.width/2,       2650, 360, 22, +1,   0.0010);
-    createSticky  (config.width/2,       2800, 420);
+    // 🔥 중단 구역(빨간 박스) — 소용돌이/컨베이어/끈적임 제거하고 플링코로 꽉 채움
+    // 2000부터 12행(간격 70) → 대략 2000~(2000+11*70=2770)까지 촘촘
+    createPegFieldFullWidth(2200, 7, 70, 24, 10, 0.85);
 
+    // 하단 스피너/왕복은 유지
     createSpinner (config.width/2, 3050, 280, -0.11, 0x34d399, true);
     createMover   (config.width/2 - 120, 3300, 140, 220, 1400, 0xfca5a5);
     createMover   (config.width/2 + 120, 3450, 140, -220, 1400, 0xfca5a5);
@@ -1020,7 +928,7 @@ function createObstacles(scene) {
     // ── 피니시 업드래프트 (Y-레일 내부, 펄스형)
     createUpdraft(config.width/2 - 60, 3840, 120, 420, 0.0060, 1000, 700,   0);   // 왼쪽, 먼저 ON
     createUpdraft(config.width/2 + 60, 3840, 120, 420, 0.0060, 1000, 700, 500);   // 오른쪽, 반 박자 뒤 ON
-} // ← 이 괄호 바로 위에 배치 블록이 들어가야 합니다.
+}
 
 function createGoalZone(scene) {
     const goalX = config.width / 2;
