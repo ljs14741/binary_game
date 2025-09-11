@@ -616,16 +616,14 @@ function startGame(scene) {
         });
     }
 
-    // 2) 방어로직: 길이 맞추기
+    // 길이 방어
     if (!Array.isArray(playerNicknames) || playerNicknames.length !== playerCount) {
-        playerNicknames = Array.from({ length: playerCount }, (_, i) =>
+        playerNicknames = Array.from({ length: playerCount }, () =>
             'Player-' + Math.random().toString(36).slice(2, 6)
         );
     }
 
-    console.log("🎮 참가자 리스트:", playerNicknames);
-
-    // 3) 설정 UI 정리
+    // 설정 UI 정리
     overlay?.remove();
     scene.uiLayer?.destroy();
     uiElements = {};
@@ -640,19 +638,46 @@ function startGame(scene) {
     const launchSpeed = 110;
     const ballColors = buildBallPalette(scene, playerCount);
 
+    // ★ NEW: 스폰 방향/자리 랜덤화 ----------------------------
+    // true  → 왼쪽에서 시작해서 오른쪽 대각선(↗)
+    // false → 오른쪽에서 시작해서 왼쪽 대각선(↗)
+    const fromLeft = Phaser.Math.Between(0, 1) === 1;
+
+    // 슬롯 간격(겹치지 않게 살짝 여유)
+    const SLOT_X = BALL_DIAM + 10;      // 가로 간격
+    const SLOT_Y = BALL_RADIUS + 6;     // 세로 상승량(대각선 기울기)
+
+    // 대각선 상에 놓일 "자리 번호" 를 랜덤하게 섞어서
+    // 누가 맨 아래/맨 위가 될지 매 게임 바뀌도록 함
+    const slotOrder = Phaser.Utils.Array.NumberArray(0, playerCount - 1);
+    Phaser.Utils.Array.Shuffle(slotOrder);
+
+    const totalWidth  = (playerCount - 1) * SLOT_X;
+    const leftAnchor  = startX - totalWidth / 2;  // 가장 왼쪽 슬롯의 x
+    const rightAnchor = startX + totalWidth / 2;  // 가장 오른쪽 슬롯의 x
+    // ------------------------------------------------------
+
     for (let i = 0; i < playerCount; i++) {
         const key = `ball_${i}`;
         makeBallTexture(scene, key, ballColors[i]);
 
-        const ballImg = scene.add.image(startX, startY, key).setDisplaySize(BALL_DIAM, BALL_DIAM);
-        const player = scene.matter.add.gameObject(ballImg);
+        // ★ NEW: i번째 플레이어가 배정될 "자리"를 셔플된 번호로 결정
+        const s = slotOrder[i];
+
+        // ★ NEW: 스폰 좌표 계산(대각선)
+        const sx = fromLeft ? (leftAnchor  + s * SLOT_X)
+            : (rightAnchor - s * SLOT_X);
+        const sy = startY - s * SLOT_Y; // 위로 갈수록 조금씩 높아짐(↗)
+
+        const ballImg = scene.add.image(sx, sy, key).setDisplaySize(BALL_DIAM, BALL_DIAM);
+        const player  = scene.matter.add.gameObject(ballImg);
         player.setCircle(BALL_RADIUS);
         player.setBounce(0.8);
-        + player.setFriction(0).setFrictionStatic(0).setFrictionAir(0.02); // ← 추가
-        + player.setFixedRotation();
+        player.setFriction(0).setFrictionStatic(0).setFrictionAir(0.02);
+        player.setFixedRotation();
         player.setIgnoreGravity(true);
 
-        const label = scene.add.text(startX, startY - 25, playerNicknames[i], {
+        const label = scene.add.text(sx, sy - 25, playerNicknames[i], {
             fontSize: '14px', fill: '#ffffff', backgroundColor: 'rgba(0,0,0,0.5)',
             padding: { left: 5, right: 5, top: 2, bottom: 2 }
         }).setOrigin(0.5);
@@ -667,15 +692,14 @@ function startGame(scene) {
             rank: null
         });
 
-        // 2초 후 개별 발사 (루프 안: OK)
+        // 2초 후 일괄 발사
         scene.time.delayedCall(2000, () => {
             player.setIgnoreGravity(false);
             player.setVelocity(0, -launchSpeed);
         });
     }
 
-    // ✅ 장애물/골인지역/승리판정은 "한 번만" 생성 (루프 밖)
-    //    2초 발사 + 1.1초 대기 = 3100ms 후에 한 번만 생성
+    // 장애물/골인지역/승리판정은 한 번만 생성
     scene.time.delayedCall(3100, () => {
         if (scene.cannon?.destroy) scene.cannon.destroy();
         createGoalZone(scene);
@@ -842,31 +866,41 @@ function createObstacles(scene) {
     }
 
     // 플링코
-    // 화면 폭을 끝까지 채우는 플링코
+    // 화면 폭을 끝까지 채우되, 홀수 행은 한 칸 줄여서 가장자리 겹침 방지
+    // 화면 폭을 끝까지 채우되, 가장자리 낑김 방지(안전 여백 + 엣지 스킵)
     function createPegFieldFullWidth(y, rows = 7, rowGap = 70, margin = 24, r = 10, rest = 0.85) {
-        const left = margin;
-        const right = config.width - margin;
+        // 🔒 가장자리 안전 여백: 공(15) + 핀(10) + 알파 여유
+        const EDGE_PAD = BALL_RADIUS + r + 6;        // = 15 + 10 + 6 = 31px
+
+        // 양쪽 여백(마진) + 안전 여백을 반영한 유효 폭
+        const left  = margin + EDGE_PAD;
+        const right = config.width - margin - EDGE_PAD;
         const width = right - left;
 
-        // 목표 간격(대략 90px)이 되도록 컬럼 수 계산
+        // 기본 컬럼 수/간격
         const targetGap = 90;
-        let cols = Math.max(5, Math.round(width / targetGap) + 1);
-        const gap = width / (cols - 1);           // 실제 간격 재계산
+        const baseCols = Math.max(5, Math.round(width / targetGap) + 1);
+        const gap = width / (baseCols - 1);
 
         for (let ry = 0; ry < rows; ry++) {
-            // 홀수 행은 반 칸 오프셋(벌집 배열)
-            const offset = (ry % 2) ? gap / 2 : 0;
-            for (let c = 0; c < cols; c++) {
-                let x = left + c * gap + offset;
-                // 가장 왼/오른쪽이 화면 밖으로 나가지 않게 보정
-                if (x < left + r) x = left + r;
-                if (x > right - r) x = right - r;
+            const odd = (ry % 2) === 1;
 
-                const body = scene.matter.add.circle(x, y + ry * rowGap, r, {
+            // 짝수 행: 기준 그대로 / 홀수 행: 반 칸 오프셋 + 개수 1 감소
+            const startX = odd ? (left + gap / 2) : left;
+            const count  = odd ? (baseCols - 1)   : baseCols;
+
+            for (let i = 0; i < count; i++) {
+                const x = startX + i * gap;
+                const yy = y + ry * rowGap;
+
+                // ⛔ 가장자리 재확인: 혹시 반올림/오프셋으로 r 이내로 붙으면 스킵
+                if (x < left + r || x > right - r) continue;
+
+                const body = scene.matter.add.circle(x, yy, r, {
                     isStatic: true, restitution: rest, friction: 0, frictionStatic: 0
                 });
                 scene.pegBodies.add(body);
-                scene.obstacles.push(scene.add.image(x, y + ry * rowGap, 'pegDot'));
+                scene.obstacles.push(scene.add.image(x, yy, 'pegDot'));
             }
         }
     }
@@ -984,8 +1018,8 @@ function createObstacles(scene) {
     createMover   (config.width/2 + 120, 3450, 140, -220, 1400, 0xfca5a5);
 
     // ── 피니시 업드래프트 (Y-레일 내부, 펄스형)
-    createUpdraft(config.width/2 - 60, 3840, 120, 240, 0.0060, 1000, 700,   0);   // 왼쪽, 먼저 ON
-    createUpdraft(config.width/2 + 60, 3840, 120, 240, 0.0060, 1000, 700, 500);   // 오른쪽, 반 박자 뒤 ON
+    createUpdraft(config.width/2 - 60, 3840, 120, 420, 0.0060, 1000, 700,   0);   // 왼쪽, 먼저 ON
+    createUpdraft(config.width/2 + 60, 3840, 120, 420, 0.0060, 1000, 700, 500);   // 오른쪽, 반 박자 뒤 ON
 } // ← 이 괄호 바로 위에 배치 블록이 들어가야 합니다.
 
 function createGoalZone(scene) {
@@ -1090,8 +1124,10 @@ function registerCollisionHandlers(scene) {
         const v = mBody.velocity;
 
         // 충분히 내려오고 있을 때만 강하게 반전
-        if (v.y > 1.2) {
-            const targetVy = Math.min(-6.0, -v.y * 0.55); // 한 번에 위로
+        if (v.y > 0.8) {
+            const mult = 2;     // ← 기존 0.55보다 더 크게 반전
+            const floorVy = -15.0;  // ← 최소 위로 튀는 속도(더 세게)
+            const targetVy = Math.min(floorVy, -v.y * mult);
             MatterJS.Body.setVelocity(mBody, { x: v.x, y: targetVy });
         }
     }
@@ -1174,7 +1210,7 @@ function registerCollisionHandlers(scene) {
                 if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
 
                 const vy = mBody.velocity.y; // + 아래로
-                const scale = Phaser.Math.Clamp(vy * 0.02, 0, 0.08);
+                const scale = Phaser.Math.Clamp(vy * 0.03, 0, 0.12);
                 const base  = z.strength;
                 const jitter = (Math.random() - 0.5) * base * 0.4;
 
