@@ -36,6 +36,55 @@
     text-align:center; outline:none;
 }
 
+
+
+/* 전체화면 */
+#game-container .fs-exit{
+    position:absolute;
+    top:max(10px, env(safe-area-inset-top));
+    right:max(10px, env(safe-area-inset-right));
+    z-index:10001;
+    display:none;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid #00c3ff;
+    background:rgba(0,0,0,.6);
+    color:#fff; font-weight:700;
+    -webkit-tap-highlight-color:transparent;
+}
+@media (pointer: coarse){
+    #game-container:fullscreen .fs-exit{display:block;}
+    #game-container:-webkit-full-screen .fs-exit{display:block;}
+    #game-container.fake-fullscreen .fs-exit{display:block;}
+}
+
+#game-container.fake-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;               /* top/right/bottom/left = 0 */
+    width: 100vw !important;
+    height: 100dvh !important;         /* iOS 주소창 변동 대응 */
+    aspect-ratio: auto !important;
+    z-index: 9999 !important;
+    background: #000;                  /* 화면 경계 안 보이게 */
+}
+
+/* 캔버스도 꽉 채우기 */
+#game-container.fake-fullscreen canvas {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* 전체화면(진짜/가짜)에서만 닫기 버튼 보이기 - 벤더 프리픽스 모두 */
+#game-container.fake-fullscreen .fs-exit,
+#game-container:fullscreen .fs-exit,
+#game-container:-webkit-full-screen .fs-exit {
+    display: inline-block !important;
+}
+
+/* 전체화면 끝 */
+
 @media (max-width: 1000px) {
     #game-container {
         display: block;        /* main-dark.css의 flex 덮어쓰기 */

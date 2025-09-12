@@ -802,26 +802,6 @@ body {
 
 /* 총알피하기 랭킹 끝 */
 
-/* 전체화면 */
-#game-container .fs-exit{
-    position:absolute;
-    top:max(10px, env(safe-area-inset-top));
-    right:max(10px, env(safe-area-inset-right));
-    z-index:10001;
-    display:none;
-    padding:8px 10px;
-    border-radius:10px;
-    border:1px solid #00c3ff;
-    background:rgba(0,0,0,.6);
-    color:#fff; font-weight:700;
-    -webkit-tap-highlight-color:transparent;
-}
-@media (pointer: coarse){
-    #game-container:fullscreen .fs-exit{display:block;}
-    #game-container:-webkit-full-screen .fs-exit{display:block;}
-    #game-container.fake-fullscreen .fs-exit{display:block;}
-}
-
 /* ✅ 모바일 대응 */
 @media (max-width: 768px) {
     .container { padding: 20px 10px; }
