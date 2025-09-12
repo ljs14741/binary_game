@@ -41,6 +41,236 @@ const MatterJS = Phaser.Physics.Matter.Matter;
 const bodyToPlayer = new Map();
 let _kbLocked = false;
 
+// === 캔버스 실제 사각형과 스케일 ===
+function getCanvasEl() {
+    return document.querySelector('#game-container canvas');
+}
+function getCanvasRect() {
+    const cv = getCanvasEl();
+    return cv ? cv.getBoundingClientRect() : null;
+}
+function getCanvasScaleAndOffset() {
+    const gc = document.getElementById('game-container');
+    const gr = gc.getBoundingClientRect();
+    const cr = getCanvasRect();
+    if (!cr) return { sx: 1, sy: 1, offX: 0, offY: 0 };
+    return {
+        sx: cr.width / BASE_W,
+        sy: cr.height / BASE_H,
+        offX: cr.left - gr.left,
+        offY: cr.top - gr.top
+    };
+}
+
+function syncDomContainerToCanvas() {
+    const gc = document.getElementById('game-container');
+    const domC = getDomContainer();
+    if (!gc || !domC) return;
+
+    const apply = () => {
+        const cr = getCanvasRect();
+        if (!cr) return;
+        const gr = gc.getBoundingClientRect();
+        const left = cr.left - gr.left;
+        const top  = cr.top  - gr.top;
+        Object.assign(domC.style, {
+            position: 'absolute',
+            left:  left + 'px',
+            top:   top  + 'px',
+            width:  cr.width  + 'px',
+            height: cr.height + 'px',
+            transform: 'none',
+            WebkitTransform: 'none',
+            pointerEvents: 'auto',
+            zIndex: 2
+        });
+    };
+
+    // 즉시 1회 + 레이아웃 확정 후 1회 + 느린 브라우저 대비 1회
+    apply();
+    requestAnimationFrame(apply);
+    setTimeout(apply, 80);
+}
+
+function rebuildNicknameInputs(scene) {
+    // 열려있지 않으면 패스
+    const overlay = document.getElementById('name-overlay');
+    const hasRex  = Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length > 0;
+    if (!overlay && !hasRex) return;
+
+    // 현재 값 + 현재 포커스 index 저장
+    let values = [];
+    let focusIdx = -1;
+
+    if (overlay) {
+        const inputs = Array.from(overlay.querySelectorAll('input'));
+        values = inputs.map(inp => (inp.value || '').trim());
+        focusIdx = inputs.indexOf(document.activeElement);
+        overlay.remove();               // 네이티브 오버레이 제거
+    } else if (hasRex) {
+        values = uiElements.nameInputs.map(inp => (inp.text || inp.node?.value || '').trim());
+        const active = document.activeElement;
+        focusIdx = uiElements.nameInputs.findIndex(inp => inp?.node === active);
+        uiElements.nameInputs.forEach(inp => { try { inp.destroy(); } catch(e){} });
+        uiElements.nameInputs = [];
+    }
+
+    // seed로 사용하도록 전역에 반영
+    playerNicknames = values;
+
+    // DOM 컨테이너를 현재 캔버스에 동기화(안전)
+    syncDomContainerToCanvas();
+
+    // 현재 화면 폭에 맞춰 올바른 방식으로 다시 생성
+    if (useNativeInputs()) {
+        generateNicknameInputsNative(scene);
+    } else {
+        generateNicknameInputs(scene);
+    }
+
+    // 포커스 복원(가능하면)
+    setTimeout(() => {
+        if (useNativeInputs()) {
+            const list = document.querySelectorAll('#name-overlay input');
+            if (focusIdx >= 0 && list[focusIdx]) list[focusIdx].focus();
+        } else if (Array.isArray(uiElements.nameInputs) && uiElements.nameInputs[focusIdx]?.node) {
+            uiElements.nameInputs[focusIdx].node.focus();
+        }
+    }, 0);
+}
+
+// === 닉네임 입력창 리레이아웃(전체화면/리사이즈 시 호출) ===
+function relayoutNicknameInputs(scene) {
+    // 아무것도 열려있지 않으면 패스
+    const overlay = document.getElementById('name-overlay');
+    const hasRex = Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length > 0;
+    if (!overlay && !hasRex) return;
+
+    // 공통 그리드 파라미터 (생성 때와 동일)
+    const centerX = BASE_W / 2;
+    const frameW = 740;
+    const frameX = centerX - frameW / 2;
+    const frameY = 270;
+    const padding = 18;
+    const cellW = 120, cellH = 36, gap = 12;
+
+    const cols = Math.max(2, Math.min(6, Math.floor((frameW - padding*2 + gap) / (cellW + gap))));
+    const rows = Math.ceil(playerCount / cols);
+    const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
+
+    const gridW = cols * cellW + (cols - 1)*gap;
+    const startX = frameX + (frameW - gridW)/2 + cellW/2;
+    const startY = frameY + padding + cellH/2;
+
+    // 노란 프레임/타이틀 재도색(Phaser 쪽)
+    if (uiElements.nameFrame) {
+        uiElements.nameFrame.setVisible(true).clear()
+            .lineStyle(2, 0xffcc00, 1)
+            .fillStyle(0x000000, 0.20)
+            .fillRoundedRect(frameX, frameY, frameW, frameH, 14)
+            .strokeRoundedRect(frameX, frameY, frameW, frameH, 14);
+    }
+    if (uiElements.nameTitle) uiElements.nameTitle.setVisible(true).setPosition(centerX, frameY - 10);
+    resizeSetupPanel(scene, { rows, frameH });
+
+    // 캔버스 스케일/오프셋
+    const { sx, sy, offX, offY } = getCanvasScaleAndOffset();
+    const pxX = v => Math.round(offX + v * sx);
+    const pxY = v => Math.round(offY + v * sy);
+
+    // 1) 네이티브 오버레이 인풋(모바일) 재배치
+    if (overlay) {
+        const cells = overlay.querySelectorAll('.cell');
+        for (let i = 0; i < playerCount && i < cells.length; i++) {
+            const c = i % cols, r = Math.floor(i / cols);
+            const baseX = startX + c*(cellW + gap);
+            const baseY = startY + r*(cellH + gap);
+
+            const cell = cells[i];
+            const input = cell.querySelector('input');
+
+            cell.style.left = pxX(baseX) + 'px';
+            cell.style.top  = pxY(baseY) + 'px';
+
+            if (input) {
+                input.style.width  = Math.round(cellW * sx) + 'px';
+                input.style.height = Math.round(cellH * sy) + 'px';
+                input.style.fontSize = Math.max(12, Math.round(16 * Math.min(sx, sy))) + 'px';
+                input.style.lineHeight = input.style.height;
+            }
+        }
+    }
+
+    // 2) rexInputText(PC 등) 재배치
+    if (!overlay && hasRex) {
+        for (let i = 0; i < uiElements.nameInputs.length; i++) {
+            const inputGO = uiElements.nameInputs[i];
+            if (!inputGO) continue;
+
+            const c = i % cols, r = Math.floor(i / cols);
+            const x = Math.round((startX + c * (cellW + gap)) * sx);
+            const y = Math.round((startY + r * (cellH + gap)) * sy);
+            const w = Math.max(40, Math.round(cellW * sx));
+            const h = Math.max(24, Math.round(cellH * sy));
+            const fontPx = Math.max(12, Math.round(16 * Math.min(sx, sy)));
+
+            inputGO.setPosition(x, y);
+            if (typeof inputGO.setSize === 'function') inputGO.setSize(w, h);
+            if (inputGO.node) {
+                inputGO.node.style.width = w + 'px';
+                inputGO.node.style.height = h + 'px';
+                inputGO.node.style.fontSize = fontPx + 'px';
+                inputGO.node.style.lineHeight = h + 'px';
+            }
+        }
+        // DOM 컨테이너도 캔버스 사각형에 맞춤
+        syncDomContainerToCanvas();
+    }
+}
+
+// === 뷰포트 변화(리사이즈/회전/전체화면 토글 등) 때 공통 처리 ===
+function onViewportChange() {
+    // 먼저 DOM 컨테이너를 캔버스에 딱 맞게
+    syncDomContainerToCanvas();
+
+    // 닉네임 입력칸이 열려 있으면 "재배치"가 아니라 "재생성"으로 처리
+    if (window.__pinballScene) {
+        const overlay = document.getElementById('name-overlay');
+        const hasRex  = Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length > 0;
+        if (overlay || hasRex) {
+            rebuildNicknameInputs(window.__pinballScene);
+            return;
+        }
+    }
+    // 열려 있지 않으면 할 일 없음
+}
+
+// 한번만 바인딩
+let __reflowBound = false;
+function bindViewportReflow() {
+    if (__reflowBound) return;
+    __reflowBound = true;
+
+    const handler = () => setTimeout(onViewportChange, 0);
+    window.addEventListener('resize', handler, { passive: true });
+    window.addEventListener('orientationchange', handler, { passive: true });
+    document.addEventListener('fullscreenchange', handler);
+    document.addEventListener('webkitfullscreenchange', handler);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handler, { passive: true });
+        window.visualViewport.addEventListener('scroll',  handler, { passive: true });
+    }
+
+    // 가짜 전체화면(#game-container.fake-fullscreen) 클래스 변화를 감지
+    const gc = document.getElementById('game-container');
+    if (gc && !window.__fsObserver) {
+        window.__fsObserver = new MutationObserver(muts => {
+            for (const m of muts) if (m.attributeName === 'class') handler();
+        });
+        window.__fsObserver.observe(gc, { attributes: true, attributeFilter: ['class'] });
+    }
+}
+
 window.onload = () => {
     game = new Phaser.Game(config);
 };
@@ -96,6 +326,11 @@ function create() {
 
     createGameSetupUI(this);
     this.cannon = this.add.image(config.width / 2, 4000, 'cannon').setOrigin(0.5, 1);
+
+    window.__pinballScene = this;
+    bindViewportReflow();
+    onViewportChange();   // 최초 1회 정렬
+
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -247,7 +482,9 @@ function generateNicknameInputsNative(scene) {
     if (old) old.remove();
     uiElements.nameInputs = [];
 
-    const s = getMobileScale();            // PC=1, 모바일<1
+    // ⬇️ 전체화면/확대 축소 반영
+    const { sx, sy, offX, offY } = getCanvasScaleAndOffset();
+
     const centerX = BASE_W / 2;
     const frameW = 740;
     const frameX = centerX - frameW / 2;
@@ -259,7 +496,7 @@ function generateNicknameInputsNative(scene) {
     const rows = Math.ceil(playerCount / cols);
     const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
 
-    // 노란 프레임은 그대로 캔버스에 그림
+    // 노란 프레임(캔버스 측)
     uiElements.nameFrame.setVisible(true).clear()
         .lineStyle(2, 0xffcc00, 1)
         .fillStyle(0x000000, 0.20)
@@ -272,17 +509,18 @@ function generateNicknameInputsNative(scene) {
     const startX = frameX + (frameW - gridW)/2 + cellW/2;
     const startY = frameY + padding + cellH/2;
 
-    // 시드값 유지
     const seed = Array.isArray(playerNicknames) ? playerNicknames.slice() : [];
 
-    // 오버레이 생성
+    // 오버레이 DOM
     const gc = document.getElementById('game-container');
     const overlay = document.createElement('div');
     overlay.id = 'name-overlay';
+    // CSS: #name-overlay { position:absolute; inset:0; pointer-events:none; }
     gc.appendChild(overlay);
 
-    // 좌표/사이즈를 컨테이너 실제 픽셀로 변환
-    const px = v => Math.round(v * (s < 1 ? s : 1));
+    // 좌표 변환(컨테이너 기준). 캔버스 오프셋 + 스케일을 모두 반영
+    const pxX = v => Math.round(offX + v * sx);
+    const pxY = v => Math.round(offY + v * sy);
 
     for (let i = 0; i < playerCount; i++) {
         const c = i % cols, r = Math.floor(i / cols);
@@ -291,17 +529,18 @@ function generateNicknameInputsNative(scene) {
 
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.style.left = px(baseX) + 'px';
-        cell.style.top  = px(baseY) + 'px';
+        cell.style.left = pxX(baseX) + 'px';
+        cell.style.top  = pxY(baseY) + 'px';
 
         const input = document.createElement('input');
         input.type = 'text';
         input.maxLength = nickMaxLength;
         input.placeholder = `P${i+1}`;
         input.value = seed[i] || '';
-        input.style.width  = px(cellW) + 'px';
-        input.style.height = px(cellH) + 'px';
-        input.style.fontSize = Math.max(16, px(16)) + 'px';
+        input.style.width  = Math.round(cellW * sx) + 'px';
+        input.style.height = Math.round(cellH * sy) + 'px';
+        input.style.fontSize = Math.max(12, Math.round(16 * Math.min(sx, sy))) + 'px';
+
         input.addEventListener('touchstart', e => e.stopPropagation(), { passive:true });
         input.addEventListener('pointerdown', e => e.stopPropagation());
         input.addEventListener('mousedown', e => e.stopPropagation());
@@ -313,32 +552,33 @@ function generateNicknameInputsNative(scene) {
 
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
+
+    // 캔버스 위치가 바뀌면 오버레이도 다시 정렬
+    syncDomContainerToCanvas();
 }
 
 function generateNicknameInputs(scene) {
     if (useNativeInputs()) return generateNicknameInputsNative(scene);
 
-    // 열기 버튼 숨김 + 기존 입력 지우기
     uiElements.nicknameButton?.setVisible(false);
     uiElements.nameInputs?.forEach(i => i.destroy());
     uiElements.nameInputs = [];
 
-    const s = getMobileScale();          // PC=1, 모바일<1
+    // ⬇️ 전체화면/확대 축소 반영
+    const { sx, sy } = getCanvasScaleAndOffset();
+
     const centerX = BASE_W / 2;
     const frameW = 740;
     const frameX = centerX - frameW / 2;
     const frameY = 270;
     const padding = 18;
 
-    // 인풋 셀 기본(논리 좌표)
     const cellW = 120, cellH = 36, gap = 12;
 
-    // 칼럼/행 계산(논리 좌표 기준)
     const cols = Math.max(2, Math.min(6, Math.floor((frameW - padding*2 + gap) / (cellW + gap))));
     const rows = Math.ceil(playerCount / cols);
     const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
 
-    // 프레임(캔버스)은 논리좌표 그대로 — CSS가 캔버스 전체를 축소하므로 OK
     uiElements.nameFrame.setVisible(true).clear()
         .lineStyle(2, 0xffcc00, 1)
         .fillStyle(0x000000, 0.20)
@@ -349,61 +589,54 @@ function generateNicknameInputs(scene) {
         .setVisible(true)
         .setPosition(centerX, frameY - 10);
 
-    // 그리드 시작점(논리 좌표)
     const gridW = cols * cellW + (cols - 1) * gap;
     const startX = frameX + (frameW - gridW) / 2 + cellW / 2;
     const startY = frameY + padding + cellH / 2;
 
-    // 기존값 유지
     const keep = Array.isArray(uiElements.nameInputs) ? uiElements.nameInputs.map(i => (i?.text || '').trim()) : [];
     const seed = keep.some(Boolean) ? keep : (Array.isArray(playerNicknames) ? playerNicknames.slice() : []);
 
-    // 도우미: 모바일이면 좌표/사이즈에 s 곱(PC는 그대로)
-    const pos  = v => (s < 1 ? Math.round(v * s) : Math.round(v));
-    const scale = v => (s < 1 ? Math.round(v * s) : Math.round(v));
-    const size = (v, min=1) => (s < 1 ? Math.max(min, Math.round(v * s)) : v);
-
     for (let i = 0; i < playerCount; i++) {
         const c = i % cols, r = Math.floor(i / cols);
-        const baseX = startX + c * (cellW + gap);
-        const baseY = startY + r * (cellH + gap);
 
-        const x = scale(startX + c * (cellW + gap));
-        const y = scale(startY + r * (cellH + gap));
-        const w = size(cellW, 40);
-        const h = size(cellH, 24);
-        const fontPx = size(16, 12);
-        const padPx  = size(4, 2);
-        const borderPx = Math.max(1, Math.round(size(1)));
+        // 좌표/크기 스케일 적용
+        const x = Math.round((startX + c * (cellW + gap)) * sx);
+        const y = Math.round((startY + r * (cellH + gap)) * sy);
+        const w = Math.max(40, Math.round(cellW * sx));
+        const h = Math.max(24, Math.round(cellH * sy));
+        const fontPx = Math.max(12, Math.round(16 * Math.min(sx, sy)));
+        const padPx  = Math.max(2, Math.round(4 * Math.min(sx, sy)));
 
         const input = scene.add.rexInputText(x, y, w, h, {
             type: 'text',
             text: (seed[i] || ''),
-            fontSize: `${size(16, 12)}px`,
+            fontSize: `${fontPx}px`,
             color: '#ffffff',
             backgroundColor: '#333333',
             border: '1px solid #ffcc00',
             align: 'center',
-            padding: size(4, 2),
+            padding: padPx,
             placeholder: `P${i+1}`,
             selectAll: true,
             maxLength: nickMaxLength
         })
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setDepth(22)
+            .setDepth(22);
 
         if (i === 0) normalizeDomContainerFrom(input);
 
         wireKeyboardGuard(input.node);
 
-        scene.uiLayer?.add(input);     // 레이어에 붙여서 start 시 함께 정리됨
+        scene.uiLayer?.add(input);
         uiElements.nameInputs.push(input);
     }
 
-    // 시작 버튼 노출 + 패널 높이 조정
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
+
+    // 캔버스 위치가 바뀌면 DOM 컨테이너도 동기화
+    syncDomContainerToCanvas();
 }
 
 function useNativeInputs() {
@@ -492,21 +725,17 @@ function getMobileScale() {
 }
 
 function normalizeDomContainerFrom(inputGO) {
-    // rexInputText의 실제 HTML <input>
     const el = inputGO?.node;
     const gc = document.getElementById('game-container');
     if (!el || !gc) return;
 
-    // 이 <input>의 부모가 바로 "Phaser DOM 컨테이너"
     const domC = el.parentElement;
     if (!domC) return;
 
-    // 🔧 컨테이너가 #game-container 밖에 있으면 안으로 이동
     if (domC.parentElement !== gc) {
         gc.appendChild(domC);
     }
 
-    // 🔧 좌표계/크기 고정 (부모를 꽉 채우고 (0,0) 기준으로)
     Object.assign(domC.style, {
         position: 'absolute',
         left: '0px',
@@ -517,8 +746,12 @@ function normalizeDomContainerFrom(inputGO) {
         height: '100%',
         transform: 'none',
         WebkitTransform: 'none',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        zIndex: 2
     });
+
+    // ⬇️ 최초 한 번 동기화
+    syncDomContainerToCanvas();
 }
 
 function changePlayerCount(delta) {
