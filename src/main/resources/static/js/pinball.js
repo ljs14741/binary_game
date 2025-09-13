@@ -449,7 +449,7 @@ function createGameSetupUI(scene) {
     scene.uiLayer?.add(uiElements.nameFrame);
 
     uiElements.nameTitle?.destroy();
-    uiElements.nameTitle = scene.add.text(centerX, 0, '닉네임 입력 (최대 ' + nickMaxLength + '자)', {
+    uiElements.nameTitle = scene.add.text(centerX, 0, '닉네임 입력 (최대 ' + nickMaxLength + '자) - 변경없이 시작 가능', {
         fontSize: '20px', color: '#ffcc00', fontFamily: 'Arial', fontStyle: 'bold'
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(25).setVisible(false);
     scene.uiLayer?.add(uiElements.nameTitle);
@@ -948,6 +948,13 @@ function startGame(scene) {
     overlay?.remove();
     scene.uiLayer?.destroy();
     uiElements = {};
+
+    try {
+        const domC = getDomContainer();
+        if (domC) domC.style.pointerEvents = 'none';
+        const ov = document.getElementById('name-overlay');
+        if (ov) ov.style.pointerEvents = 'none';
+    } catch (e) {}
 
     scene.cameras.main.setBackgroundColor('#000');
     players = [];
@@ -1621,50 +1628,6 @@ function updateLeaderboard(scene) {
     scene.lbItems.length = sorted.length;
 }
 
-// ─────────────────────────────────────────────
-// 예쁜 네온-글래스 CTA 버튼 만들기 (모바일 터치 안정화 포함)
-function makeNeonPillTexture(scene, key, w, h) {
-    if (scene.textures.exists(key)) return key;
-
-    const g = scene.add.graphics();
-    const r = Math.min(22, h / 2);
-
-    // 본체 그라디언트(민트→시안)
-    g.fillGradientStyle(0x22d3ee, 0x22d3ee, 0x14b8a6, 0x14b8a6, 1);
-    g.fillRoundedRect(0, 0, w, h, r);
-
-    // 상단 유리 하이라이트
-    g.fillStyle(0xffffff, 0.08);
-    g.fillRoundedRect(8, 6, w - 16, h * 0.45, r - 8);
-
-    // 외곽 네온 라인
-    g.lineStyle(2, 0x67e8f9, 1).strokeRoundedRect(0.5, 0.5, w - 1, h - 1, r);
-
-    g.generateTexture(key, w, h);
-    g.destroy();
-    return key;
-}
-
-function makeGlowTexture(scene, key, w, h, color = 0x67e8f9) {
-    if (scene.textures.exists(key)) return key;
-
-    const pad = 20;                   // 글로우가 퍼질 여백
-    const W = w + pad * 2, H = h + pad * 2;
-    const r = Math.min(22, h / 2);
-
-    const g = scene.add.graphics();
-    // 바깥에서 안쪽으로 레이어를 쌓아 가짜 블러를 만듦
-    for (let i = 6; i >= 1; i--) {
-        const a = 0.08 * i;            // 투명도 단계
-        const grow = i * 3;            // 퍼지는 정도
-        g.fillStyle(color, a);
-        g.fillRoundedRect(pad - grow, pad - grow, w + grow * 2, h + grow * 2, r + grow);
-    }
-    g.generateTexture(key, W, H);
-    g.destroy();
-    return key;
-}
-
 function createRestartCTA(scene, opts = {}) {
     const btnW = opts.w || 240;
     const btnH = opts.h || 64;
@@ -1673,57 +1636,80 @@ function createRestartCTA(scene, opts = {}) {
     const label = opts.label || "🔁 다시하기";
     const onClick = opts.onClick || (() => window.location.reload());
 
-    const key = `cta_${btnW}x${btnH}`;
-    makeNeonPillTexture(scene, key, btnW, btnH);
+    // HUD 레이어
+    const hud = scene.add.layer().setDepth(9000);
+    if (scene.minimapCamera) scene.minimapCamera.ignore(hud);
 
-    const layer = scene.add.layer().setDepth(9000);
-    if (scene.minimapCamera) scene.minimapCamera.ignore(layer);
+    // 평면 버튼 텍스처 생성 (필요 시 1회만)
+    const key = `cta_flat_${btnW}x${btnH}`;
+    if (!scene.textures.exists(key)) {
+        const g = scene.add.graphics();
+        const r = Math.min(18, btnH / 2);
 
-    // ✅ 외곽선 없는 전용 글로우 텍스처 사용
-    const glowKey = `cta_glow_${btnW}x${btnH}`;
-    makeGlowTexture(scene, glowKey, btnW, btnH, 0x67e8f9);
-    const glow = scene.add.image(x, y, glowKey).setScrollFactor(0)
-        .setBlendMode(Phaser.BlendModes.ADD)   // 퍼지는 느낌
-        .setAlpha(0.6);
-    layer.add(glow);
+        // 본체 + 얇은 외곽선 (네온/글로우 없음)
+        g.fillStyle(0x1f2937, 0.95).fillRoundedRect(0, 0, btnW, btnH, r);
+        g.lineStyle(2, 0x7dd3fc, 1).strokeRoundedRect(0.5, 0.5, btnW - 1, btnH - 1, r - 1);
 
-    const bg = scene.add.image(x, y, key).setScrollFactor(0);
-    layer.add(bg);
+        // 살짝 상단 하이라이트(아주 약하게)
+        g.fillStyle(0xffffff, 0.05);
+        g.fillRoundedRect(6, 6, btnW - 12, Math.max(10, btnH * 0.38), Math.max(4, r - 6));
 
+        g.generateTexture(key, btnW, btnH);
+        g.destroy();
+    }
+
+    // 버튼 이미지 (이 객체 하나만 인터랙티브)
+    const bg = scene.add.image(x, y, key)
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(9001)
+        .setInteractive({ useHandCursor: true });  // PC에서 cursor:pointer
+
+    // 텍스트
     const txt = scene.add.text(x, y, label, {
         fontFamily: "Arial Black",
-        fontSize: "22px",
-        color: "#ffffff",
+        fontSize: "20px",
+        color: "#e6faff",
         align: "center",
-        stroke: "#003840",
+        stroke: "#00222a",
         strokeThickness: 3,
-        shadow: { color: "#000000", blur: 4, fill: true, offsetY: 1 }
-    }).setOrigin(0.5).setScrollFactor(0);
-    layer.add(txt);
+        shadow: { color: "#000000", blur: 2, fill: true, offsetY: 1 }
+    })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(9002);
 
-    // (이하 인터랙션 로직은 그대로)
-    const zone = scene.add.zone(x, y, btnW + 40, btnH + 24)
-        .setOrigin(0.5).setScrollFactor(0)
-        .setInteractive({ useHandCursor: true });
-    layer.add(zone);
+    hud.add([bg, txt]);
 
+    // 모바일/PC 공통 눌림 애니메이션 & 클릭 처리
     let armed = false;
-    zone.on("pointerdown", () => {
+    const press = () => {
+        if (armed) return;
         armed = true;
-        scene.tweens.add({ targets: layer, scale: 0.96, duration: 80, ease: "Quad.easeOut" });
-        bg.setAlpha(0.95);
-    });
+        scene.tweens.add({ targets: [bg, txt], scale: 0.96, duration: 80, ease: "Quad.easeOut" });
+    };
     const release = (fire) => {
+        if (!armed) return;
+        armed = false;
         scene.tweens.add({
-            targets: layer, scale: 1, duration: 120, ease: "Back.Out",
-            onComplete: () => { bg.setAlpha(1); if (fire && armed) setTimeout(onClick, 40); armed = false; }
+            targets: [bg, txt],
+            scale: 1,
+            duration: 120,
+            ease: "Back.Out",
+            onComplete: () => { if (fire) onClick(); }
         });
     };
-    zone.on("pointerup", () => release(true));
-    zone.on("pointerupoutside", () => release(false));
-    zone.on("pointerout", () => release(false));
 
-    return layer;
+    bg.on("pointerdown", () => press());
+    bg.on("pointerup", () => release(true));
+    bg.on("pointerupoutside", () => release(true)); // iOS 등에서 upoutside만 오는 케이스 대비
+    bg.on("pointerout", () => release(false));
+    bg.on("pointercancel", () => release(false));
+
+    // 혹시 브라우저가 커서를 먹으면 강제로 지정
+    if (bg.input) bg.input.cursor = 'pointer';
+
+    return { hud, bg, txt };
 }
 
 // 우승 패널: 이름 자동-맞춤 + 플레이어 색 적용 + 다시하기는 좌하단
