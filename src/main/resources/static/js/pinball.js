@@ -363,6 +363,11 @@ function create() {
 
 }
 
+function setPlayingMode(on){
+    const gc = document.getElementById('game-container');
+    if (gc) gc.classList.toggle('playing', !!on);
+}
+
 // ─────────────────────────────────────────────────────────────
 // 테마 적용: 배경 컬러 + 은은한 스타필드
 function applyTheme(scene) {
@@ -505,6 +510,7 @@ function createStyledButton(scene, x, y, label, callback, width = 100, color = "
 }
 
 function generateNicknameInputsNative(scene) {
+    setPlayingMode(false);
     uiElements.nicknameButton?.setVisible(false);
 
     const old = document.getElementById('name-overlay');
@@ -942,12 +948,12 @@ function startGame(scene) {
         );
     }
 
-    // ===== 여기서부터는 기존 코드 유지 =====
-
     // 설정 UI 정리
     overlay?.remove();
     scene.uiLayer?.destroy();
     uiElements = {};
+
+    setPlayingMode(true);
 
     try {
         const domC = getDomContainer();
