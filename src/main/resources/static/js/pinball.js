@@ -521,9 +521,7 @@ function resizeSetupPanel(scene, { rows, frameH }) {
     uiElements.startGameButton.setY(topY + panelH - 58);
 }
 
-// 버튼 생성 (개선된 스타일)
-// ⬇ 기존 createStyledButton 전체를 이 버전으로 교체하세요
-// ⬇ 기존 createStyledButton 전체를 이 버전으로 교체
+// 버튼 생성 (반복 클릭 가능 / onClick은 pointerup 때마다 실행)
 function createStyledButton(scene, cx, cy, label, onClick, width = 120, color = UI.accent) {
     const h = 44;
     const key = `btn_${width}_${h}_${color}`;
@@ -553,19 +551,20 @@ function createStyledButton(scene, cx, cy, label, onClick, width = 120, color = 
     if (scene.uiLayer) scene.uiLayer.add(hit);
     if (hit.input) hit.input.cursor = 'pointer';
 
-    // 3) 마이크로 인터랙션(히트박스는 스케일 X → 어긋남 없음)
+    // 3) 마이크로 인터랙션 (항상 클릭마다 실행)
     const press   = () => scene.tweens.add({ targets: [bg, txt], scale: 0.98, duration: 80, ease: 'Quad.easeOut' });
     const release = (fire) => scene.tweens.add({
         targets: [bg, txt], scale: 1, duration: 120, ease: 'Back.Out',
         onComplete: () => { if (fire) onClick?.(); }
     });
-    hit.on('pointerdown', press);
-    hit.on('pointerup',        () => release(true));
-    hit.on('pointerupoutside', () => release(true));
+
+    hit.on('pointerdown',     press);
+    hit.on('pointerup',        () => release(true));   // ← 클릭마다 onClick 실행
+    hit.on('pointerupoutside', () => release(false));
     hit.on('pointerout',       () => release(false));
     hit.on('pointercancel',    () => release(false));
 
-    // 4) 기존 코드 호환용 체이닝 API (setDepth/Visible/Position 등)
+    // 4) 체이닝 API
     const api = {
         setDepth: (d) => { visuals.setDepth(d); hit.setDepth(d + 0.1); return api; },
         setVisible: (v) => { visuals.setVisible(v); hit.setVisible(v); return api; },
@@ -975,6 +974,10 @@ function hexToCss(hex) {
 }
 
 function startGame(scene) {
+    // ✅ 중복 시작 방지
+    if (scene._starting || scene._gameStarted) return;
+    scene._starting = true;
+
     const overlay = document.getElementById('name-overlay');
 
     // 공백이면 P{index+1}로 대체
@@ -998,7 +1001,7 @@ function startGame(scene) {
         playerNicknames = Array.from({ length: playerCount }, (_, i) => `P${i + 1}`);
     }
 
-    // 길이/공백 방어 (혹시 수집 배열 길이가 어긋나면 보강)
+    // 길이/공백 방어
     if (!Array.isArray(playerNicknames) || playerNicknames.length !== playerCount) {
         playerNicknames = Array.from({ length: playerCount }, (_, i) =>
             safeName(playerNicknames?.[i], i)
@@ -1006,29 +1009,27 @@ function startGame(scene) {
     }
 
     // ─────────────────────────────────────────────────────
-    // 설정 UI/DOM 완전 정리(모바일 탭 가림 방지 핵심)
+    // 설정 UI/DOM 완전 정리
     // ─────────────────────────────────────────────────────
-    overlay?.remove();                 // 네이티브 입력 오버레이 제거
-    scene.uiLayer?.destroy();          // 설정 UI 레이어 제거
-    uiElements = {};                   // UI 핸들 초기화
+    overlay?.remove();
+    scene.uiLayer?.destroy();
+    uiElements = {};
 
     try {
-        // rexInputText 부모 DOM 컨테이너도 완전히 숨김
         const domC = getDomContainer();
         if (domC) {
             try { unlockDomContainer(); } catch(e) {}
-            domC.style.display = 'none';          // ← display:none이 결정타
+            domC.style.display = 'none';
             domC.style.pointerEvents = 'none';
             domC.style.zIndex = '0';
         }
     } catch (e) {}
 
-    // 입력/키보드 상태 플래그 초기화
     __typingLock = false;
     _kbLocked = false;
 
     // ─────────────────────────────────────────────────────
-    // 이하 기존 게임 시작 로직 유지
+    // 이하 기존 게임 시작 로직
     // ─────────────────────────────────────────────────────
     scene.cameras.main.setBackgroundColor('#000');
     players = [];
@@ -1071,7 +1072,7 @@ function startGame(scene) {
         const nameColor = hexToCss(ballColors[i]);
         const displayName = playerNicknames[i];
 
-        // 텍스트(먼저 만들고 사이즈 측정)
+        // 텍스트
         const nameText = scene.add.text(0, 0, displayName, {
             fontSize: '13px',
             fontFamily: UI_FONT,
@@ -1081,7 +1082,7 @@ function startGame(scene) {
             strokeThickness: 3
         }).setOrigin(0.5);
 
-        // 배지(플레이어 색 테두리)
+        // 배지
         const padX = 14, padY = 6;
         const pillW = Math.ceil(nameText.width) + padX * 2;
         const pillH = Math.max(22, Math.ceil(nameText.height) + padY);
@@ -1089,9 +1090,9 @@ function startGame(scene) {
         makePillTexture(scene, pillKey, pillW, pillH, playersColor = ballColors[i], 0x0f1729, 0.78);
         const pillImg = scene.add.image(0, 0, pillKey).setOrigin(0.5);
 
-        // 컨테이너(본체 위치 기준으로 이동)
+        // 컨테이너
         const label = scene.add.container(sx, sy - 24, [pillImg, nameText]);
-        label.setDepth(500); // 공보다 살짝 위
+        label.setDepth(500);
 
         players.push({
             body: player,
@@ -1120,6 +1121,10 @@ function startGame(scene) {
 
     createMinimap(scene);
     createLeaderboard(scene);
+
+    // ✅ 시작 완료 마킹
+    scene._starting = false;
+    scene._gameStarted = true;
 }
 
 // 둥근 배지 텍스처 생성(필 + 테두리)
@@ -1745,7 +1750,7 @@ function updateLeaderboard(scene) {
 
 function createRestartCTA(scene, opts = {}) {
     const btnW = opts.w || 240;
-    const btnH = opts.h || 64;
+    const btnH = opts.h || 64;           // ← 호출부에서 96, 110 등으로 키우면 박스/클릭영역 같이 커짐
     const x = opts.x ?? (14 + btnW / 2);
     const y = opts.y ?? (config.height - 14 - btnH / 2);
     const label = opts.label || "🔁 다시하기";
@@ -1765,34 +1770,34 @@ function createRestartCTA(scene, opts = {}) {
         g.generateTexture(key, btnW, btnH); g.destroy();
     }
 
-    // 시각 요소(입력 X)
     const bg  = scene.add.image(x, y, key).setOrigin(0.5).setScrollFactor(0).setDepth(9001);
     const txt = scene.add.text(x, y, label, {
         fontFamily: "Arial Black", fontSize: "20px", color: "#e6faff",
         align: "center", stroke: "#00222a", strokeThickness: 3,
         shadow: { color: "#000000", blur: 2, fill: true, offsetY: 1 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9002);
+
     hud.add([bg, txt]);
 
-    // 정확한 히트박스(입력 O) — 스케일 영향 없음
     const hit = scene.add.rectangle(x, y, btnW, btnH, 0x000000, 0.001)
         .setOrigin(0.5).setScrollFactor(0).setDepth(9003)
         .setInteractive({ useHandCursor: true });
 
     if (hit.input) {
         hit.input.cursor = 'pointer';
-        hit.input.alwaysEnabled = true;    // 카메라 스크롤/줌과 무관하게 입력 보장
+        hit.input.alwaysEnabled = true;
     }
 
+    let fired = false;
     const press   = () => scene.tweens.add({ targets: [bg, txt], scale: 0.96, duration: 80, ease: "Quad.easeOut" });
     const release = (fire) => scene.tweens.add({
         targets: [bg, txt], scale: 1, duration: 120, ease: "Back.Out",
-        onComplete: () => { if (fire) onClick(); }
+        onComplete: () => { if (fire && !fired) { fired = true; onClick(); } }
     });
 
-    hit.on("pointerdown", () => press());
-    hit.on("pointerup",        () => release(true));
-    hit.on("pointerupoutside", () => release(true));
+    hit.on("pointerdown",     () => press());
+    hit.on("pointerup",        () => release(true));   // ✅ 한 번만 실행
+    hit.on("pointerupoutside", () => release(false));
     hit.on("pointerout",       () => release(false));
     hit.on("pointercancel",    () => release(false));
 
@@ -1856,8 +1861,10 @@ function resetGlobals(scene){
     __typingLock = false;
     _kbLocked = false;
 
-    // 같은 Scene 인스턴스 재사용 대비
+    // ✅ 시작 플래그 초기화
     if (scene) {
+        scene._starting = false;
+        scene._gameStarted = false;
         scene._collisionsReady = false;
         if (scene._updraftUpdater) {
             try { scene.events.off('update', scene._updraftUpdater); } catch(e) {}
