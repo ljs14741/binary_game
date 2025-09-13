@@ -85,19 +85,6 @@
 
 /* 전체화면 끝 */
 
-#game-container.playing > .dom-container,
-#game-container.playing > div.dom-container,
-#game-container.playing #name-overlay {
-    pointer-events: none !important;
-}
-
-/* ▶ 캔버스 쪽 터치 제스처 안정화(iOS의 pointercancel/스크롤 제스처 줄이기) */
-#game-container canvas{
-    touch-action: manipulation;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
 @media (max-width: 1000px) {
     #game-container {
         display: block;        /* main-dark.css의 flex 덮어쓰기 */
