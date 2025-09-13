@@ -987,9 +987,19 @@ function startGame(scene) {
         player.setFixedRotation();
         player.setIgnoreGravity(true);
 
+        // const label = scene.add.text(sx, sy - 25, playerNicknames[i], {
+        //     fontSize: '14px', fill: '#ffffff', backgroundColor: 'rgba(0,0,0,0.5)',
+        //     padding: { left: 5, right: 5, top: 2, bottom: 2 }
+        // }).setOrigin(0.5);
+        const nameColor = hexToCss(ballColors[i]); // ← 공 색상을 CSS 문자열로
         const label = scene.add.text(sx, sy - 25, playerNicknames[i], {
-            fontSize: '14px', fill: '#ffffff', backgroundColor: 'rgba(0,0,0,0.5)',
-            padding: { left: 5, right: 5, top: 2, bottom: 2 }
+            fontSize: '14px',
+            fontFamily: 'Arial',
+            color: nameColor,                                // ← 닉네임 색 적용
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            padding: { left: 5, right: 5, top: 2, bottom: 2 },
+            stroke: '#000000',                               // 가독성(선택)
+            strokeThickness: 2
         }).setOrigin(0.5);
 
         players.push({
@@ -1611,78 +1621,186 @@ function updateLeaderboard(scene) {
     scene.lbItems.length = sorted.length;
 }
 
+// ─────────────────────────────────────────────
+// 예쁜 네온-글래스 CTA 버튼 만들기 (모바일 터치 안정화 포함)
+function makeNeonPillTexture(scene, key, w, h) {
+    if (scene.textures.exists(key)) return key;
+
+    const g = scene.add.graphics();
+    const r = Math.min(22, h / 2);
+
+    // 본체 그라디언트(민트→시안)
+    g.fillGradientStyle(0x22d3ee, 0x22d3ee, 0x14b8a6, 0x14b8a6, 1);
+    g.fillRoundedRect(0, 0, w, h, r);
+
+    // 상단 유리 하이라이트
+    g.fillStyle(0xffffff, 0.08);
+    g.fillRoundedRect(8, 6, w - 16, h * 0.45, r - 8);
+
+    // 외곽 네온 라인
+    g.lineStyle(2, 0x67e8f9, 1).strokeRoundedRect(0.5, 0.5, w - 1, h - 1, r);
+
+    g.generateTexture(key, w, h);
+    g.destroy();
+    return key;
+}
+
+function makeGlowTexture(scene, key, w, h, color = 0x67e8f9) {
+    if (scene.textures.exists(key)) return key;
+
+    const pad = 20;                   // 글로우가 퍼질 여백
+    const W = w + pad * 2, H = h + pad * 2;
+    const r = Math.min(22, h / 2);
+
+    const g = scene.add.graphics();
+    // 바깥에서 안쪽으로 레이어를 쌓아 가짜 블러를 만듦
+    for (let i = 6; i >= 1; i--) {
+        const a = 0.08 * i;            // 투명도 단계
+        const grow = i * 3;            // 퍼지는 정도
+        g.fillStyle(color, a);
+        g.fillRoundedRect(pad - grow, pad - grow, w + grow * 2, h + grow * 2, r + grow);
+    }
+    g.generateTexture(key, W, H);
+    g.destroy();
+    return key;
+}
+
+function createRestartCTA(scene, opts = {}) {
+    const btnW = opts.w || 240;
+    const btnH = opts.h || 64;
+    const x = opts.x ?? (14 + btnW / 2);
+    const y = opts.y ?? (config.height - 14 - btnH / 2);
+    const label = opts.label || "🔁 다시하기";
+    const onClick = opts.onClick || (() => window.location.reload());
+
+    const key = `cta_${btnW}x${btnH}`;
+    makeNeonPillTexture(scene, key, btnW, btnH);
+
+    const layer = scene.add.layer().setDepth(9000);
+    if (scene.minimapCamera) scene.minimapCamera.ignore(layer);
+
+    // ✅ 외곽선 없는 전용 글로우 텍스처 사용
+    const glowKey = `cta_glow_${btnW}x${btnH}`;
+    makeGlowTexture(scene, glowKey, btnW, btnH, 0x67e8f9);
+    const glow = scene.add.image(x, y, glowKey).setScrollFactor(0)
+        .setBlendMode(Phaser.BlendModes.ADD)   // 퍼지는 느낌
+        .setAlpha(0.6);
+    layer.add(glow);
+
+    const bg = scene.add.image(x, y, key).setScrollFactor(0);
+    layer.add(bg);
+
+    const txt = scene.add.text(x, y, label, {
+        fontFamily: "Arial Black",
+        fontSize: "22px",
+        color: "#ffffff",
+        align: "center",
+        stroke: "#003840",
+        strokeThickness: 3,
+        shadow: { color: "#000000", blur: 4, fill: true, offsetY: 1 }
+    }).setOrigin(0.5).setScrollFactor(0);
+    layer.add(txt);
+
+    // (이하 인터랙션 로직은 그대로)
+    const zone = scene.add.zone(x, y, btnW + 40, btnH + 24)
+        .setOrigin(0.5).setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
+    layer.add(zone);
+
+    let armed = false;
+    zone.on("pointerdown", () => {
+        armed = true;
+        scene.tweens.add({ targets: layer, scale: 0.96, duration: 80, ease: "Quad.easeOut" });
+        bg.setAlpha(0.95);
+    });
+    const release = (fire) => {
+        scene.tweens.add({
+            targets: layer, scale: 1, duration: 120, ease: "Back.Out",
+            onComplete: () => { bg.setAlpha(1); if (fire && armed) setTimeout(onClick, 40); armed = false; }
+        });
+    };
+    zone.on("pointerup", () => release(true));
+    zone.on("pointerupoutside", () => release(false));
+    zone.on("pointerout", () => release(false));
+
+    return layer;
+}
+
+// 우승 패널: 이름 자동-맞춤 + 플레이어 색 적용 + 다시하기는 좌하단
+// 우승 패널: 가운데 정렬 + 이름 자동-맞춤 + 공색 적용
 function showWinnerUI(scene, winnerName) {
-    // 중복 방지
     if (scene._winHudShown) return;
     scene._winHudShown = true;
 
-    const winner = scene.winner; // 게임은 계속 진행
+    const winner = scene.winner;
+    const nameColor = hexToCss(winner?.color || 0xffffff);
 
-    // === 작은 HUD 레이어(화면 고정) ===
+    // ── 우측 하단 우승 패널(더 크게, 중앙 정렬)
     const hud = scene.add.layer().setDepth(9000);
-    if (scene.minimapCamera) scene.minimapCamera.ignore(hud); // 미니맵에서 숨김
+    if (scene.minimapCamera) scene.minimapCamera.ignore(hud);
 
     const margin = 14;
-    const boxW = 280;
-    const boxH = 120;
-    const bx = config.width - margin - boxW;
+    const boxW = 420;         // ⬅ 더 키움
+    const boxH = 190;
+    const bx = config.width  - margin - boxW;
     const by = config.height - margin - boxH;
 
-    // 패널
     const panel = scene.add.graphics().setScrollFactor(0);
     panel.fillStyle(0x101418, 0.92).fillRoundedRect(bx, by, boxW, boxH, 12);
     panel.lineStyle(2, 0x00d2ff, 1).strokeRoundedRect(bx, by, boxW, boxH, 12);
     hud.add(panel);
 
-    // 타이틀
-    const title = scene.add.text(bx + 14, by + 12, "🏆 1등", {
-        fontSize: "16px", fontFamily: "Orbitron", color: "#a8e5ff"
-    }).setScrollFactor(0);
+    const title = scene.add.text(bx + boxW / 2, by + 14, "🏆 1등", {
+        fontSize: "20px", fontFamily: "Orbitron", color: "#a8e5ff", align: "center"
+    }).setOrigin(0.5, 0).setScrollFactor(0);
     hud.add(title);
 
-    // 우승자 이름
-    const name = scene.add.text(bx + 14, by + 42, winnerName, {
-        fontSize: "20px", fontFamily: "Arial", color: "#ffffff",
-        wordWrap: { width: boxW - 28, useAdvancedWrap: true }
-    }).setScrollFactor(0);
+    const name = scene.add.text(bx + boxW / 2, by + 50, winnerName || "", {
+        fontFamily: "Arial", color: nameColor, align: "center"
+    })
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0)
+        .setStroke("#000000", 5)
+        .setShadow(0, 2, "#000000", 4, true, true);
     hud.add(name);
 
-    // 다시하기 버튼
-    const btn = scene.add.text(bx + boxW - 112, by + boxH - 36, "🔁 다시하기", {
-        fontSize: "16px", fontFamily: "Arial",
-        backgroundColor: "#ff4a4a", color: "#fff",
-        fixedWidth: 110, fixedHeight: 32, align: "center",
-        padding: { top: 7 }
-    })
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setInteractive({ useHandCursor: true })
-        .on("pointerdown", () => window.location.reload())
-        .on("pointerover", () => btn.setStyle({ backgroundColor: "#ffffff", color: "#ff4a4a" }))
-        .on("pointerout",  () => btn.setStyle({ backgroundColor: "#ff4a4a", color: "#ffffff" }));
-    hud.add(btn);
+    const contentTop = title.y + title.height + 10;
+    const nameBoxW = boxW - 36;
+    const nameBoxH = (by + boxH - 16) - contentTop;
 
-    // 나타나는 애니메이션
-    scene.tweens.add({
-        targets: hud,
-        alpha: { from: 0, to: 1 },
-        y: { from: 8, to: 0 },
-        duration: 180,
-        ease: "Quad.easeOut"
+    const fitTextToBox = (txt, maxW, maxH, minPx = 22, maxPx = 96) => {
+        let lo = minPx, hi = maxPx, best = minPx;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            txt.setFontSize(mid);
+            if (txt.width <= maxW && txt.height <= maxH) { best = mid; lo = mid + 1; }
+            else hi = mid - 1;
+        }
+        txt.setFontSize(best);
+        txt.setX(bx + boxW / 2);
+        txt.setY(contentTop + Math.max(0, (nameBoxH - txt.height) / 2));
+    };
+    fitTextToBox(name, nameBoxW, nameBoxH);
+
+    scene.tweens.add({ targets: hud, alpha: { from: 0, to: 1 }, y: { from: 8, to: 0 }, duration: 180, ease: "Quad.easeOut" });
+
+    // ── 좌하단: 새 예쁜 CTA 버튼
+    createRestartCTA(scene, {
+        w: 260, h: 68,
+        x: 14 + 260 / 2,
+        y: config.height - 14 - 68 / 2,
+        label: "🔁 다시하기",
+        onClick: () => window.location.reload()
     });
 
-    // === 화면 전체 축포! (기존 HUD 주변 컨페티 코드는 제거) ===
-    playFullScreenConfetti(scene, 3000); // 3초간 전체 화면에서 컨페티
-
-    // 우승 공 하이라이트(짧게)
+    // 축포 + 우승 공 하이라이트 유지
+    playFullScreenConfetti(scene, 3000);
     if (winner?.body) {
         const pulse = scene.add.circle(winner.body.x, winner.body.y, 24, 0xffff00, 0.25).setDepth(5000);
-        scene.tweens.add({
-            targets: pulse, scale: 4, alpha: 0, duration: 900, repeat: 1,
-            onComplete: () => pulse.destroy()
-        });
+        scene.tweens.add({ targets: pulse, scale: 4, alpha: 0, duration: 900, repeat: 1, onComplete: () => pulse.destroy() });
     }
 }
+
 
 function playFullScreenConfetti(scene, duration = 3000) {
     // 텍스처 보장
