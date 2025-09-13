@@ -28,6 +28,7 @@ let lastWinner = null;
 let finishZone;
 let minimap;
 let backgroundMusic;
+let endConfettiParticles = null;
 let nickMaxLength = 10;
 const BALL_RADIUS = 15;
 const BALL_DIAM = BALL_RADIUS * 2;
@@ -1170,7 +1171,7 @@ function createMinimap(scene) {
     scene.minimapCamera.ignore(ignoreList);
 }
 
-// 확장된 장애물 구성 (스피너, 왕복, 플링코만 유지 — 끈적/소용돌이/컨베이어 제거)
+// 확장된 장애물 구성 (스피너, 왕복, 플링코 + 좌/우 가이드 디플렉터 2구간)
 function createObstacles(scene) {
     scene.obstacles = [];
 
@@ -1233,6 +1234,21 @@ function createObstacles(scene) {
         makeSolidTexture(scene, key, w, 20, color, 1);
         const img = scene.matter.add.image(x, y, key, null, { restitution: 0.6 });
         img.setOrigin(0.5).setFriction(0).setFrictionStatic(0).setFrictionAir(0);
+        return img;
+    }
+
+    // ── 도우미: 미끄러지는 가이드 디플렉터
+    function createDeflector(x, y, width, angleDeg, color = 0xfda4af, restitution = 0.35, thickness = 18) {
+        const key = `deflect_${width}_${thickness}_${color.toString(16)}`;
+        makeSolidTexture(scene, key, width, thickness, color, 1);
+        const img = scene.matter.add.image(x, y, key, null, {
+            isStatic: true,
+            restitution,           // 너무 튀지 않게
+            friction: 0.02,
+            frictionStatic: 0.02
+        });
+        img.setOrigin(0.5).setAngle(angleDeg);
+        scene.obstacles.push(img);
         return img;
     }
 
@@ -1337,19 +1353,36 @@ function createObstacles(scene) {
     createSpinner(config.width/2, 900, 240, 0.10, 0xff8bd1, true);
     createMover  (config.width/2, 1200, 180, 180, 1700, 0x93c5fd);
 
-    // 기존 플링코(첫 구역)
+    // 🔻 1구간(첫 플링코 앞) 디플렉터
+    (function placeFirstPegDeflectors(){
+        const y = 1520;               // 첫 플링코(1650) 직전
+        const inset = 90;             // 좌/우 가장자리에서 안쪽으로
+        const width = 220;            // 디플렉터 길이
+        createDeflector(inset,                 y, width,  +24, 0xfda4af, 0.35); // 좌측: \ 방향
+        createDeflector(config.width - inset,  y, width,  -24, 0xfda4af, 0.35); // 우측: / 방향
+    })();
+
+    // 첫 번째 플링코
     createPegFieldFullWidth(1650, 7, 70, 24, 10, 0.85);
 
-    // 🔥 중단 구역(빨간 박스) — 소용돌이/컨베이어/끈적임 제거하고 플링코로 꽉 채움
-    // 2000부터 12행(간격 70) → 대략 2000~(2000+11*70=2770)까지 촘촘
+    // 🔻 2구간(두 번째 플링코 앞) 디플렉터 — 요청 추가
+    (function placeSecondPegTopDeflectors(){
+        const y = 2120;               // 두 번째 플링코(2200) 직전
+        const inset = 90;
+        const width = 220;
+        createDeflector(inset,                 y, width,  +24, 0xfda4af, 0.35);
+        createDeflector(config.width - inset,  y, width,  -24, 0xfda4af, 0.35);
+    })();
+
+    // 두 번째 플링코
     createPegFieldFullWidth(2200, 7, 70, 24, 10, 0.85);
 
-    // 하단 스피너/왕복은 유지
+    // 하단 스피너/왕복
     createSpinner (config.width/2, 3050, 280, -0.11, 0x34d399, true);
     createMover   (config.width/2 - 120, 3300, 140, 220, 1400, 0xfca5a5);
     createMover   (config.width/2 + 120, 3450, 140, -220, 1400, 0xfca5a5);
 
-    // ── 피니시 업드래프트 (Y-레일 내부, 펄스형)
+    // 피니시 업드래프트 (Y-레일 내부, 펄스형)
     createUpdraft(config.width/2 - 60, 3840, 120, 420, 0.0060, 1000, 700,   0);   // 왼쪽, 먼저 ON
     createUpdraft(config.width/2 + 60, 3840, 120, 420, 0.0060, 1000, 700, 500);   // 오른쪽, 반 박자 뒤 ON
 }
@@ -1632,40 +1665,128 @@ function onPlayerFinish(scene, p, name) {
     }
 
     updateLeaderboard(scene);
+
+    // ✅ 전원 골인했으면 엔드 메시지 + 무한 컨페티
+    if (scene.finishOrder.length === players.length) {
+        showAllFinishedMessage(scene);  // ← 아래 새 함수
+    }
+}
+
+function showAllFinishedMessage(scene) {
+    if (scene._raceOverLayer) return;           // 가드
+
+    // 1등 정보
+    const winner   = scene.winner || scene.finishOrder?.[0];
+    const winName  = winner?.name || '???';
+    const nameHex  = winner?.color || 0xffffff;
+    const nameCss  = '#' + (nameHex >>> 0).toString(16).padStart(6, '0');
+
+    // 레이어(고정 HUD)
+    const layer = scene.add.layer().setDepth(8500);
+    if (scene.minimapCamera) scene.minimapCamera.ignore(layer);
+    scene._raceOverLayer = layer;
+
+    // 폰트 크기 자동(폭에 맞춰 살짝 조절)
+    const base = 44;
+    const fontPx = Math.max(32, Math.min(52, Math.round(base * (config.width / 1000))));
+
+    // 1줄: "1등은 " + [닉네임] + "님"
+    const styleWhite = { fontFamily: UI_FONT, fontStyle: '700', fontSize: `${fontPx}px`,
+        color: '#ffffff', stroke: '#000', strokeThickness: 6,
+        shadow: { color:'#000', blur:6, fill:true, offsetY:2 } };
+    const styleName  = { ...styleWhite, color: nameCss, fontFamily: "Arial Black, system-ui" };
+
+    const pre  = scene.add.text(0, 0, '1등은 ', styleWhite).setOrigin(0, 0.5).setScrollFactor(0);
+    const name = scene.add.text(0, 0, winName, styleName ).setOrigin(0, 0.5).setScrollFactor(0);
+    const suf  = scene.add.text(0, 0, '님',   styleWhite).setOrigin(0, 0.5).setScrollFactor(0);
+
+    // 2줄: "축하드립니다~!"
+    const sub = scene.add.text(0, 0, '축하드립니다~!', {
+        ...styleWhite, fontSize: `${Math.round(fontPx * 0.9)}px`
+    }).setOrigin(0.5, 0.5).setScrollFactor(0);
+
+    // 두 줄을 가운데 정렬 배치
+    const gapY = 18;
+    const totalW = pre.width + name.width + suf.width;
+    const cx = Math.round(config.width / 2);
+    const cy = Math.round(config.height / 2);
+
+    pre .setPosition(cx - totalW / 2,           cy - gapY);
+    name.setPosition(pre.x + pre.width,         cy - gapY);
+    suf .setPosition(name.x + name.width,       cy - gapY);
+    sub .setPosition(cx,                        cy + Math.max(14, fontPx * 0.6));
+
+    layer.add([pre, name, suf, sub]);
+
+    // ✨ 무한 컨페티 시작 (다시하기 전까지 유지)
+    playFullScreenConfettiForever(scene);
+}
+
+function playFullScreenConfettiForever(scene) {
+    // 텍스처 보장(기존 playFullScreenConfetti와 동일)
+    if (!scene.textures.exists('confetti')) {
+        const g = scene.add.graphics();
+        g.fillStyle(0xffffff).fillRect(0, 0, 8, 8);
+        g.generateTexture('confetti', 8, 8);
+        g.destroy();
+    }
+
+    // 이미 돌고 있으면 스킵
+    if (scene._confettiForever && !scene._confettiForever.destroyed) return scene._confettiForever;
+
+    const emitter = scene.add.particles(0, 0, 'confetti', {
+        x: { min: 20, max: config.width - 20 },
+        y: 0,
+        speed: { min: 220, max: 420 },
+        angle: { min: 110, max: 250 },
+        gravityY: 520,
+        lifespan: { min: 900, max: 1400 },
+        quantity: 12,
+        frequency: 60,
+        scale: { start: 1.0, end: 0.4 },
+        rotate: { min: -180, max: 180 },
+        tint: [0xff5252, 0xffe066, 0x69f0ae, 0x40c4ff, 0xff80ab]
+    });
+    emitter.setScrollFactor(0).setDepth(9050);
+    if (scene.minimapCamera) scene.minimapCamera.ignore(emitter);
+
+    scene._confettiForever = emitter; // ★ softRestart에서 정리
+    return emitter;
 }
 
 function createLeaderboard(scene) {
+    // 기존 레이어 정리 후 새로 생성 (순위판은 높은 depth 유지)
     scene.lbLayer?.destroy();
     const layer = scene.add.layer().setDepth(8000);
     scene.lbLayer = layer;
     if (scene.minimapCamera) scene.minimapCamera.ignore(layer);
 
-    // 도트 텍스처(플레이어 색상 표시 점)
-    if (!scene.textures.exists('lbDot8')) {
-        const g = scene.add.graphics();
-        g.fillStyle(0xffffff, 1).fillCircle(4, 4, 4);
-        g.generateTexture('lbDot8', 8, 8);
-        g.destroy();
-    }
+    // 우측에 붙여서 표시(완전 투명)
+    const rightPad = 8;
+    scene._lbRightX   = config.width - rightPad;
+    scene._lbLineH    = 22;
+    scene._lbNameMaxW = 160;
 
-    const w = 220, h = config.height - 20;
-    const x = config.width - w - 10, y = 10;
-
-    const bg = scene.add.graphics().setScrollFactor(0);
-    bg.fillStyle(0x0f1729, 0.85).fillRoundedRect(x, y, w, h, 12);
-    bg.lineStyle(2, 0x67e8f9, 1).strokeRoundedRect(x, y, w, h, 12);
-    layer.add(bg);
-
-    const title = scene.add.text(x + 14, y + 12, "📜 순위", {
-        fontSize: '16px', fontFamily: UI_FONT, color: '#e2e8f0', fontStyle: '700'
-    }).setScrollFactor(0);
+    // 제목 텍스트
+    const title = scene.add.text(scene._lbRightX, 8, "📜 순위", {
+        fontSize: '16px',
+        fontFamily: UI_FONT,
+        color: '#e2e8f0',
+        fontStyle: '700',
+        stroke: '#000000',
+        strokeThickness: 3,
+        shadow: { color: '#000', blur: 2, fill: true, offsetY: 1 },
+        align: 'right'
+    })
+        .setOrigin(1, 0)   // 오른쪽 정렬
+        .setScrollFactor(0);
     layer.add(title);
 
-    scene._lbStartX = x + 12;
-    scene._lbStartY = y + 40;
-    scene._lbWidth  = w - 24;
-    scene._lbLineH  = 20;
-    scene.lbItems   = [];
+    // 👉 제목과 첫 줄 사이 여백을 확보
+    const gapBelowTitle = 10;
+    scene._lbStartY = title.y + title.height + gapBelowTitle;
+
+    scene.lbItems = [];
 }
 
 function rankColor(rank){
@@ -1678,60 +1799,95 @@ function rankColor(rank){
 function updateLeaderboard(scene) {
     if (!scene.lbLayer) return;
 
+    // 완료자 우선(순위 오름차순) → 진행중은 y가 큰 순서(결승에 가까움)
     const sorted = players.slice().sort((a, b) => {
         if (a.finished && b.finished) return a.rank - b.rank;
         if (a.finished !== b.finished) return a.finished ? -1 : 1;
         return (b.body.y - a.body.y);
     });
 
+    const iconFor = (rank, finished) => {
+        if (!finished) return " ";
+        if (rank === 1) return "🥇";
+        if (rank === 2) return "🥈";
+        if (rank === 3) return "🥉";
+        return "🏆";
+    };
+
+    // 닉네임이 너무 길면 … 처리
+    const ellipsize = (txtObj, str, maxW) => {
+        txtObj.setText(str);
+        if (txtObj.width <= maxW) return str;
+        let lo = 1, hi = str.length, best = 1;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            txtObj.setText(str.slice(0, mid) + "…");
+            if (txtObj.width <= maxW) { best = mid; lo = mid + 1; }
+            else hi = mid - 1;
+        }
+        const out = str.slice(0, best) + "…";
+        txtObj.setText(out);
+        return out;
+    };
+
+    const rightX   = scene._lbRightX;
+    const startY   = scene._lbStartY;
+    const lineH    = scene._lbLineH;
+    const nameMaxW = scene._lbNameMaxW;
+
+    // 간격(요청: 이름↔등수 간격 더 띄움)
+    const GAP_ICON_NAME = 8;
+    const GAP_NAME_RANK = 16;
+
     const makeOrUpdate = (i, p, rank) => {
-        const baseY = scene._lbStartY + i * scene._lbLineH;
+        const yTop = startY + i * lineH;
 
         let line = scene.lbItems[i];
         if (!line) {
-            const rankTx = scene.add.text(scene._lbStartX, baseY, '', {
-                fontSize: '14px', fontFamily: UI_FONT, color: '#94a3b8'
-            }).setScrollFactor(0);
+            const iconTx = scene.add.text(rightX, yTop, "", {
+                fontSize: '14px', fontFamily: UI_FONT, color: '#ffffff',
+                stroke: '#000000', strokeThickness: 3
+            }).setOrigin(1, 0).setScrollFactor(0);
 
-            const dot = scene.add.image(0, baseY + 8, 'lbDot8').setOrigin(0, 0.5).setScrollFactor(0);
-            const nameTx = scene.add.text(0, baseY, '', {
-                fontSize: '14px', fontFamily: UI_FONT, color: '#e2e8f0'
-            }).setScrollFactor(0);
+            const nameTx = scene.add.text(rightX, yTop, "", {
+                fontSize: '14px', fontFamily: UI_FONT, color: '#e2e8f0',
+                stroke: '#000000', strokeThickness: 3
+            }).setOrigin(1, 0).setScrollFactor(0);
 
-            const flagTx = scene.add.text(0, baseY, '', {
-                fontSize: '14px', fontFamily: UI_FONT, color: '#e2e8f0'
-            }).setScrollFactor(0);
+            const rankTx = scene.add.text(rightX, yTop, "", {
+                fontSize: '14px', fontFamily: UI_FONT, color: '#94a3b8',
+                stroke: '#000000', strokeThickness: 3
+            }).setOrigin(1, 0).setScrollFactor(0);
 
-            scene.lbLayer.add(rankTx);
-            scene.lbLayer.add(dot);
+            scene.lbLayer.add(iconTx);
             scene.lbLayer.add(nameTx);
-            scene.lbLayer.add(flagTx);
-            line = scene.lbItems[i] = { rankTx, dot, nameTx, flagTx };
+            scene.lbLayer.add(rankTx);
+            line = scene.lbItems[i] = { iconTx, nameTx, rankTx };
         }
 
-        // 내용 갱신
-        line.rankTx.setText(String(rank).padStart(2, ' ') + '.')
-            .setY(baseY)
-            .setColor(rankColor(rank));
+        // 아이콘
+        line.iconTx.setText(iconFor(rank, !!p.finished));
 
-        line.dot.setTint(p.color || 0xffffff);
-        line.dot.setPosition(line.rankTx.x + line.rankTx.width + 6, baseY + 8);
+        // 닉네임 색을 공 색으로
+        const nameStr = p.name || p.label?.text || `P${i+1}`;
+        line.nameTx.setColor(hexToCss(p.color || 0xffffff));
+        ellipsize(line.nameTx, nameStr, nameMaxW);
 
-        line.nameTx.setText(p.name || p.label?.text || `P${i+1}`)
-            .setY(baseY)
-            .setX(line.dot.x + 12)
-            .setColor('#e2e8f0');
+        // "N등"
+        line.rankTx.setText(`${rank}등`).setColor(rankColor(rank));
 
-        const flag = p.finished ? " 🏁" : "";
-        line.flagTx.setText(flag)
-            .setY(baseY)
-            .setX(line.nameTx.x + line.nameTx.width + 4);
+        // 오른쪽 정렬: [아이콘] [닉네임] [N등]
+        const xRank = rightX;
+        const xName = xRank - line.rankTx.width - GAP_NAME_RANK;
+        const xIcon = xName - line.nameTx.width - GAP_ICON_NAME;
 
-        // 보이기
-        line.rankTx.setVisible(true);
-        line.dot.setVisible(true);
+        line.rankTx.setPosition(xRank, yTop);
+        line.nameTx.setPosition(xName, yTop);
+        line.iconTx.setPosition(xIcon, yTop);
+
+        line.iconTx.setVisible(true);
         line.nameTx.setVisible(true);
-        line.flagTx.setVisible(true);
+        line.rankTx.setVisible(true);
     };
 
     for (let i = 0; i < sorted.length; i++) {
@@ -1743,7 +1899,7 @@ function updateLeaderboard(scene) {
     // 남는 라인 정리
     for (let j = sorted.length; j < (scene.lbItems?.length || 0); j++) {
         const l = scene.lbItems[j];
-        l.rankTx.destroy(); l.dot.destroy(); l.nameTx.destroy(); l.flagTx.destroy();
+        l.iconTx.destroy(); l.nameTx.destroy(); l.rankTx.destroy();
     }
     scene.lbItems.length = sorted.length;
 }
@@ -1839,6 +1995,16 @@ function softRestart(scene){
             scene.minimapCamera = null; }
     } catch(e) {}
 
+    // ✅ 추가 정리: 엔딩 레이어/무한 컨페티
+    try {
+        if (scene._raceOverLayer) { scene._raceOverLayer.destroy(); scene._raceOverLayer = null; }
+        if (scene._confettiForever) {
+            scene._confettiForever.stop();
+            scene._confettiForever.destroy();
+            scene._confettiForever = null;
+        }
+    } catch(e) {}
+
     // 4) 씬 가드 리셋
     scene._collisionsReady = false;
     scene._winHudShown = false;
@@ -1871,14 +2037,127 @@ function resetGlobals(scene){
         }
         scene._updraftUpdater = null;
         scene._winHudShown = false;
+        scene._raceEndShown = false;
     }
 
     // 배경음은 유지
     window.__pinballScene = null;
 }
 
-// 우승 패널: 이름 자동-맞춤 + 플레이어 색 적용 + 다시하기는 좌하단
-// 우승 패널: 가운데 정렬 + 이름 자동-맞춤 + 공색 적용
+// 모든 플레이어가 결승점에 도달했을 때 중앙에 고정으로 띄우는 축하 문구
+// 모든 플레이어가 결승점에 도달했을 때 중앙에 고정으로 띄우는 축하 문구
+function showRaceEndUI(scene) {
+    if (scene._raceEndShown) return;
+    scene._raceEndShown = true;
+
+    const top = scene.finishOrder?.[0];
+    const name = top?.name || "???";
+    const nameColor = hexToCss(top?.color || 0xffffff);
+
+    const layer = scene.add.layer().setDepth(8500);
+    if (scene.minimapCamera) scene.minimapCamera.ignore(layer);
+
+    // ====== 스타일 튜닝값 ======
+    const F1_INIT = 46;   // 1줄 기본 폰트(px)
+    const FNAME   = 50;   // 닉네임 기본 폰트(px)
+    const F2_INIT = 36;   // 2줄 기본 폰트(px)
+    const GAP_X   = 10;   // "1등은" ↔ 닉네임 ↔ "님" 가로 간격
+    const GAP_Y   = 12;   // 1·2줄 세로 간격
+    const MAX_W   = Math.floor(config.width * 0.92);
+    // ==========================
+
+    const baseStyle = {
+        fontFamily: "Pretendard, 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', Roboto, Arial",
+        color: "#ffffff",
+        fontStyle: "900",
+        stroke: "#000000",
+        strokeThickness: 6,
+        shadow: { color: "#000000", blur: 8, fill: true, offsetY: 2 },
+        align: "center"
+    };
+
+    // 1줄: "1등은 " + 닉네임(색상) + "님"
+    const tLeft  = scene.add.text(0, 0, "1등은 ", { ...baseStyle, fontSize: `${F1_INIT}px` })
+        .setOrigin(0.5, 1).setScrollFactor(0);
+    const tName  = scene.add.text(0, 0, name, { ...baseStyle, fontSize: `${FNAME}px`, color: nameColor })
+        .setOrigin(0.5, 1).setScrollFactor(0);
+    const tRight = scene.add.text(0, 0, "님",    { ...baseStyle, fontSize: `${F1_INIT}px` })
+        .setOrigin(0.5, 1).setScrollFactor(0);
+
+    // 2줄: "축하드립니다~!"
+    const tSecond = scene.add.text(0, 0, "축하드립니다~!", {
+        ...baseStyle, fontSize: `${F2_INIT}px`, fontStyle: "800"
+    }).setOrigin(0.5, 0).setScrollFactor(0);
+
+    layer.add([tLeft, tName, tRight, tSecond]);
+
+    // 폭에 맞춰 자동 리사이즈 + 중앙 정렬
+    const layout = () => {
+        const y1 = Math.round(config.height / 2) - 6;
+        const totalW = tLeft.width + GAP_X + tName.width + GAP_X + tRight.width;
+        const startX = Math.round(config.width / 2 - totalW / 2);
+
+        tLeft .setPosition(startX + tLeft.width / 2, y1);
+        tName .setPosition(tLeft.x + tLeft.width / 2 + GAP_X + tName.width / 2, y1);
+        tRight.setPosition(tName.x + tName.width / 2 + GAP_X + tRight.width / 2, y1);
+
+        tSecond.setPosition(config.width / 2, y1 + GAP_Y);
+    };
+
+    const fit = () => {
+        // 글자 크기를 같이 줄여서 한 줄 폭을 맞춤
+        let fLeft = F1_INIT, fName = FNAME, fRight = F1_INIT, f2 = F2_INIT;
+        const down = () => {
+            fLeft = Math.max(24, fLeft - 1);
+            fName = Math.max(28, fName - 1);
+            fRight = Math.max(24, fRight - 1);
+            f2 = Math.max(22, f2 - 1);
+            tLeft.setFontSize(fLeft);
+            tName.setFontSize(fName);
+            tRight.setFontSize(fRight);
+            tSecond.setFontSize(f2);
+        };
+        // 과도하면 줄이기
+        for (let i = 0; i < 40; i++) {
+            const w = tLeft.width + GAP_X + tName.width + GAP_X + tRight.width;
+            if (w <= MAX_W) break;
+            down();
+        }
+        layout();
+    };
+    fit();
+
+    // 등장 애니메이션(텍스트 유지)
+    const targets = [tLeft, tName, tRight, tSecond];
+    targets.forEach(t => t.setAlpha(0).setScale(0.98));
+    scene.tweens.add({
+        targets, alpha: 1, scale: 1,
+        duration: 420, ease: "Back.Out"
+    });
+
+    // 중앙 주변 반짝 파티클(짧게) + 컨페티 재생
+    if (!scene.textures.exists('spark')) {
+        const g = scene.add.graphics();
+        g.fillStyle(0xffffff).fillCircle(4, 4, 4);
+        g.generateTexture('spark', 8, 8);
+        g.destroy();
+    }
+    const spark = scene.add.particles(0, 0, 'spark', {
+        x: { min: config.width / 2 - 160, max: config.width / 2 + 160 },
+        y: Math.round(config.height / 2) - 40,
+        lifespan: 1200,
+        speed: { min: 80, max: 160 },
+        angle: { min: 60, max: 120 },
+        gravityY: 300,
+        quantity: 6,
+        frequency: 80,
+        scale: { start: 1.0, end: 0 },
+        tint: [0xfff176, 0xf8c4ff, 0x93c5fd, 0x86efac]
+    });
+    spark.setScrollFactor(0).setDepth(8510);
+}
+
+// 우승 표시는 하단 중앙 한 줄: "🥇 닉네임" (배경 없음)
 function showWinnerUI(scene, winnerName) {
     if (scene._winHudShown) return;
     scene._winHudShown = true;
@@ -1886,63 +2165,80 @@ function showWinnerUI(scene, winnerName) {
     const winner = scene.winner;
     const nameColor = hexToCss(winner?.color || 0xffffff);
 
-    const hud = scene.add.layer().setDepth(9000);
+    const hud = scene.add.layer().setDepth(7500);
     if (scene.minimapCamera) scene.minimapCamera.ignore(hud);
 
-    const margin = 14;
-    const boxW = 420, boxH = 190;
-    const bx = config.width  - margin - boxW;
-    const by = config.height - margin - boxH;
+    // ====== 튜닝값 ======
+    const GAP = 12;                 // 메달 ↔ 이름 간격
+    const MEDAL_RATIO = 0.8;        // ← 네가 쓰는 값
+    const MEDAL_DY = 2;             // 메달을 더 아래로 내리고 싶으면 +로 늘리기(0~6 추천)
+    const BOTTOM_PAD = 6;           // 화면 바닥과의 간격
+    const MAX_W = Math.floor(config.width * 0.92); // 한 줄 최대 폭
+    // ====================
 
-    const panel = scene.add.graphics().setScrollFactor(0);
-    panel.fillStyle(0x101418, 0.92).fillRoundedRect(bx, by, boxW, boxH, 12);
-    panel.lineStyle(2, 0x00d2ff, 1).strokeRoundedRect(bx, by, boxW, boxH, 12);
-    hud.add(panel);
+    const medalTx = scene.add.text(0, 0, "🥇", {
+        fontFamily: "Segoe UI Emoji, Apple Color Emoji, system-ui",
+        fontSize: "20px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 4,
+        shadow: { color: "#000", blur: 6, fill: true, offsetY: 2 }
+    }).setScrollFactor(0).setOrigin(0, 1);   // ★ 하단 기준
 
-    const title = scene.add.text(bx + boxW / 2, by + 14, "🏆 1등", {
-        fontSize: "20px", fontFamily: "Orbitron", color: "#a8e5ff", align: "center"
-    }).setOrigin(0.5, 0).setScrollFactor(0);
-    hud.add(title);
+    const nameTx = scene.add.text(0, 0, winnerName || "", {
+        fontFamily: "Arial Black, system-ui",
+        fontSize: "20px",
+        color: nameColor,
+        stroke: "#000000",
+        strokeThickness: 6,
+        shadow: { color: "#000", blur: 6, fill: true, offsetY: 2 }
+    }).setScrollFactor(0).setOrigin(0, 1);   // ★ 하단 기준
 
-    const name = scene.add.text(bx + boxW / 2, by + 50, winnerName || "", {
-        fontFamily: "Arial", color: nameColor, align: "center"
-    })
-        .setOrigin(0.5, 0)
-        .setScrollFactor(0)
-        .setStroke("#000000", 5)
-        .setShadow(0, 2, "#000000", 4, true, true);
-    hud.add(name);
+    hud.add(medalTx);
+    hud.add(nameTx);
 
-    const contentTop = title.y + title.height + 10;
-    const nameBoxW = boxW - 36;
-    const nameBoxH = (by + boxH - 16) - contentTop;
-
-    const fitTextToBox = (txt, maxW, maxH, minPx = 22, maxPx = 96) => {
+    // 크기/배치 자동 맞춤 (두 텍스트의 아래선 동일)
+    const fitRow = (minPx = 28, maxPx = 40) => {
         let lo = minPx, hi = maxPx, best = minPx;
         while (lo <= hi) {
-            const mid = (lo + hi) >> 1;
-            txt.setFontSize(mid);
-            if (txt.width <= maxW && txt.height <= maxH) { best = mid; lo = mid + 1; }
+            const mid = (lo + hi) >> 1;                 // 이름 폰트 크기
+            nameTx.setFontSize(mid);
+            medalTx.setFontSize(Math.round(mid * MEDAL_RATIO));
+            const totalW = medalTx.width + GAP + nameTx.width;
+            if (totalW <= MAX_W) { best = mid; lo = mid + 1; }
             else hi = mid - 1;
         }
-        txt.setFontSize(best);
-        txt.setX(bx + boxW / 2);
-        txt.setY(contentTop + Math.max(0, (nameBoxH - txt.height) / 2));
+        nameTx.setFontSize(best);
+        medalTx.setFontSize(Math.round(best * MEDAL_RATIO));
+
+        const totalW = medalTx.width + GAP + nameTx.width;
+        const cx = config.width / 2;
+        const startX = Math.round(cx - totalW / 2);
+
+        const yBottom = config.height - BOTTOM_PAD; // ★ 두 텍스트의 아래선을 동일하게
+        medalTx.setPosition(startX, yBottom + MEDAL_DY); // 메달만 미세 보정
+        nameTx.setPosition(startX + medalTx.width + GAP, yBottom);
     };
-    fitTextToBox(name, nameBoxW, nameBoxH);
+    fitRow();
 
-    scene.tweens.add({ targets: hud, alpha: { from: 0, to: 1 }, y: { from: 8, to: 0 }, duration: 180, ease: "Quad.easeOut" });
+    // 간단한 페이드 인
+    scene.tweens.add({
+        targets: [medalTx, nameTx],
+        alpha: { from: 0, to: 1 },
+        duration: 200,
+        ease: "Quad.easeOut"
+    });
 
-    // ⬇⬇⬇ 여기! reload 제거, 씬 재시작으로 교체
+    // 다시하기 버튼/컨페티 유지
     createRestartCTA(scene, {
         w: 260, h: 96,
         x: 14 + 260 / 2,
         y: config.height - 14 - 96 / 2,
         label: "🔁 다시하기",
-        onClick: () => softRestart(scene)   // ← 씬 재시작
+        onClick: () => softRestart(scene)
     });
-
     playFullScreenConfetti(scene, 3000);
+
     if (winner?.body) {
         const pulse = scene.add.circle(winner.body.x, winner.body.y, 24, 0xffff00, 0.25).setDepth(5000);
         scene.tweens.add({ targets: pulse, scale: 4, alpha: 0, duration: 900, repeat: 1, onComplete: () => pulse.destroy() });
@@ -1983,6 +2279,29 @@ function playFullScreenConfetti(scene, duration = 3000) {
     });
 }
 
+function respawnPlayerToTop(scene, p) {
+    const MatterJS = Phaser.Physics.Matter.Matter;
+    if (!p || !p.body) return;
+
+    const spawnY = 200; // 맵 최상단 근처
+    const jitterX = Phaser.Math.Between(-140, 140);
+    const spawnX = Phaser.Math.Clamp((config.width / 2) + jitterX, BALL_RADIUS + 4, config.width - BALL_RADIUS - 4);
+
+    const mBody = p.body.body;
+    if (MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
+
+    p.body.setIgnoreGravity(false);
+    p.body.setStatic(false);
+    p.body.setPosition(spawnX, spawnY);
+    p.body.setVelocity(Phaser.Math.FloatBetween(-1.2, 1.2), 0);
+
+    // 정지 타이머 리셋
+    p._idleSince = null;
+
+    // ❗️여기서 바로 현재 위치로 lastPos 재설정(= null 금지)
+    const cur = mBody.position;
+    p._lastPos = { x: cur.x, y: cur.y };
+}
 
 // update 함수: 카메라 추적, 라벨 따라가기, 미니맵 연동
 function update() {
@@ -1994,24 +2313,64 @@ function update() {
         ? racing.reduce((a, b) => (a.body.y > b.body.y ? a : b))
         : players[0];
 
-    if (lowest) {
-        this.cameras.main.startFollow(lowest.body, true, 0.2, 0.2);
-    }
+    if (lowest) this.cameras.main.startFollow(lowest.body, true, 0.2, 0.2);
     this.cameras.main.setZoom(1);
+
+    const now = this.time.now;
+    const MatterJS = Phaser.Physics.Matter.Matter;
 
     players.forEach(p => {
         if (!p.body || !p.label) return;
-        if (p.finished) return;                   // 결승 통과자는 갱신 X
 
-        p.label.setPosition(p.body.x, p.body.y - 25);
+        if (!p.finished) {
+            // 라벨은 항상 공 위에
+            p.label.setPosition(p.body.x, p.body.y - 25);
 
-        const { x, y } = p.body;
-        if (x < -500 || x > config.width + 300 || y < -200 || y > 4500) {
-            p.body.setPosition(config.width / 2, 200);
-            p.body.setVelocity(Phaser.Math.Between(-2, 2), 0);
+            // 화면 완전 이탈 시 즉시 리스폰 → 이 프레임 처리 종료
+            const { x, y } = p.body;
+            if (x < -500 || x > config.width + 300 || y < -200 || y > 4500) {
+                respawnPlayerToTop(this, p);
+                return; // ← 중요: 같은 프레임에서 더 만지지 않음
+            }
+
+            // ── 정지 감지 → 3초 지나면 최상단 복귀 ──
+            const mBody = p.body.body;
+            if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
+
+            const v = mBody.velocity;
+            const speed = Math.hypot(v.x, v.y);
+            const pos = mBody.position;
+
+            // null 안전: 없으면 즉시 객체로 만들어 둔다
+            if (!p._lastPos) p._lastPos = { x: pos.x, y: pos.y };
+
+            const moved = Math.hypot(pos.x - p._lastPos.x, pos.y - p._lastPos.y);
+
+            const IDLE_SPEED = 0.12; // "거의 정지"
+            const MOVE_EPS   = 0.8;  // 프레임간 이동량 임계
+            const STUCK_MS   = 3000; // 3초
+
+            const idleNow = (speed < IDLE_SPEED && moved < MOVE_EPS);
+
+            if (idleNow) {
+                if (!p._idleSince) p._idleSince = now;
+                if (now - p._idleSince >= STUCK_MS) {
+                    // 리스폰하고 이번 프레임은 종료 (아래 lastPos 갱신 금지)
+                    respawnPlayerToTop(this, p);
+                    return; // ← 중요
+                }
+            } else {
+                p._idleSince = null;
+            }
+
+            // 다음 프레임 비교용 위치 갱신(여기까지 내려왔으면 p._lastPos는 절대 null 아님)
+            p._lastPos.x = pos.x;
+            p._lastPos.y = pos.y;
         }
+        // 결승 통과자는 갱신 생략
     });
 
+    // 미니맵 추적
     if (this.minimapCamera && lowest) {
         this.minimapCamera.scrollX = 0;
         this.minimapCamera.scrollY = lowest.body.y - (this.minimapCamera.height / 2);
@@ -2020,6 +2379,5 @@ function update() {
             this.minimapCamera.scrollY = 4000 - this.minimapCamera.height;
     }
 
-    // ← 실시간 순위판 갱신
     updateLeaderboard(this);
 }
