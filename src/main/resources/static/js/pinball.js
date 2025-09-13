@@ -40,6 +40,8 @@ const BASE_W = 1000, BASE_H = 720;
 const MatterJS = Phaser.Physics.Matter.Matter;
 const bodyToPlayer = new Map();
 let _kbLocked = false;
+let __typingLock = false;
+let __domContainer = null;
 
 // === 캔버스 실제 사각형과 스케일 ===
 function getCanvasEl() {
@@ -229,20 +231,41 @@ function relayoutNicknameInputs(scene) {
 }
 
 // === 뷰포트 변화(리사이즈/회전/전체화면 토글 등) 때 공통 처리 ===
-function onViewportChange() {
-    // 먼저 DOM 컨테이너를 캔버스에 딱 맞게
-    syncDomContainerToCanvas();
+function onViewportChange(force = false) {
+    if (!force && __typingLock) return;
 
-    // 닉네임 입력칸이 열려 있으면 "재배치"가 아니라 "재생성"으로 처리
+    // ★ 미디어쿼리 임계(1000px) 넘나들면 인풋 방식을 갈아엎어야 함
+    const wantNative = useNativeInputs();
+    const overlayOpen = !!document.getElementById('name-overlay');
+    const rexOpen = Array.isArray(uiElements.nameInputs)
+        && uiElements.nameInputs.length > 0
+        && !!uiElements.nameInputs[0]?.node;
+
     if (window.__pinballScene) {
-        const overlay = document.getElementById('name-overlay');
-        const hasRex  = Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length > 0;
-        if (overlay || hasRex) {
-            rebuildNicknameInputs(window.__pinballScene);
+        if (wantNative && rexOpen && !overlayOpen) {
+            rebuildNicknameInputs(window.__pinballScene); // rex -> 네이티브
+            return;
+        }
+        if (!wantNative && overlayOpen) {
+            rebuildNicknameInputs(window.__pinballScene); // 네이티브 -> rex
             return;
         }
     }
-    // 열려 있지 않으면 할 일 없음
+
+    // 평소엔 위치/사이즈만 동기화
+    syncDomContainerToCanvas();
+    if (window.__pinballScene) relayoutNicknameInputs(window.__pinballScene);
+}
+
+
+function rafReflow(times = 8, force = true) {
+    let i = 0;
+    const tick = () => {
+        if (!__typingLock) onViewportChange(force);
+        if (++i < times) requestAnimationFrame(tick);   // 몇 프레임 연속으로 추적
+    };
+    // 전환 직후 한 프레임 기다렸다가 시작
+    requestAnimationFrame(tick);
 }
 
 // 한번만 바인딩
@@ -251,21 +274,28 @@ function bindViewportReflow() {
     if (__reflowBound) return;
     __reflowBound = true;
 
-    const handler = () => setTimeout(onViewportChange, 0);
-    window.addEventListener('resize', handler, { passive: true });
-    window.addEventListener('orientationchange', handler, { passive: true });
-    document.addEventListener('fullscreenchange', handler);
-    document.addEventListener('webkitfullscreenchange', handler);
+    // 일반 리사이즈/회전: 4~6프레임 정도 추적
+    const light = () => rafReflow(6, true);
+    // 전체화면 토글: 더 크게 흔들리므로 8~10프레임 추적
+    const heavy = () => rafReflow(10, true);
+
+    window.addEventListener('resize', light, { passive: true });
+    window.addEventListener('orientationchange', heavy, { passive: true });
+
+    document.addEventListener('fullscreenchange', heavy);
+    document.addEventListener('webkitfullscreenchange', heavy);
+
     if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', handler, { passive: true });
-        window.visualViewport.addEventListener('scroll',  handler, { passive: true });
+        // 모바일 주소창 애니메이션 등: 짧게 여러 번
+        window.visualViewport.addEventListener('resize', () => rafReflow(4, true), { passive: true });
+        window.visualViewport.addEventListener('scroll',  () => rafReflow(4, true), { passive: true });
     }
 
-    // 가짜 전체화면(#game-container.fake-fullscreen) 클래스 변화를 감지
+    // 가짜 전체화면(#game-container.fake-fullscreen) 클래스 변경 추적
     const gc = document.getElementById('game-container');
     if (gc && !window.__fsObserver) {
         window.__fsObserver = new MutationObserver(muts => {
-            for (const m of muts) if (m.attributeName === 'class') handler();
+            for (const m of muts) if (m.attributeName === 'class') heavy();
         });
         window.__fsObserver.observe(gc, { attributes: true, attributeFilter: ['class'] });
     }
@@ -477,12 +507,10 @@ function createStyledButton(scene, x, y, label, callback, width = 100, color = "
 function generateNicknameInputsNative(scene) {
     uiElements.nicknameButton?.setVisible(false);
 
-    // 이전 것 정리
     const old = document.getElementById('name-overlay');
     if (old) old.remove();
     uiElements.nameInputs = [];
 
-    // ⬇️ 전체화면/확대 축소 반영
     const { sx, sy, offX, offY } = getCanvasScaleAndOffset();
 
     const centerX = BASE_W / 2;
@@ -496,7 +524,6 @@ function generateNicknameInputsNative(scene) {
     const rows = Math.ceil(playerCount / cols);
     const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
 
-    // 노란 프레임(캔버스 측)
     uiElements.nameFrame.setVisible(true).clear()
         .lineStyle(2, 0xffcc00, 1)
         .fillStyle(0x000000, 0.20)
@@ -511,14 +538,13 @@ function generateNicknameInputsNative(scene) {
 
     const seed = Array.isArray(playerNicknames) ? playerNicknames.slice() : [];
 
-    // 오버레이 DOM
     const gc = document.getElementById('game-container');
     const overlay = document.createElement('div');
     overlay.id = 'name-overlay';
-    // CSS: #name-overlay { position:absolute; inset:0; pointer-events:none; }
+    // 필요 CSS가 없다면 최소한 이것만:
+    // overlay.style.position = 'absolute'; overlay.style.left = overlay.style.top = 0; overlay.style.width = overlay.style.height = '100%';
     gc.appendChild(overlay);
 
-    // 좌표 변환(컨테이너 기준). 캔버스 오프셋 + 스케일을 모두 반영
     const pxX = v => Math.round(offX + v * sx);
     const pxY = v => Math.round(offY + v * sy);
 
@@ -529,6 +555,7 @@ function generateNicknameInputsNative(scene) {
 
         const cell = document.createElement('div');
         cell.className = 'cell';
+        cell.style.position = 'absolute';                // 안전하게 보장
         cell.style.left = pxX(baseX) + 'px';
         cell.style.top  = pxY(baseY) + 'px';
 
@@ -540,10 +567,33 @@ function generateNicknameInputsNative(scene) {
         input.style.width  = Math.round(cellW * sx) + 'px';
         input.style.height = Math.round(cellH * sy) + 'px';
         input.style.fontSize = Math.max(12, Math.round(16 * Math.min(sx, sy))) + 'px';
+        input.style.lineHeight = input.style.height;
 
-        input.addEventListener('touchstart', e => e.stopPropagation(), { passive:true });
-        input.addEventListener('pointerdown', e => e.stopPropagation());
-        input.addEventListener('mousedown', e => e.stopPropagation());
+        // ▶ 모바일 키보드 안정화 포인트
+        input.setAttribute('inputmode', 'text');
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('autocapitalize', 'off');
+        input.setAttribute('autocorrect', 'off');
+
+        // 포커스 직전에 타이핑락 걸어 리레이아웃을 완전히 멈춤
+        input.addEventListener('pointerdown', () => {
+            __typingLock = true;
+            // 일부 브라우저는 클릭 후 focus가 늦게 오므로 확실히 보장
+            setTimeout(() => { try { input.focus({ preventScroll: true }); } catch(e){} }, 0);
+        }, { passive: true });
+
+        input.addEventListener('focus', () => {
+            __typingLock = true;
+        }, { passive:true });
+
+        input.addEventListener('blur',  () => {
+            __typingLock = false;
+            setTimeout(() => onViewportChange(true), 60);
+        });
+
+        // 터치 이벤트가 Phaser로 전파되지 않게만 처리 (기본 포커스는 막지 않음)
+        ['touchstart','touchmove','touchend','pointerup','mousedown','mouseup','click']
+            .forEach(evt => input.addEventListener(evt, e => { e.stopPropagation(); }, { passive: false }));
 
         cell.appendChild(input);
         overlay.appendChild(cell);
@@ -553,8 +603,8 @@ function generateNicknameInputsNative(scene) {
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
 
-    // 캔버스 위치가 바뀌면 오버레이도 다시 정렬
     syncDomContainerToCanvas();
+    rafReflow(8, true);
 }
 
 function generateNicknameInputs(scene) {
@@ -564,7 +614,6 @@ function generateNicknameInputs(scene) {
     uiElements.nameInputs?.forEach(i => i.destroy());
     uiElements.nameInputs = [];
 
-    // ⬇️ 전체화면/확대 축소 반영
     const { sx, sy } = getCanvasScaleAndOffset();
 
     const centerX = BASE_W / 2;
@@ -585,9 +634,7 @@ function generateNicknameInputs(scene) {
         .fillRoundedRect(frameX, frameY, frameW, frameH, 14)
         .strokeRoundedRect(frameX, frameY, frameW, frameH, 14);
 
-    uiElements.nameTitle
-        .setVisible(true)
-        .setPosition(centerX, frameY - 10);
+    uiElements.nameTitle.setVisible(true).setPosition(centerX, frameY - 10);
 
     const gridW = cols * cellW + (cols - 1) * gap;
     const startX = frameX + (frameW - gridW) / 2 + cellW / 2;
@@ -598,8 +645,6 @@ function generateNicknameInputs(scene) {
 
     for (let i = 0; i < playerCount; i++) {
         const c = i % cols, r = Math.floor(i / cols);
-
-        // 좌표/크기 스케일 적용
         const x = Math.round((startX + c * (cellW + gap)) * sx);
         const y = Math.round((startY + r * (cellH + gap)) * sy);
         const w = Math.max(40, Math.round(cellW * sx));
@@ -625,9 +670,7 @@ function generateNicknameInputs(scene) {
             .setDepth(22);
 
         if (i === 0) normalizeDomContainerFrom(input);
-
         wireKeyboardGuard(input.node);
-
         scene.uiLayer?.add(input);
         uiElements.nameInputs.push(input);
     }
@@ -635,8 +678,8 @@ function generateNicknameInputs(scene) {
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
 
-    // 캔버스 위치가 바뀌면 DOM 컨테이너도 동기화
-    syncDomContainerToCanvas();
+    // ⬇️ 생성 직후 & 전환 직후 몇 프레임 동안 계속 추적해서 잘림 방지
+    rafReflow(8, true);
 }
 
 function useNativeInputs() {
@@ -644,8 +687,31 @@ function useNativeInputs() {
 }
 
 function getDomContainer() {
-    return document.querySelector('#game-container > .dom-container, #game-container > div.dom-container');
+    // ① 캐시가 살아있으면 그걸 사용
+    if (__domContainer && __domContainer.isConnected) return __domContainer;
+
+    // ② 현재 rex 인풋이 하나라도 있으면 그 부모를 컨테이너로
+    const anyNode = uiElements?.nameInputs?.find(i => i?.node)?.node;
+    if (anyNode && anyNode.parentElement) {
+        __domContainer = anyNode.parentElement;
+        return __domContainer;
+    }
+
+    // ③ 일반 쿼리 (플러그인이 클래스 붙여준 경우)
+    const gc = document.getElementById('game-container');
+    if (!gc) return null;
+
+    let el = gc.querySelector(':scope > .dom-container, :scope > div.dom-container');
+    if (el) { __domContainer = el; return el; }
+
+    // ④ 최후의 수단: 직접 자식 div 중에 input을 품은 것을 찾음
+    const divs = gc.querySelectorAll(':scope > div');
+    for (const d of divs) {
+        if (d.querySelector('input')) { __domContainer = d; return d; }
+    }
+    return null;
 }
+
 function lockDomContainer() {
     const gc = document.getElementById('game-container');
     const domC = getDomContainer();
@@ -704,12 +770,17 @@ function unlockDomContainer() {
 // 입력 엘리먼트에 포커스/블러 가드 장착
 function wireKeyboardGuard(el) {
     if (!el) return;
+
     el.addEventListener('focus', () => {
-        lockDomContainer();
+        __typingLock = true;     // 입력 중 플래그 ON
+        lockDomContainer();      // 화면 흔들림 방지
     }, { passive: true });
 
     el.addEventListener('blur', () => {
+        __typingLock = false;    // 입력 끝
         unlockDomContainer();
+        // 키보드가 완전히 닫힌 뒤 레이아웃 싱크
+        setTimeout(() => onViewportChange(true), 60);
     });
 
     // 터치가 게임으로 전파되지 않도록
@@ -736,6 +807,11 @@ function normalizeDomContainerFrom(inputGO) {
         gc.appendChild(domC);
     }
 
+    // ▶ 이후 탐색이 항상 성공하도록 클래스와 캐시를 보장
+    domC.classList.add('dom-container');
+    __domContainer = domC;
+    uiElements.domContainer = domC;
+
     Object.assign(domC.style, {
         position: 'absolute',
         left: '0px',
@@ -750,7 +826,7 @@ function normalizeDomContainerFrom(inputGO) {
         zIndex: 2
     });
 
-    // ⬇️ 최초 한 번 동기화
+    // 최초 동기화
     syncDomContainerToCanvas();
 }
 
@@ -837,24 +913,36 @@ function hexToCss(hex) {
 
 function startGame(scene) {
     const overlay = document.getElementById('name-overlay');
+
+    // 공백이면 P{index+1}로 대체
+    const safeName = (v, idx) => {
+        const s = (v ?? '').toString().trim();
+        return s.length ? s : `P${idx + 1}`;
+    };
+
+    // 1) 닉네임 수집 (모바일: 네이티브 input, PC: rexInputText)
     if (overlay) {
-        // 모바일: HTML 인풋에서 수집
         const fields = Array.from(overlay.querySelectorAll('input'));
-        playerNicknames = fields.map(inp => (inp.value || '').trim() || ('Player-' + Math.random().toString(36).slice(2,6)));
+        playerNicknames = fields.slice(0, playerCount).map((inp, idx) =>
+            safeName(inp.value, idx)
+        );
     } else if (Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length) {
-        // PC: rexInputText에서 수집
-        playerNicknames = uiElements.nameInputs.map(inp => {
-            const v = (inp.text || inp.node?.value || '').trim();
-            return v || ('Player-' + Math.random().toString(36).slice(2,6));
-        });
+        playerNicknames = uiElements.nameInputs.slice(0, playerCount).map((inp, idx) =>
+            safeName(inp.text || inp.node?.value, idx)
+        );
+    } else {
+        // 입력 UI가 닫혀 있었던 특수 상황 방어
+        playerNicknames = Array.from({ length: playerCount }, (_, i) => `P${i + 1}`);
     }
 
-    // 길이 방어
+    // 길이/공백 방어 (혹시 수집 배열 길이가 어긋나면 보강)
     if (!Array.isArray(playerNicknames) || playerNicknames.length !== playerCount) {
-        playerNicknames = Array.from({ length: playerCount }, () =>
-            'Player-' + Math.random().toString(36).slice(2, 6)
+        playerNicknames = Array.from({ length: playerCount }, (_, i) =>
+            safeName(playerNicknames?.[i], i)
         );
     }
+
+    // ===== 여기서부터는 기존 코드 유지 =====
 
     // 설정 UI 정리
     overlay?.remove();
@@ -871,36 +959,25 @@ function startGame(scene) {
     const launchSpeed = 110;
     const ballColors = buildBallPalette(scene, playerCount);
 
-    // ★ NEW: 스폰 방향/자리 랜덤화 ----------------------------
-    // true  → 왼쪽에서 시작해서 오른쪽 대각선(↗)
-    // false → 오른쪽에서 시작해서 왼쪽 대각선(↗)
+    // 스폰 방향/자리 랜덤화
     const fromLeft = Phaser.Math.Between(0, 1) === 1;
+    const SLOT_X = BALL_DIAM + 10;
+    const SLOT_Y = BALL_RADIUS + 6;
 
-    // 슬롯 간격(겹치지 않게 살짝 여유)
-    const SLOT_X = BALL_DIAM + 10;      // 가로 간격
-    const SLOT_Y = BALL_RADIUS + 6;     // 세로 상승량(대각선 기울기)
-
-    // 대각선 상에 놓일 "자리 번호" 를 랜덤하게 섞어서
-    // 누가 맨 아래/맨 위가 될지 매 게임 바뀌도록 함
     const slotOrder = Phaser.Utils.Array.NumberArray(0, playerCount - 1);
     Phaser.Utils.Array.Shuffle(slotOrder);
 
     const totalWidth  = (playerCount - 1) * SLOT_X;
-    const leftAnchor  = startX - totalWidth / 2;  // 가장 왼쪽 슬롯의 x
-    const rightAnchor = startX + totalWidth / 2;  // 가장 오른쪽 슬롯의 x
-    // ------------------------------------------------------
+    const leftAnchor  = startX - totalWidth / 2;
+    const rightAnchor = startX + totalWidth / 2;
 
     for (let i = 0; i < playerCount; i++) {
         const key = `ball_${i}`;
         makeBallTexture(scene, key, ballColors[i]);
 
-        // ★ NEW: i번째 플레이어가 배정될 "자리"를 셔플된 번호로 결정
         const s = slotOrder[i];
-
-        // ★ NEW: 스폰 좌표 계산(대각선)
-        const sx = fromLeft ? (leftAnchor  + s * SLOT_X)
-            : (rightAnchor - s * SLOT_X);
-        const sy = startY - s * SLOT_Y; // 위로 갈수록 조금씩 높아짐(↗)
+        const sx = fromLeft ? (leftAnchor  + s * SLOT_X) : (rightAnchor - s * SLOT_X);
+        const sy = startY - s * SLOT_Y;
 
         const ballImg = scene.add.image(sx, sy, key).setDisplaySize(BALL_DIAM, BALL_DIAM);
         const player  = scene.matter.add.gameObject(ballImg);
