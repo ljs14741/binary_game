@@ -42,6 +42,19 @@ const bodyToPlayer = new Map();
 let _kbLocked = false;
 let __typingLock = false;
 let __domContainer = null;
+const UI_FONT = "Pretendard, 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', Roboto, Arial";
+const UI = {
+    bg: '#0b1220',            // 씬 배경
+    panelBg: 0x0f1729,        // 카드 바탕
+    panelAlpha: 1.0,
+    panelBorder: 0x334155,    // 카드 보더(슬레이트)
+    accent: 0x60a5fa,         // 포인트(블루)
+    accentSoft: 0x93c5fd,
+    danger: 0xf87171,         // -
+    success: 0x34d399,        // +
+    text: '#f1f5f9',     // 거의 흰색
+    subText: '#cbd5e1',  // 밝은 회색
+};
 
 function ensureDomContainerVisible() {
     const domC = getDomContainer();
@@ -372,6 +385,8 @@ function create() {
     createGameSetupUI(this);
     this.cannon = this.add.image(config.width / 2, 4000, 'cannon').setOrigin(0.5, 1);
 
+    this.input.manager.canvas.style.touchAction = 'none';
+
     window.__pinballScene = this;
     bindViewportReflow();
     onViewportChange();   // 최초 1회 정렬
@@ -380,10 +395,10 @@ function create() {
 // ─────────────────────────────────────────────────────────────
 // 테마 적용: 배경 컬러 + 은은한 스타필드
 function applyTheme(scene) {
-    // 배경색 교체(깊은 네이비)
-    scene.cameras.main.setBackgroundColor('#0b1220');
+    // 깊은 네이비 배경
+    scene.cameras.main.setBackgroundColor(UI.bg);
 
-    // 작은 점 텍스처 보장
+    // 점 텍스처 보장
     if (!scene.textures.exists('starDot')) {
         const g = scene.add.graphics();
         g.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 2);
@@ -391,18 +406,18 @@ function applyTheme(scene) {
         g.destroy();
     }
 
-    // 스타필드 파티클 (스크린 고정, 은은하게)
+    // 은은한 스타필드 (과한 네온/글로우 제거)
     scene._starfield?.destroy();
     const stars = scene.add.particles(0, 0, 'starDot', {
         x: { min: 0, max: scene.scale.width },
         y: { min: 0, max: scene.scale.height },
         lifespan: 8000,
-        speedX: { min: -6, max: 6 },
-        speedY: { min: 10, max: 24 },
+        speedX: { min: -5, max: 5 },
+        speedY: { min: 8, max: 18 },
         quantity: 1,
-        frequency: 80,
+        frequency: 90,
         scale: { start: 1, end: 0.4 },
-        alpha: { start: 0.35, end: 0 }
+        alpha: { start: 0.30, end: 0 }
     });
     stars.setScrollFactor(0).setDepth(-10);
     scene._starfield = stars;
@@ -412,116 +427,157 @@ function applyTheme(scene) {
 function createGameSetupUI(scene) {
     const centerX = config.width / 2;
 
-    // 파란 패널(그래픽 객체는 매번 다시 그릴 것이므로 핸들만 유지)
+    // 레이어 초기화
     uiElements.uiContainer?.destroy();
-    uiElements.uiContainer = scene.add.graphics().setScrollFactor(0).setDepth(10);
-    scene.uiLayer?.add(uiElements.uiContainer);
+    uiElements.uiContainer = scene.add.graphics().setScrollFactor(0);
+    scene.uiLayer?.add(uiElements.uiContainer); // 패널은 레이어에
 
     // 타이틀
     uiElements.titleText?.destroy();
-    uiElements.titleText = scene.add.text(centerX, 85, "🎮 게임 참가 설정", {
-        fontSize: '30px', fontFamily: 'Orbitron', fontWeight: 'bold', color: '#ffcc00'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20);
-    scene.uiLayer?.add(uiElements.titleText);
+    uiElements.titleText = scene.add.text(centerX, 84, "🎮 게임 참가 설정", {
+        fontSize: '28px', fontFamily: UI_FONT, color: UI.text, fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0);
+    scene.uiLayer?.add(uiElements.titleText); // ⭐ 레이어에 올리기
 
-    // 참가자 수
+    // 참가자 레이블
     uiElements.participantLabel?.destroy();
-    uiElements.participantLabel = scene.add.text(centerX - 120, 160, "참가자 수", {
-        fontSize: '22px', fontFamily: 'Arial', color: '#ffffff'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20);
-    scene.uiLayer?.add(uiElements.participantLabel);
+    uiElements.participantLabel = scene.add.text(centerX - 120, 155, "참가자 수", {
+        fontSize: '18px', fontFamily: UI_FONT, color: UI.subText
+    }).setOrigin(0.5).setScrollFactor(0);
+    scene.uiLayer?.add(uiElements.participantLabel); // ⭐
 
+    // 참가자 숫자 Pill
     uiElements.participantCountText?.destroy();
-    uiElements.participantCountText = scene.add.text(centerX, 160, playerCount, {
-        fontSize: '24px', fontFamily: 'Arial', color: '#00ffea',
-        backgroundColor: '#222', padding: { left: 14, right: 14, top: 8, bottom: 8 }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20);
-    scene.uiLayer?.add(uiElements.participantCountText);
+    uiElements.participantCountText = scene.add.text(centerX, 155, playerCount, {
+        fontSize: '22px', fontFamily: UI_FONT, color: '#0b1220',
+        backgroundColor: Phaser.Display.Color.IntegerToColor(UI.accent).rgba,
+        padding: { left: 12, right: 12, top: 6, bottom: 6 }
+    }).setOrigin(0.5).setScrollFactor(0);
+    scene.uiLayer?.add(uiElements.participantCountText); // ⭐
 
-    // + / -
+    // + / - 버튼 (이 함수는 내부에서 레이어에 올림)
     uiElements.increaseButton?.destroy();
     uiElements.decreaseButton?.destroy();
-    uiElements.increaseButton = createStyledButton(scene, centerX + 100, 160, "＋",
-        () => changePlayerCount.call(scene, 1), 50, "#28a745").setDepth(30);
-    uiElements.decreaseButton = createStyledButton(scene, centerX + 160, 160, "－",
-        () => changePlayerCount.call(scene, -1), 50, "#dc3545").setDepth(30);
+    uiElements.increaseButton = createStyledButton(
+        scene, centerX + 100, 155, "＋", () => changePlayerCount.call(scene, 1), 48, UI.success
+    );
+    uiElements.decreaseButton = createStyledButton(
+        scene, centerX + 160, 155, "－", () => changePlayerCount.call(scene, -1), 48, UI.danger
+    );
 
-    // 닉네임 입력 열기 버튼
+    // 닉네임 입력 열기 버튼 (내부에서 레이어에 올림)
     uiElements.nicknameButton?.destroy();
-    uiElements.nicknameButton = createStyledButton(scene, centerX, 220, "✍ 닉네임 입력하기",
-        () => generateNicknameInputs(scene), 260, "#1e7cff").setDepth(25);
+    uiElements.nicknameButton = createStyledButton(
+        scene, centerX, 214, "✍ 닉네임 입력하기", () => generateNicknameInputs(scene), 280, UI.accent
+    );
 
-    // 시작 버튼 (하단에 재배치 예정)
+    // 시작 버튼 (하단 정렬, 내부에서 레이어에 올림)
     uiElements.startGameButton?.destroy();
-    uiElements.startGameButton = createStyledButton(scene, centerX, 0, "🚀 게임 시작",
-        () => startGame(scene), 300, "#ff3b3b").setDepth(25);
+    uiElements.startGameButton = createStyledButton(
+        scene, centerX, 0, "🚀 게임 시작", () => startGame(scene), 320, 0xf43f5e
+    );
     uiElements.startGameButton.setVisible(false);
 
-    // 노란 프레임(입력칸 영역). 처음에는 숨김
+    // 닉네임 프레임/타이틀
     uiElements.nameFrame?.destroy();
-    uiElements.nameFrame = scene.add.graphics().setScrollFactor(0).setDepth(15).setVisible(false);
-    scene.uiLayer?.add(uiElements.nameFrame);
+    uiElements.nameFrame = scene.add.graphics().setScrollFactor(0).setVisible(false);
+    scene.uiLayer?.add(uiElements.nameFrame); // ⭐
 
     uiElements.nameTitle?.destroy();
-    uiElements.nameTitle = scene.add.text(centerX, 0, '닉네임 입력 (최대 ' + nickMaxLength + '자) - 변경없이 시작 가능', {
-        fontSize: '20px', color: '#ffcc00', fontFamily: 'Arial', fontStyle: 'bold'
-    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(25).setVisible(false);
-    scene.uiLayer?.add(uiElements.nameTitle);
+    uiElements.nameTitle = scene.add.text(centerX, 0,
+        `닉네임 입력 (최대 ${nickMaxLength}자) - 변경 없이 시작 가능`, {
+            fontSize: '16px', fontFamily: UI_FONT, color: UI.subText
+        }
+    ).setOrigin(0.5, 1).setScrollFactor(0).setVisible(false);
+    scene.uiLayer?.add(uiElements.nameTitle); // ⭐
 
-    // 최초 패널 그리기
-    resizeSetupPanel(scene, { rows: 0, frameH: 0 }); // 기본 높이로
+    // 최초 패널 드로우
+    resizeSetupPanel(scene, { rows: 0, frameH: 0 });
 }
 
 // rows에 맞춰 파란 패널 크기와 요소 배치 업데이트
 function resizeSetupPanel(scene, { rows, frameH }) {
     const centerX = config.width / 2;
-    const baseW = 800;
+    const baseW = 820;
     const baseX = centerX - baseW / 2;
-    const topY  = 50;
+    const topY  = 46;
 
-    // 기본 높이
-    let panelH = 600;
-
-    // 입력 프레임이 있을 때는 필요한 높이 계산
+    let panelH = 560;
     if (rows > 0) {
-        const topSpace = 260 - topY; // 타이틀/참가자수/버튼 영역
-        const bottomSpace = 100;     // 시작 버튼 + 여백
-        panelH = Math.max(600, topSpace + frameH + bottomSpace);
+        const topSpace = 252 - topY; // 타이틀/스테퍼 영역
+        const bottomSpace = 110;      // 시작 버튼 영역
+        panelH = Math.max(560, topSpace + frameH + bottomSpace);
     }
 
-    // 파란 패널 다시 그리기
+    // 카드(글래스 느낌, 네온 아님)
     uiElements.uiContainer.clear();
     uiElements.uiContainer
-        .fillStyle(0x1e1e1e, 0.95)
-        .fillRoundedRect(baseX, topY, baseW, panelH, 20)
-        .lineStyle(3, 0x00c3ff)
-        .strokeRoundedRect(baseX, topY, baseW, panelH, 20);
+        .fillStyle(UI.panelBg, UI.panelAlpha)
+        .fillRoundedRect(baseX, topY, baseW, panelH, 18)
+        .lineStyle(2, UI.panelBorder, 1)
+        .strokeRoundedRect(baseX, topY, baseW, panelH, 18);
 
-    // 시작 버튼은 항상 하단 60px 위
-    uiElements.startGameButton.setY(topY + panelH - 60);
+    // 시작 버튼 하단 정렬
+    uiElements.startGameButton.setY(topY + panelH - 58);
 }
 
 // 버튼 생성 (개선된 스타일)
-function createStyledButton(scene, x, y, label, callback, width = 100, color = "#0077ff") {
-    const btn = scene.add.text(x, y, label, {
-        fontSize: '20px', fontFamily: 'Arial',
-        backgroundColor: color, color: '#fff', align: 'center',
-        fixedWidth: width, fixedHeight: 45, padding: { top: 10 }
-    })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', callback)
-        .on('pointerover', () => btn.setStyle({ backgroundColor: '#fff', color }))
-        .on('pointerout',  () => btn.setStyle({ backgroundColor: color, color: '#fff' }));
+// ⬇ 기존 createStyledButton 전체를 이 버전으로 교체하세요
+// ⬇ 기존 createStyledButton 전체를 이 버전으로 교체
+function createStyledButton(scene, cx, cy, label, onClick, width = 120, color = UI.accent) {
+    const h = 44;
+    const key = `btn_${width}_${h}_${color}`;
+    if (!scene.textures.exists(key)) {
+        const g = scene.add.graphics();
+        g.fillStyle(color, 1).fillRoundedRect(0, 0, width, h, 12);
+        g.fillStyle(0xffffff, 0.06).fillRoundedRect(6, 6, width - 12, Math.max(10, h * 0.38), 8);
+        const border = darker(color, 0.68);
+        g.lineStyle(2, border, 1).strokeRoundedRect(0.5, 0.5, width - 1, h - 1, 11);
+        g.generateTexture(key, width, h);
+        g.destroy();
+    }
 
-    scene.uiLayer?.add(btn); // ✅ 레이어에 넣기
-    return btn;
+    // 1) 시각 요소(입력 없음)
+    const visuals = scene.add.container(cx - width/2, cy - h/2).setScrollFactor(0);
+    const bg  = scene.add.image(width/2, h/2, key).setOrigin(0.5);
+    const txt = scene.add.text(width/2, h/2, label, {
+        fontSize: '18px', fontFamily: UI_FONT, color: '#0b1220', fontStyle: 'bold', align: 'center'
+    }).setOrigin(0.5);
+    visuals.add([bg, txt]);
+    if (scene.uiLayer) scene.uiLayer.add(visuals);
+
+    // 2) 정확한 히트 박스(컨테이너와 분리)
+    const hit = scene.add.rectangle(cx, cy, width, h, 0x000000, 0.001)
+        .setOrigin(0.5).setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
+    if (scene.uiLayer) scene.uiLayer.add(hit);
+    if (hit.input) hit.input.cursor = 'pointer';
+
+    // 3) 마이크로 인터랙션(히트박스는 스케일 X → 어긋남 없음)
+    const press   = () => scene.tweens.add({ targets: [bg, txt], scale: 0.98, duration: 80, ease: 'Quad.easeOut' });
+    const release = (fire) => scene.tweens.add({
+        targets: [bg, txt], scale: 1, duration: 120, ease: 'Back.Out',
+        onComplete: () => { if (fire) onClick?.(); }
+    });
+    hit.on('pointerdown', press);
+    hit.on('pointerup',        () => release(true));
+    hit.on('pointerupoutside', () => release(true));
+    hit.on('pointerout',       () => release(false));
+    hit.on('pointercancel',    () => release(false));
+
+    // 4) 기존 코드 호환용 체이닝 API (setDepth/Visible/Position 등)
+    const api = {
+        setDepth: (d) => { visuals.setDepth(d); hit.setDepth(d + 0.1); return api; },
+        setVisible: (v) => { visuals.setVisible(v); hit.setVisible(v); return api; },
+        setPosition: (x, y) => { visuals.setPosition(x - width/2, y - h/2); hit.setPosition(x, y); return api; },
+        setX: (x) => { visuals.setX(x - width/2); hit.setX(x); return api; },
+        setY: (y) => { visuals.setY(y - h/2); hit.setY(y); return api; }
+    };
+    return Object.assign(api, { _visuals: visuals, _hit: hit });
 }
 
 function generateNicknameInputsNative(scene) {
-    // ★ 혹시 숨겨진 상태면 보여주기(네이티브에 직접 영향은 없지만 일관성 유지)
     ensureDomContainerVisible();
-
     uiElements.nicknameButton?.setVisible(false);
 
     const old = document.getElementById('name-overlay');
@@ -529,23 +585,20 @@ function generateNicknameInputsNative(scene) {
     uiElements.nameInputs = [];
 
     const { sx, sy, offX, offY } = getCanvasScaleAndOffset();
-
     const centerX = BASE_W / 2;
     const frameW = 740;
     const frameX = centerX - frameW / 2;
     const frameY = 270;
     const padding = 18;
-
     const cellW = 120, cellH = 36, gap = 12;
     const cols = Math.max(2, Math.min(6, Math.floor((frameW - padding*2 + gap) / (cellW + gap))));
     const rows = Math.ceil(playerCount / cols);
     const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
 
+    // 프레임 (노란 네온 제거 → 미니멀)
     uiElements.nameFrame.setVisible(true).clear()
-        .lineStyle(2, 0xffcc00, 1)
-        .fillStyle(0x000000, 0.20)
-        .fillRoundedRect(frameX, frameY, frameW, frameH, 14)
-        .strokeRoundedRect(frameX, frameY, frameW, frameH, 14);
+        .fillStyle(UI.panelBg, 0.22).fillRoundedRect(frameX, frameY, frameW, frameH, 12)
+        .lineStyle(1.5, UI.panelBorder, 1).strokeRoundedRect(frameX, frameY, frameW, frameH, 12);
 
     uiElements.nameTitle.setVisible(true).setPosition(centerX, frameY - 10);
 
@@ -554,7 +607,6 @@ function generateNicknameInputsNative(scene) {
     const startY = frameY + padding + cellH/2;
 
     const seed = Array.isArray(playerNicknames) ? playerNicknames.slice() : [];
-
     const gc = document.getElementById('game-container');
     const overlay = document.createElement('div');
     overlay.id = 'name-overlay';
@@ -570,19 +622,27 @@ function generateNicknameInputsNative(scene) {
 
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.style.position = 'absolute';
-        cell.style.left = pxX(baseX) + 'px';
-        cell.style.top  = pxY(baseY) + 'px';
+        Object.assign(cell.style, { position:'absolute', left: pxX(baseX)+'px', top: pxY(baseY)+'px' });
 
         const input = document.createElement('input');
         input.type = 'text';
         input.maxLength = nickMaxLength;
         input.placeholder = `P${i+1}`;
         input.value = seed[i] || '';
-        input.style.width  = Math.round(cellW * sx) + 'px';
-        input.style.height = Math.round(cellH * sy) + 'px';
-        input.style.fontSize = Math.max(12, Math.round(16 * Math.min(sx, sy))) + 'px';
-        input.style.lineHeight = input.style.height;
+
+        const w = Math.round(cellW * sx);
+        const h = Math.round(cellH * sy);
+        Object.assign(input.style, {
+            width: w+'px', height: h+'px', fontSize: Math.max(12, Math.round(16*Math.min(sx, sy)))+'px',
+            lineHeight: h+'px', textAlign:'center',
+            color: UI.text, background: 'rgba(15,23,42,0.85)',
+            border: `1px solid ${Phaser.Display.Color.IntegerToColor(UI.panelBorder).rgba}`,
+            borderRadius: '10px', outline: 'none',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 2px transparent',
+            transition: 'box-shadow .15s ease'
+        });
+        input.onfocus = () => { input.style.boxShadow = `0 0 0 2px ${Phaser.Display.Color.IntegerToColor(UI.accentSoft).rgba}`; };
+        input.onblur  = () => { input.style.boxShadow = '0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 2px transparent'; };
 
         input.setAttribute('inputmode', 'text');
         input.setAttribute('autocomplete', 'off');
@@ -593,12 +653,11 @@ function generateNicknameInputsNative(scene) {
             __typingLock = true;
             setTimeout(() => { try { input.focus({ preventScroll: true }); } catch(e){} }, 0);
         }, { passive: true });
-
         input.addEventListener('focus', () => { __typingLock = true; }, { passive:true });
-        input.addEventListener('blur',  () => { __typingLock = false; setTimeout(() => onViewportChange(true), 60); });
+        input.addEventListener('blur', () => { __typingLock = false; setTimeout(() => onViewportChange(true), 60); });
 
         ['touchstart','touchmove','touchend','pointerup','mousedown','mouseup','click']
-            .forEach(evt => input.addEventListener(evt, e => { e.stopPropagation(); }, { passive: false }));
+            .forEach(evt => input.addEventListener(evt, e => e.stopPropagation(), { passive:false }));
 
         cell.appendChild(input);
         overlay.appendChild(cell);
@@ -607,7 +666,6 @@ function generateNicknameInputsNative(scene) {
 
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
-
     syncDomContainerToCanvas();
     rafReflow(8, true);
 }
@@ -615,38 +673,32 @@ function generateNicknameInputsNative(scene) {
 function generateNicknameInputs(scene) {
     if (useNativeInputs()) return generateNicknameInputsNative(scene);
 
-    // ★ 혹시 softRestart에서 숨겨놓은 DOM 컨테이너를 되살림
     ensureDomContainerVisible();
-
     uiElements.nicknameButton?.setVisible(false);
+
     uiElements.nameInputs?.forEach(i => i.destroy());
     uiElements.nameInputs = [];
 
     const { sx, sy } = getCanvasScaleAndOffset();
-
     const centerX = BASE_W / 2;
     const frameW = 740;
     const frameX = centerX - frameW / 2;
     const frameY = 270;
     const padding = 18;
-
     const cellW = 120, cellH = 36, gap = 12;
-
     const cols = Math.max(2, Math.min(6, Math.floor((frameW - padding*2 + gap) / (cellW + gap))));
     const rows = Math.ceil(playerCount / cols);
     const frameH = padding*2 + rows*cellH + (rows - 1)*gap;
 
     uiElements.nameFrame.setVisible(true).clear()
-        .lineStyle(2, 0xffcc00, 1)
-        .fillStyle(0x000000, 0.20)
-        .fillRoundedRect(frameX, frameY, frameW, frameH, 14)
-        .strokeRoundedRect(frameX, frameY, frameW, frameH, 14);
+        .fillStyle(UI.panelBg, 0.22).fillRoundedRect(frameX, frameY, frameW, frameH, 12)
+        .lineStyle(1.5, UI.panelBorder, 1).strokeRoundedRect(frameX, frameY, frameW, frameH, 12);
 
     uiElements.nameTitle.setVisible(true).setPosition(centerX, frameY - 10);
 
-    const gridW = cols * cellW + (cols - 1) * gap;
-    const startX = frameX + (frameW - gridW) / 2 + cellW / 2;
-    const startY = frameY + padding + cellH / 2;
+    const gridW = cols * cellW + (cols - 1)*gap;
+    const startX = frameX + (frameW - gridW)/2 + cellW/2;
+    const startY = frameY + padding + cellH/2;
 
     const keep = Array.isArray(uiElements.nameInputs) ? uiElements.nameInputs.map(i => (i?.text || '').trim()) : [];
     const seed = keep.some(Boolean) ? keep : (Array.isArray(playerNicknames) ? playerNicknames.slice() : []);
@@ -658,38 +710,35 @@ function generateNicknameInputs(scene) {
         const w = Math.max(40, Math.round(cellW * sx));
         const h = Math.max(24, Math.round(cellH * sy));
         const fontPx = Math.max(12, Math.round(16 * Math.min(sx, sy)));
-        const padPx  = Math.max(2, Math.round(4 * Math.min(sx, sy)));
+        const padPx  = Math.max(2, Math.round(6 * Math.min(sx, sy)));
 
         const input = scene.add.rexInputText(x, y, w, h, {
-            type: 'text',
-            text: (seed[i] || ''),
-            fontSize: `${fontPx}px`,
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            border: '1px solid #ffcc00',
-            align: 'center',
-            padding: padPx,
-            placeholder: `P${i+1}`,
-            selectAll: true,
-            maxLength: nickMaxLength
-        })
-            .setOrigin(0.5)
-            .setScrollFactor(0)
-            .setDepth(22);
+            type: 'text', text: (seed[i] || ''), fontSize: `${fontPx}px`,
+            fontFamily: UI_FONT, color: UI.text, backgroundColor: 'rgba(15,23,42,0.85)',
+            border: `1px solid ${Phaser.Display.Color.IntegerToColor(UI.panelBorder).rgba}`,
+            align: 'center', padding: padPx, placeholder: `P${i+1}`, selectAll: true, maxLength: nickMaxLength
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(22);
 
-        if (i === 0) {
-            // ★ 첫 생성 시 컨테이너 가시화/보정
-            normalizeDomContainerFrom(input);
-            ensureDomContainerVisible();
+        // DOM 스타일 미세 조정
+        if (input.node) {
+            const n = input.node;
+            n.style.borderRadius = '10px';
+            n.style.outline = 'none';
+            n.style.boxShadow = '0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 2px transparent';
+            n.style.transition = 'box-shadow .15s ease';
+            n.addEventListener('focus', () => { n.style.boxShadow = `0 0 0 2px ${Phaser.Display.Color.IntegerToColor(UI.accentSoft).rgba}`; }, { passive: true });
+            n.addEventListener('blur',  () => { n.style.boxShadow = '0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 2px transparent'; });
+            wireKeyboardGuard(n);
         }
-        wireKeyboardGuard(input.node);
+
+        if (i === 0) { normalizeDomContainerFrom(input); ensureDomContainerVisible(); }
+
         scene.uiLayer?.add(input);
         uiElements.nameInputs.push(input);
     }
 
     uiElements.startGameButton.setVisible(true);
     resizeSetupPanel(scene, { rows, frameH });
-
     rafReflow(8, true);
 }
 
@@ -1020,15 +1069,29 @@ function startGame(scene) {
         player.setIgnoreGravity(true);
 
         const nameColor = hexToCss(ballColors[i]);
-        const label = scene.add.text(sx, sy - 25, playerNicknames[i], {
-            fontSize: '14px',
-            fontFamily: 'Arial',
-            color: nameColor,
-            backgroundColor: 'rgba(0,0,0,0.45)',
-            padding: { left: 5, right: 5, top: 2, bottom: 2 },
+        const displayName = playerNicknames[i];
+
+        // 텍스트(먼저 만들고 사이즈 측정)
+        const nameText = scene.add.text(0, 0, displayName, {
+            fontSize: '13px',
+            fontFamily: UI_FONT,
+            fontStyle: '600',
+            color: '#e2e8f0',
             stroke: '#000000',
-            strokeThickness: 2
+            strokeThickness: 3
         }).setOrigin(0.5);
+
+        // 배지(플레이어 색 테두리)
+        const padX = 14, padY = 6;
+        const pillW = Math.ceil(nameText.width) + padX * 2;
+        const pillH = Math.max(22, Math.ceil(nameText.height) + padY);
+        const pillKey = `pill_${i}_${pillW}x${pillH}`;
+        makePillTexture(scene, pillKey, pillW, pillH, playersColor = ballColors[i], 0x0f1729, 0.78);
+        const pillImg = scene.add.image(0, 0, pillKey).setOrigin(0.5);
+
+        // 컨테이너(본체 위치 기준으로 이동)
+        const label = scene.add.container(sx, sy - 24, [pillImg, nameText]);
+        label.setDepth(500); // 공보다 살짝 위
 
         players.push({
             body: player,
@@ -1058,6 +1121,18 @@ function startGame(scene) {
     createMinimap(scene);
     createLeaderboard(scene);
 }
+
+// 둥근 배지 텍스처 생성(필 + 테두리)
+function makePillTexture(scene, key, w, h, strokeColor = 0xffffff, fillColor = 0x0f1729, fillA = 0.78) {
+    if (scene.textures.exists(key)) return;
+    const r = Math.min(12, Math.floor(h / 2));
+    const g = scene.add.graphics();
+    g.fillStyle(fillColor, fillA).fillRoundedRect(0, 0, w, h, r);
+    g.lineStyle(2, strokeColor, 0.95).strokeRoundedRect(0.5, 0.5, w - 1, h - 1, r - 1);
+    g.generateTexture(key, w, h);
+    g.destroy();
+}
+
 
 function createMinimap(scene) {
     // 기존 미니맵이 있으면 안전하게 제거
@@ -1558,33 +1633,46 @@ function createLeaderboard(scene) {
     scene.lbLayer?.destroy();
     const layer = scene.add.layer().setDepth(8000);
     scene.lbLayer = layer;
-
     if (scene.minimapCamera) scene.minimapCamera.ignore(layer);
 
-    const w = 190, h = config.height - 20;
+    // 도트 텍스처(플레이어 색상 표시 점)
+    if (!scene.textures.exists('lbDot8')) {
+        const g = scene.add.graphics();
+        g.fillStyle(0xffffff, 1).fillCircle(4, 4, 4);
+        g.generateTexture('lbDot8', 8, 8);
+        g.destroy();
+    }
+
+    const w = 220, h = config.height - 20;
     const x = config.width - w - 10, y = 10;
 
     const bg = scene.add.graphics().setScrollFactor(0);
-    bg.fillStyle(0x0f1729, 0.82).fillRoundedRect(x, y, w, h, 12);
-    bg.lineStyle(2, 0x5eead4, 1).strokeRoundedRect(x, y, w, h, 12); // 민트 네온
+    bg.fillStyle(0x0f1729, 0.85).fillRoundedRect(x, y, w, h, 12);
+    bg.lineStyle(2, 0x67e8f9, 1).strokeRoundedRect(x, y, w, h, 12);
     layer.add(bg);
 
-    const title = scene.add.text(x + 12, y + 10, "📜 순위", {
-        fontSize: '16px', fontFamily: 'Orbitron', color: '#c7d2fe'
+    const title = scene.add.text(x + 14, y + 12, "📜 순위", {
+        fontSize: '16px', fontFamily: UI_FONT, color: '#e2e8f0', fontStyle: '700'
     }).setScrollFactor(0);
     layer.add(title);
 
     scene._lbStartX = x + 12;
-    scene._lbStartY = y + 36;
+    scene._lbStartY = y + 40;
     scene._lbWidth  = w - 24;
-    scene._lbLineH  = 18;
+    scene._lbLineH  = 20;
     scene.lbItems   = [];
+}
+
+function rankColor(rank){
+    if (rank === 1) return '#facc15'; // gold
+    if (rank === 2) return '#cbd5e1'; // silver-ish
+    if (rank === 3) return '#f97316'; // bronze-ish
+    return '#94a3b8';                 // others
 }
 
 function updateLeaderboard(scene) {
     if (!scene.lbLayer) return;
 
-    // finished 먼저, 그 다음 진행 중은 결승선에 가까운 순
     const sorted = players.slice().sort((a, b) => {
         if (a.finished && b.finished) return a.rank - b.rank;
         if (a.finished !== b.finished) return a.finished ? -1 : 1;
@@ -1593,40 +1681,50 @@ function updateLeaderboard(scene) {
 
     const makeOrUpdate = (i, p, rank) => {
         const baseY = scene._lbStartY + i * scene._lbLineH;
-        const name  = p.name || p.label?.text || `P${i+1}`;
-        const flag  = p.finished ? " 🏁" : "";
-        const color = p.color || 0xffffff;
 
         let line = scene.lbItems[i];
         if (!line) {
             const rankTx = scene.add.text(scene._lbStartX, baseY, '', {
-                fontSize: '14px', fontFamily: 'Arial', color: '#ffffff'
+                fontSize: '14px', fontFamily: UI_FONT, color: '#94a3b8'
             }).setScrollFactor(0);
 
+            const dot = scene.add.image(0, baseY + 8, 'lbDot8').setOrigin(0, 0.5).setScrollFactor(0);
             const nameTx = scene.add.text(0, baseY, '', {
-                fontSize: '14px', fontFamily: 'Arial', color: hexToCss(color)
+                fontSize: '14px', fontFamily: UI_FONT, color: '#e2e8f0'
             }).setScrollFactor(0);
 
             const flagTx = scene.add.text(0, baseY, '', {
-                fontSize: '14px', fontFamily: 'Arial', color: '#ffffff'
+                fontSize: '14px', fontFamily: UI_FONT, color: '#e2e8f0'
             }).setScrollFactor(0);
 
-            // ⛏️ 여기! addMultiple 대신 개별 add
             scene.lbLayer.add(rankTx);
+            scene.lbLayer.add(dot);
             scene.lbLayer.add(nameTx);
             scene.lbLayer.add(flagTx);
-
-            line = scene.lbItems[i] = { rankTx, nameTx, flagTx };
+            line = scene.lbItems[i] = { rankTx, dot, nameTx, flagTx };
         }
 
-        // 내용/색/위치 갱신
-        line.rankTx.setText(String(rank).padStart(2, ' ') + '.').setY(baseY);
-        line.nameTx.setText(name).setColor(hexToCss(color)).setY(baseY);
-        line.nameTx.setX(line.rankTx.x + line.rankTx.width + 6);
-        line.flagTx.setText(flag).setY(baseY);
-        line.flagTx.setX(line.nameTx.x + line.nameTx.width + 4);
+        // 내용 갱신
+        line.rankTx.setText(String(rank).padStart(2, ' ') + '.')
+            .setY(baseY)
+            .setColor(rankColor(rank));
 
+        line.dot.setTint(p.color || 0xffffff);
+        line.dot.setPosition(line.rankTx.x + line.rankTx.width + 6, baseY + 8);
+
+        line.nameTx.setText(p.name || p.label?.text || `P${i+1}`)
+            .setY(baseY)
+            .setX(line.dot.x + 12)
+            .setColor('#e2e8f0');
+
+        const flag = p.finished ? " 🏁" : "";
+        line.flagTx.setText(flag)
+            .setY(baseY)
+            .setX(line.nameTx.x + line.nameTx.width + 4);
+
+        // 보이기
         line.rankTx.setVisible(true);
+        line.dot.setVisible(true);
         line.nameTx.setVisible(true);
         line.flagTx.setVisible(true);
     };
@@ -1640,7 +1738,7 @@ function updateLeaderboard(scene) {
     // 남는 라인 정리
     for (let j = sorted.length; j < (scene.lbItems?.length || 0); j++) {
         const l = scene.lbItems[j];
-        l.rankTx.destroy(); l.nameTx.destroy(); l.flagTx.destroy();
+        l.rankTx.destroy(); l.dot.destroy(); l.nameTx.destroy(); l.flagTx.destroy();
     }
     scene.lbItems.length = sorted.length;
 }
@@ -1651,7 +1749,7 @@ function createRestartCTA(scene, opts = {}) {
     const x = opts.x ?? (14 + btnW / 2);
     const y = opts.y ?? (config.height - 14 - btnH / 2);
     const label = opts.label || "🔁 다시하기";
-    const onClick = opts.onClick || (() => softRestart(scene)); // ← 여기만 변경
+    const onClick = opts.onClick || (() => softRestart(scene));
 
     const hud = scene.add.layer().setDepth(9000);
     if (scene.minimapCamera) scene.minimapCamera.ignore(hud);
@@ -1664,67 +1762,49 @@ function createRestartCTA(scene, opts = {}) {
         g.lineStyle(2, 0x7dd3fc, 1).strokeRoundedRect(0.5, 0.5, btnW - 1, btnH - 1, r - 1);
         g.fillStyle(0xffffff, 0.05);
         g.fillRoundedRect(6, 6, btnW - 12, Math.max(10, btnH * 0.38), Math.max(4, r - 6));
-        g.generateTexture(key, btnW, btnH);
-        g.destroy();
+        g.generateTexture(key, btnW, btnH); g.destroy();
     }
 
-    const bg = scene.add.image(x, y, key)
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(9001)
-        .setInteractive({ useHandCursor: true });
-
+    // 시각 요소(입력 X)
+    const bg  = scene.add.image(x, y, key).setOrigin(0.5).setScrollFactor(0).setDepth(9001);
     const txt = scene.add.text(x, y, label, {
-        fontFamily: "Arial Black",
-        fontSize: "20px",
-        color: "#e6faff",
-        align: "center",
-        stroke: "#00222a",
-        strokeThickness: 3,
+        fontFamily: "Arial Black", fontSize: "20px", color: "#e6faff",
+        align: "center", stroke: "#00222a", strokeThickness: 3,
         shadow: { color: "#000000", blur: 2, fill: true, offsetY: 1 }
-    })
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(9002);
-
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002);
     hud.add([bg, txt]);
 
-    let armed = false;
-    const press = () => {
-        if (armed) return;
-        armed = true;
-        scene.tweens.add({ targets: [bg, txt], scale: 0.96, duration: 80, ease: "Quad.easeOut" });
-    };
-    const release = (fire) => {
-        if (!armed) return;
-        armed = false;
-        scene.tweens.add({
-            targets: [bg, txt],
-            scale: 1,
-            duration: 120,
-            ease: "Back.Out",
-            onComplete: () => { if (fire) onClick(); }
-        });
-    };
+    // 정확한 히트박스(입력 O) — 스케일 영향 없음
+    const hit = scene.add.rectangle(x, y, btnW, btnH, 0x000000, 0.001)
+        .setOrigin(0.5).setScrollFactor(0).setDepth(9003)
+        .setInteractive({ useHandCursor: true });
 
-    bg.on("pointerdown", () => press());
-    bg.on("pointerup", () => release(true));
-    bg.on("pointerupoutside", () => release(true));
-    bg.on("pointerout", () => release(false));
-    bg.on("pointercancel", () => release(false));
-
-    if (bg.input) {
-        bg.input.cursor = 'pointer';
-        bg.input.alwaysEnabled = true;  // 모바일 히트 안정성 +
+    if (hit.input) {
+        hit.input.cursor = 'pointer';
+        hit.input.alwaysEnabled = true;    // 카메라 스크롤/줌과 무관하게 입력 보장
     }
 
-    return { hud, bg, txt };
+    const press   = () => scene.tweens.add({ targets: [bg, txt], scale: 0.96, duration: 80, ease: "Quad.easeOut" });
+    const release = (fire) => scene.tweens.add({
+        targets: [bg, txt], scale: 1, duration: 120, ease: "Back.Out",
+        onComplete: () => { if (fire) onClick(); }
+    });
+
+    hit.on("pointerdown", () => press());
+    hit.on("pointerup",        () => release(true));
+    hit.on("pointerupoutside", () => release(true));
+    hit.on("pointerout",       () => release(false));
+    hit.on("pointercancel",    () => release(false));
+
+    return { hud, bg, txt, hit };
 }
 
 function softRestart(scene){
     // 1) 입력 오버레이/DOM 컨테이너 완전 제거/숨김
     try {
         document.getElementById('name-overlay')?.remove();
+        getDomContainer()?.style.setProperty('display','none','important');
+        getDomContainer()?.style.setProperty('pointer-events','none','important');
         const domC = getDomContainer();
         if (domC) {
             domC.style.display = 'none';
@@ -1848,9 +1928,9 @@ function showWinnerUI(scene, winnerName) {
 
     // ⬇⬇⬇ 여기! reload 제거, 씬 재시작으로 교체
     createRestartCTA(scene, {
-        w: 260, h: 68,
+        w: 260, h: 96,
         x: 14 + 260 / 2,
-        y: config.height - 14 - 68 / 2,
+        y: config.height - 14 - 96 / 2,
         label: "🔁 다시하기",
         onClick: () => softRestart(scene)   // ← 씬 재시작
     });
