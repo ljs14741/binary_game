@@ -324,6 +324,17 @@ function bindViewportReflow() {
 }
 
 window.onload = () => {
+    // 🔄 (선택 기능 적용) 이전 게임의 닉네임 복원
+    try {
+        const saved = JSON.parse(localStorage.getItem('pinball_names') || '[]');
+        if (Array.isArray(saved) && saved.length) {
+            // 최대 30명까지만, 문자열화 보정
+            playerNicknames = saved.slice(0, 30).map(v => (v ?? '').toString());
+        }
+    } catch (e) {
+        // 복원 실패 시 무시
+    }
+
     game = new Phaser.Game(config);
 };
 
@@ -894,13 +905,21 @@ function normalizeDomContainerFrom(inputGO) {
 }
 
 function changePlayerCount(delta) {
-    playerCount = Phaser.Math.Clamp(playerCount + delta, 1, 30);
-    uiElements.participantCountText.setText(playerCount);
+    // 1) 지금까지 입력한 값 스냅샷
+    const snap = snapshotCurrentNicknameInputs();
 
+    // 2) 인원 변경
+    playerCount = Phaser.Math.Clamp(playerCount + delta, 1, 30);
+    uiElements.participantCountText?.setText(playerCount);
+
+    // 3) 전역 seed 갱신 (앞부분은 유지, 모자라면 빈칸)
+    const safe = (v) => (v ?? '').toString();
+    playerNicknames = Array.from({ length: playerCount }, (_, i) => safe(snap[i]));
+
+    // 4) 입력창이 열려있다면 값 유지한 채로 리빌드
     if (uiElements.nameFrame && uiElements.nameFrame.visible) {
-        generateNicknameInputs(this); // 입력칸/프레임/패널 자동 재배치
+        rebuildNicknameInputs(this);   // ← 네이티브/REX 모두 값 보존
     } else {
-        // 입력칸 닫힌 상태면 기본 패널 높이 유지
         resizeSetupPanel(this, { rows: 0, frameH: 0 });
     }
 }
@@ -975,10 +994,11 @@ function hexToCss(hex) {
 }
 
 function startGame(scene) {
-    // ✅ 중복 시작 방지
+    // ✅ 중복 시작/중복 클릭 방지
     if (scene._starting || scene._gameStarted) return;
     scene._starting = true;
 
+    // ── 닉네임 입력 소스
     const overlay = document.getElementById('name-overlay');
 
     // 공백이면 P{index+1}로 대체
@@ -987,31 +1007,49 @@ function startGame(scene) {
         return s.length ? s : `P${idx + 1}`;
     };
 
-    // 1) 닉네임 수집 (모바일: 네이티브 input, PC: rexInputText)
+    // 🔄 이전 시도에서 남아있을 수 있는 빨간 테두리/토스트 리셋
+    resetNicknameInputHighlights();
+    if (uiElements.errorToast?.cont && !uiElements.errorToast.cont.destroyed) {
+        try { uiElements.errorToast.cont.destroy(); } catch(_) {}
+        uiElements.errorToast = null;
+    }
+
+    // 1) 원본 값 수집
+    let rawValues = [];
     if (overlay) {
         const fields = Array.from(overlay.querySelectorAll('input'));
-        playerNicknames = fields.slice(0, playerCount).map((inp, idx) =>
-            safeName(inp.value, idx)
-        );
+        rawValues = fields.slice(0, playerCount).map(inp => inp.value ?? '');
     } else if (Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length) {
-        playerNicknames = uiElements.nameInputs.slice(0, playerCount).map((inp, idx) =>
-            safeName(inp.text || inp.node?.value, idx)
-        );
+        rawValues = uiElements.nameInputs.slice(0, playerCount).map(inp => (inp.text ?? inp.node?.value ?? ''));
     } else {
-        // 입력 UI가 닫혀 있었던 특수 상황 방어
-        playerNicknames = Array.from({ length: playerCount }, (_, i) => `P${i + 1}`);
+        rawValues = Array.from({ length: playerCount }, () => '');
     }
 
-    // 길이/공백 방어
-    if (!Array.isArray(playerNicknames) || playerNicknames.length !== playerCount) {
-        playerNicknames = Array.from({ length: playerCount }, (_, i) =>
-            safeName(playerNicknames?.[i], i)
-        );
+    // 2) 최종 닉네임(빈 값은 P1~P{N})
+    let finalNames = rawValues.map((v, idx) => safeName(v, idx));
+
+    // 3) 중복 검사(공백 정규화 + 소문자 기준) → 동일 문자열 중복 금지
+    const dupIdx = findDuplicateNameIndices(finalNames);
+    if (dupIdx.length > 0) {
+        // ⛔️ 시작 중단 + 하이라이트 + 에러 토스트
+        highlightDuplicateNicknameIndices(dupIdx);
+        showErrorToast(scene, "동일한 닉네임으로는 시작할 수 없습니다.");
+        scene._starting = false;
+        return;
     }
 
     // ─────────────────────────────────────────────────────
-    // 설정 UI/DOM 완전 정리
+    // ✅ 통과 → 이후에만 설정 UI/DOM 제거
     // ─────────────────────────────────────────────────────
+    playerNicknames = finalNames;
+
+    // 💾 (선택 기능 적용) 새로고침 복원용 저장
+    try {
+        localStorage.setItem('pinball_names', JSON.stringify(playerNicknames));
+    } catch (e) {
+        // 저장 실패 시 무시 (사파리 프라이빗 등)
+    }
+
     overlay?.remove();
     scene.uiLayer?.destroy();
     uiElements = {};
@@ -1029,9 +1067,7 @@ function startGame(scene) {
     __typingLock = false;
     _kbLocked = false;
 
-    // ─────────────────────────────────────────────────────
     // 이하 기존 게임 시작 로직
-    // ─────────────────────────────────────────────────────
     scene.cameras.main.setBackgroundColor('#000');
     players = [];
     lastWinner = null;
@@ -1042,7 +1078,6 @@ function startGame(scene) {
     const launchSpeed = 110;
     const ballColors = buildBallPalette(scene, playerCount);
 
-    // 스폰 방향/자리 랜덤화
     const fromLeft = Phaser.Math.Between(0, 1) === 1;
     const SLOT_X = BALL_DIAM + 10;
     const SLOT_Y = BALL_RADIUS + 6;
@@ -1070,10 +1105,10 @@ function startGame(scene) {
         player.setFixedRotation();
         player.setIgnoreGravity(true);
 
-        const nameColor = hexToCss(ballColors[i]);
         const displayName = playerNicknames[i];
 
-        // 텍스트
+        // 닉네임 라벨(공 색상 외곽선 배지)
+        const nameColor = hexToCss(ballColors[i]);
         const nameText = scene.add.text(0, 0, displayName, {
             fontSize: '13px',
             fontFamily: UI_FONT,
@@ -1083,7 +1118,6 @@ function startGame(scene) {
             strokeThickness: 3
         }).setOrigin(0.5);
 
-        // 배지
         const padX = 14, padY = 6;
         const pillW = Math.ceil(nameText.width) + padX * 2;
         const pillH = Math.max(22, Math.ceil(nameText.height) + padY);
@@ -1091,7 +1125,6 @@ function startGame(scene) {
         makePillTexture(scene, pillKey, pillW, pillH, playersColor = ballColors[i], 0x0f1729, 0.78);
         const pillImg = scene.add.image(0, 0, pillKey).setOrigin(0.5);
 
-        // 컨테이너
         const label = scene.add.container(sx, sy - 24, [pillImg, nameText]);
         label.setDepth(500);
 
@@ -1112,7 +1145,6 @@ function startGame(scene) {
         });
     }
 
-    // 장애물/골인지역/승리판정은 한 번만 생성
     scene.time.delayedCall(3100, () => {
         if (scene.cannon?.destroy) scene.cannon.destroy();
         createGoalZone(scene);
@@ -1126,6 +1158,146 @@ function startGame(scene) {
     // ✅ 시작 완료 마킹
     scene._starting = false;
     scene._gameStarted = true;
+}
+
+function findDuplicateNameIndices(names) {
+    // 공백 정규화 + 소문자 기준으로 동일성 판단
+    const norm = s => (s ?? '')
+        .toString()
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+
+    const seen = new Map();
+    const dup = new Set();
+
+    for (let i = 0; i < names.length; i++) {
+        const key = norm(names[i]);
+        if (!key) continue; // 빈 값은 어차피 safeName으로 치환되어 여기 안옴
+        if (seen.has(key)) {
+            dup.add(i);
+            dup.add(seen.get(key));
+        } else {
+            seen.set(key, i);
+        }
+    }
+    return Array.from(dup).sort((a, b) => a - b);
+}
+
+function resetNicknameInputHighlights() {
+    const borderCss = hexToCss(UI.panelBorder); // 기존 회색 보더
+    const overlay = document.getElementById('name-overlay');
+
+    if (overlay) {
+        overlay.querySelectorAll('input').forEach(inp => {
+            inp.style.borderColor = borderCss;
+            inp.style.boxShadow = '0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 2px transparent';
+        });
+    }
+    if (Array.isArray(uiElements.nameInputs)) {
+        uiElements.nameInputs.forEach(it => {
+            const n = it?.node;
+            if (n) {
+                n.style.borderColor = borderCss;
+                n.style.boxShadow = '0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 2px transparent';
+            }
+        });
+    }
+}
+
+function highlightDuplicateNicknameIndices(indices) {
+    const red = hexToCss(UI.danger); // '#f87171'
+    const overlay = document.getElementById('name-overlay');
+
+    if (overlay) {
+        const inputs = overlay.querySelectorAll('input');
+        indices.forEach(i => {
+            const inp = inputs[i];
+            if (inp) {
+                inp.style.borderColor = red;
+                inp.style.boxShadow = '0 0 0 2px rgba(248,113,113,0.65)';
+            }
+        });
+    } else if (Array.isArray(uiElements.nameInputs)) {
+        indices.forEach(i => {
+            const n = uiElements.nameInputs[i]?.node;
+            if (n) {
+                n.style.borderColor = red;
+                n.style.boxShadow = '0 0 0 2px rgba(248,113,113,0.65)';
+            }
+        });
+    }
+}
+
+function showErrorToast(scene, msg = "오류가 발생했습니다.") {
+    // 기존 토스트가 있으면 재사용
+    if (uiElements.errorToast?.cont && !uiElements.errorToast.cont.destroyed) {
+        uiElements.errorToast.txt.setText(msg);
+        // 배경 리드로우
+        const w = Math.min(Math.max(uiElements.errorToast.txt.width + 28, 220), Math.floor(config.width * 0.92));
+        const h = 44;
+        const g = uiElements.errorToast.bg;
+        g.clear();
+        g.fillStyle(0x1f2937, 0.96).fillRoundedRect(-w/2, -h/2, w, h, 10);
+        g.lineStyle(2, UI.danger, 1).strokeRoundedRect(-w/2 + 0.5, -h/2 + 0.5, w - 1, h - 1, 9);
+        uiElements.errorToast.cont.setAlpha(1);
+        return;
+    }
+
+    const layer = scene.uiLayer || scene.add.layer().setDepth(1100);
+    const txt = scene.add.text(0, 0, msg, {
+        fontFamily: UI_FONT,
+        fontSize: '16px',
+        fontStyle: '700',
+        color: '#ffeef0',
+        align: 'center',
+        stroke: '#000000',
+        strokeThickness: 4
+    }).setOrigin(0.5).setScrollFactor(0);
+
+    const w = Math.min(Math.max(txt.width + 28, 220), Math.floor(config.width * 0.92));
+    const h = 44;
+    const bg = scene.add.graphics().setScrollFactor(0);
+    bg.fillStyle(0x1f2937, 0.96).fillRoundedRect(-w/2, -h/2, w, h, 10);
+    bg.lineStyle(2, UI.danger, 1).strokeRoundedRect(-w/2 + 0.5, -h/2 + 0.5, w - 1, h - 1, 9);
+
+    const cont = scene.add.container(config.width / 2, 36, [bg, txt]).setScrollFactor(0).setDepth(1100);
+    layer.add(cont);
+
+    cont.setAlpha(0);
+    scene.tweens.add({ targets: cont, alpha: 1, duration: 160, ease: 'Quad.easeOut' });
+
+    // 2.4초 후 자동 페이드아웃
+    scene.time.delayedCall(2400, () => {
+        if (cont.destroyed) return;
+        scene.tweens.add({
+            targets: cont,
+            alpha: 0,
+            duration: 180,
+            ease: 'Quad.easeIn',
+            onComplete: () => { try { cont.destroy(); } catch(_) {} }
+        });
+    });
+
+    uiElements.errorToast = { cont, bg, txt };
+}
+
+function snapshotCurrentNicknameInputs() {
+    const overlay = document.getElementById('name-overlay');
+
+    // 네이티브 인풋(모바일 구간)
+    if (overlay) {
+        const fields = Array.from(overlay.querySelectorAll('input'));
+        return fields.map(inp => (inp.value ?? '').toString());
+    }
+
+    // rexInputText(PC 등)
+    if (Array.isArray(uiElements.nameInputs) && uiElements.nameInputs.length) {
+        return uiElements.nameInputs.map(inp => (inp.text ?? inp.node?.value ?? '').toString());
+    }
+
+    // 열려있지 않으면 현재 전역 값을 그대로
+    return Array.isArray(playerNicknames) ? playerNicknames.slice() : [];
 }
 
 // 둥근 배지 텍스처 생성(필 + 테두리)
@@ -2019,7 +2191,9 @@ function softRestart(scene){
 function resetGlobals(scene){
     uiElements = {};
     players = [];
-    playerNicknames = [];
+    // ❗️닉네임은 유지해서 다음 입력창에 씨드로 사용
+    // playerNicknames = [];  // ← 지우지 마!
+
     lastWinner = null;
     finishZone = null;
     minimap = null;
@@ -2027,7 +2201,6 @@ function resetGlobals(scene){
     __typingLock = false;
     _kbLocked = false;
 
-    // ✅ 시작 플래그 초기화
     if (scene) {
         scene._starting = false;
         scene._gameStarted = false;
