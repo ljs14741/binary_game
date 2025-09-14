@@ -565,9 +565,17 @@ function createStyledButton(scene, cx, cy, label, onClick, width = 120, color = 
 
     // 3) 마이크로 인터랙션 (항상 클릭마다 실행)
     const press   = () => scene.tweens.add({ targets: [bg, txt], scale: 0.98, duration: 80, ease: 'Quad.easeOut' });
+    // 탭 중복 방지(같은 탭에서 200ms 이내 중복 호출 무시)
+    let lastFire = 0;
     const release = (fire) => scene.tweens.add({
         targets: [bg, txt], scale: 1, duration: 120, ease: 'Back.Out',
-        onComplete: () => { if (fire) onClick?.(); }
+        onComplete: () => {
+            if (!fire) return;
+            const now = scene.time.now || performance.now();
+            if (now - lastFire < 100) return;   // ← 더블 탭/이중 이벤트 차단
+            lastFire = now;
+            onClick?.();
+        }
     });
 
     hit.on('pointerdown',     press);
@@ -582,7 +590,8 @@ function createStyledButton(scene, cx, cy, label, onClick, width = 120, color = 
         setVisible: (v) => { visuals.setVisible(v); hit.setVisible(v); return api; },
         setPosition: (x, y) => { visuals.setPosition(x - width/2, y - h/2); hit.setPosition(x, y); return api; },
         setX: (x) => { visuals.setX(x - width/2); hit.setX(x); return api; },
-        setY: (y) => { visuals.setY(y - h/2); hit.setY(y); return api; }
+        setY: (y) => { visuals.setY(y - h/2); hit.setY(y); return api; },
+        destroy: () => { try { visuals.destroy(); } catch(_) {} try { hit.destroy(); } catch(_) {} }
     };
     return Object.assign(api, { _visuals: visuals, _hit: hit });
 }
