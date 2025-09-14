@@ -16,7 +16,12 @@ const config = {
             { key: 'rexInputTextPlugin', plugin: window.rexinputtextplugin, start: true }
         ]
     },
-    scene: { preload, create, update }
+    scene: { preload, create, update },
+    fps: {
+        target: 60,
+        forceSetTimeOut: true,
+        smoothStep: false
+    }
 };
 
 let game;
