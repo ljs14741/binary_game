@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <title>핀볼 룰렛 랜덤 뽑기 (최대 30명 · 룰렛/사다리 대체) | Binary World</title>
+    <title>핀볼룰렛 - 핀볼 랜덤 숫자 뽑기 사다리 룰렛 게임 | Binary World</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content="최대 30명까지 한 번에! 경주형 핀볼 룰렛 랜덤 뽑기—룰렛/사다리 대신 공정하고 재밌게 팀/자리/벌칙을 정하세요.">
-    <meta name="keywords" content="핀볼, 랜덤핀볼, 핀볼룰렛, 핀볼뽑기, 핀볼추첨, 랜덤뽑기, 랜덤공봅기, 숫자 추첨, 미니게임, Binary World, 룰렛, 사다리">
+    <meta name="description" content="핀볼룰렛은 핀볼 기계를 사용해 무작위로 우승자를 가려내는 재미있는 뽑기 프로그램이에요. 대회·경품 추첨, 사다리·제비뽑기 대신 최대 30명까지 공정하게 뽑기. 무료로 지금 바로!">
+    <meta name="keywords" content="핀볼룰렛, 핀볼 룰렛, 핀볼 뽑기, 핀볼뽑기, 핀볼 추첨, 핀볼 랜덤 뽑기, 랜덤핀볼, 랜덤 핀볼 룰렛, 핀볼게임, 공뽑기, 사다리타기, 제비뽑기, 룰렛, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="핀볼 룰렛 랜덤 뽑기 (최대 30명 · 룰렛/사다리 대체) | Binary World">
-    <meta property="og:description" content="핀볼 룰렛 방식의 랜덤 숫자 추첨 게임! 경주형 룰렛 게임으로 친구들과 즐기세요.">
-    <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
+    <meta property="og:title" content="핀볼룰렛 - 핀볼 랜덤 숫자 뽑기 사다리 룰렛 | Binary World">
+    <meta property="og:description" content="핀볼 기계로 무작위 우승자 뽑기. 대회·경품 추첨에 딱! 사다리·제비뽑기 대신 무료 핀볼 룰렛.">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/pinball.png">
     <meta property="og:url" content="https://game.binaryworld.kr/pinball">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="핀볼 룰렛 랜덤 뽑기 (최대 30명 · 룰렛/사다리 대체) | Binary World">
-    <meta name="twitter:description" content="30명까지 참여 가능한 경주형 핀볼 룰렛 랜덤 뽑기!">
-    <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
+    <meta name="twitter:title" content="핀볼룰렛 - 핀볼 랜덤 숫자 뽑기 사다리 룰렛 | Binary World">
+    <meta name="twitter:description" content="핀볼 기계로 무작위 우승자 뽑기. 대회·경품 추첨, 사다리 대체 무료 게임!">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/pinball.png">
 
     <!-- 기본 파비콘 -->
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
@@ -50,6 +50,21 @@
     <meta name="_csrf" th:content="${_csrf.token}" />
 
     <link rel="canonical" href="https://game.binaryworld.kr/pinball">
+    <link rel="alternate" hreflang="ko" href="https://game.binaryworld.kr/pinball">
+
+    <!-- JSON-LD 구조화 데이터 (핀볼룰렛 Google 검색 최적화) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "핀볼룰렛 - 핀볼 랜덤 숫자 뽑기 사다리 룰렛",
+      "url": "https://game.binaryworld.kr/pinball",
+      "description": "핀볼 기계를 사용해 무작위로 우승자를 가려내는 재미있는 뽑기 프로그램. 대회·경품 추첨, 사다리·제비뽑기 대신 최대 30명까지 공정하게 뽑기.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
@@ -72,7 +87,7 @@
             <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
         </div>
 
-        <h1 class="game-title">🎲 핀볼 룰렛 랜덤 뽑기</h1>
+        <h1 class="game-title">🎲 핀볼룰렛 - 핀볼 랜덤 숫자 뽑기 사다리 룰렛</h1>
 
         <div class="game-bgm">
             <button id="bgmToggle">🎵 BGM 끄기/켜기</button>

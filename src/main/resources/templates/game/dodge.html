@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <title>총알 피하기 - Binary World</title>
+    <title>총알피하기 - 총알 피하기 게임 무료 (랭킹) | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content="빠르게 날아오는 총알을 피하며 최대한 오래 살아남는 총알 피하기 미니게임.">
-    <meta name="keywords" content="총알 피하기, 미니게임, 생존 게임, Binary World">
+    <meta name="description" content="총알피하기 게임! 빠르게 날아오는 총알을 피하며 최고 점수 도전. 명예의 전당·월별 랭킹. 무적·폭탄 아이템으로 생존 시간 늘리기. 무료 웹게임 지금 바로 플레이.">
+    <meta name="keywords" content="총알피하기, 총알 피하기, 총알피하기 게임, 총알 피하기 게임, 총알피하기게임, 미니게임, 생존 게임, 웹게임, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="총알 피하기 - Binary World">
-    <meta property="og:description" content="빠르게 날아오는 적을 피해 생존 점수를 겨뤄보세요.">
-    <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
+    <meta property="og:title" content="총알피하기 - 총알 피하기 게임 무료 (랭킹) | Binary World">
+    <meta property="og:description" content="총알 피하기 게임! 날아오는 총알을 피하며 랭킹 도전. 무적·폭탄 아이템. 무료 웹게임.">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/dodge.png">
     <meta property="og:url" content="https://game.binaryworld.kr/dodge">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="총알 피하기 - Binary World">
-    <meta name="twitter:description" content="빠르게 날아오는 총알을 피하며 생존 점수를 기록하세요.">
-    <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
+    <meta name="twitter:title" content="총알피하기 - 총알 피하기 게임 무료 (랭킹) | Binary World">
+    <meta name="twitter:description" content="총알 피하기 게임! 랭킹 도전, 무적·폭탄 아이템. 무료 웹게임 플레이.">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/dodge.png">
 
     <!-- 기본 파비콘 -->
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
@@ -50,6 +50,19 @@
     <meta name="_csrf" th:content="${_csrf.token}"/>
 
     <link rel="canonical" href="https://game.binaryworld.kr/dodge">
+    <!-- JSON-LD 구조화 데이터 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "총알피하기 - 총알 피하기 게임",
+      "url": "https://game.binaryworld.kr/dodge",
+      "description": "빠르게 날아오는 총알을 피하며 생존 점수를 겨루는 총알 피하기 게임. 명예의 전당·월별 랭킹. 무료 웹게임.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+    }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
@@ -127,7 +140,7 @@
             </div>
         </section>
 
-        <h1 class="game-title">🎯 총알 피하기</h1>
+        <h1 class="game-title">🎯 총알피하기 - 총알 피하기 게임</h1>
 
         <div class="game-bgm">
             <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
