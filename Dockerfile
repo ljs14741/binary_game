@@ -1,6 +1,5 @@
 # 도커가 사용할 기본 이미지
-FROM openjdk:17-jdk-slim
-
+FROM eclipse-temurin:17-jdk-jammy
 # 컨테이너 내부에서 /app이라는 작업 디레토리를 설정. 이후 명령들은 이 디렉토리를 기준으로 싱행됨
 WORKDIR /app
 
