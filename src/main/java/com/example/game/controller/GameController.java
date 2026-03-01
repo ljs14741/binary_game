@@ -46,6 +46,11 @@ public class GameController {
         return "game/pinball";
     }
 
+    @GetMapping("/horserace")
+    public String horserace(Model model, HttpSession session) {
+        return "game/horserace";
+    }
+
     @GetMapping("/omokGame")
     public String omokGame(Model model, HttpSession session) {
 

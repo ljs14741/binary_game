@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <title>말달리자 - 경마게임 경마내기 사다리타기 룰렛 핀볼 뽑기 추첨 무료 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <!-- SEO: 경마게임, 사다리타기, 룰렛, 핀볼 등 뽑기·추첨 검색 유입 최적화 -->
+    <meta name="description" content="말달리자 - 경마게임, 경마내기, 사다리타기·룰렛·핀볼처럼 뽑기·추첨용! 친구·직장 내기, 벌칙·당번·커피 뽑기. 최대 30명 참가 웹 2D 경마 게임. 역전·폭죽 연출 무료.">
+    <meta name="keywords" content="말달리자, 경마게임, 경마내기, 경마레이스, 경마 뽑기, 사다리타기, 룰렛, 핀볼, 제비뽑기, 랜덤뽑기, 벌칙 뽑기, 당번 뽑기, 커피 내기, 친구내기, 직장내기, 추첨게임, 뽑기게임, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <!-- Open Graph -->
+    <meta property="og:type"        content="website">
+    <meta property="og:title"       content="말달리자 - 경마게임 사다리타기 룰렛 핀볼 뽑기 추첨 무료 | Binary World">
+    <meta property="og:description" content="말달리자! 사다리타기·룰렛·핀볼처럼 뽑기·추첨용. 경마게임·경마내기로 친구 내기, 벌칙·당번 뽑기. 최대 30명, 역전·폭죽 연출 무료!">
+    <meta property="og:image"       content="https://game.binaryworld.kr/img/horserace.png">
+    <meta property="og:url"         content="https://game.binaryworld.kr/horserace">
+
+    <!-- Twitter -->
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="말달리자 - 경마게임 사다리타기 룰렛 핀볼 뽑기 추첨 | Binary World">
+    <meta name="twitter:description" content="말달리자! 사다리타기·룰렛·핀볼처럼 뽑기·추첨용. 경마게임으로 친구 내기·벌칙 뽑기 무료!">
+    <meta name="twitter:image"       content="https://game.binaryworld.kr/img/horserace.png">
+
+    <!-- 파비콘 -->
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="57x57"   href="/img/favicon/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60"   href="/img/favicon/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72"   href="/img/favicon/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76"   href="/img/favicon/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/img/favicon/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/img/favicon/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/img/favicon/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/img/favicon/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32"   href="/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96"   href="/img/favicon/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16"   href="/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/img/favicon/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="canonical"  href="https://game.binaryworld.kr/horserace">
+    <link rel="alternate"  hreflang="ko" href="https://game.binaryworld.kr/horserace">
+
+    <!-- JSON-LD: 경마게임, 경마내기, 경마레이스 검색 유입 최적화 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "말달리자 - 경마게임 경마내기 사다리타기 룰렛 핀볼 뽑기",
+      "alternateName": ["경마게임", "경마내기", "경마레이스", "사다리타기", "룰렛", "핀볼", "제비뽑기", "벌칙 뽑기", "당번 뽑기", "랜덤 뽑기", "추첨 게임"],
+      "url": "https://game.binaryworld.kr/horserace",
+      "description": "말달리자! 사다리타기·룰렛·핀볼처럼 뽑기·추첨용 경마게임. 경마내기·벌칙·당번·커피 뽑기. 최대 30명 참가 웹 2D 경마 게임. 역전·폭죽 우승 연출.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+    }
+    </script>
+
+    <!-- 폰트 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+
+    <!-- 공통 CSS -->
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+
+    <!-- 게임 캔버스 & BGM 컨트롤 스타일 -->
+    <style>
+        /* 제목 → BGM → 게임 순서, 겹치지 않게 */
+        #horserace-fullscreen-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto 8px auto;
+        }
+        #horserace-fullscreen-wrap .game-bgm {
+            flex-shrink: 0;
+            width: 100%;
+            margin: 0 0 16px 0;
+            box-sizing: border-box;
+        }
+
+        #game-container {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0;
+            padding: 0;
+            background: #060614;
+            border-radius: 10px;
+            overflow: visible;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.12);
+            min-height: 400px;
+            aspect-ratio: 1000 / 720;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 전체화면: BGM/전체화면 버튼이 상단에 잘리지 않도록 여백, 노치 대응 */
+        #horserace-fullscreen-wrap:fullscreen .game-bgm,
+        #horserace-fullscreen-wrap:-webkit-full-screen .game-bgm,
+        #horserace-fullscreen-wrap:-moz-full-screen .game-bgm,
+        #horserace-fullscreen-wrap:-ms-fullscreen .game-bgm {
+            margin-top: max(14px, env(safe-area-inset-top));
+            flex-shrink: 0;
+        }
+        /* 전체화면 시 게임 영역 최대 활용 (비율 유지, 짤림 방지) */
+        #horserace-fullscreen-wrap:fullscreen,
+        #horserace-fullscreen-wrap:-webkit-full-screen,
+        #horserace-fullscreen-wrap:-moz-full-screen,
+        #horserace-fullscreen-wrap:-ms-fullscreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            max-width: none;
+            width: 100vw;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        #horserace-fullscreen-wrap:fullscreen #game-container,
+        #horserace-fullscreen-wrap:-webkit-full-screen #game-container,
+        #horserace-fullscreen-wrap:-moz-full-screen #game-container,
+        #horserace-fullscreen-wrap:-ms-fullscreen #game-container {
+            max-width: none;
+            flex: 1;
+            min-height: 0;
+            width: min(100%, min(100vw, (100vh - 80px) * 1000 / 720));
+            aspect-ratio: 1000 / 720;
+        }
+
+        #game-container canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 100%;
+            object-fit: contain;
+        }
+        /* Phaser DOM(닉네임 입력)이 캔버스 위에 보이도록 */
+        #game-container > div {
+            z-index: 10;
+            pointer-events: none;
+        }
+        #game-container > div * {
+            pointer-events: auto;
+        }
+        #hrNamesInput {
+            opacity: 1 !important;
+            visibility: visible !important;
+            min-height: 120px !important;
+        }
+
+        .game-bgm {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: rgba(6, 6, 20, 0.95);
+            border-radius: 8px;
+            touch-action: manipulation;
+        }
+        .game-bgm button {
+            min-height: 44px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .game-bgm button:hover { background: rgba(255,255,255,0.14); }
+
+        .game-bgm label {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .game-bgm input[type=range] {
+            width: 90px;
+            min-height: 44px;
+            accent-color: #FFD700;
+        }
+        /* 모바일: 좁은 화면에서 레이아웃·터치 영역 보정 */
+        @media (max-width: 640px) {
+            #horserace-fullscreen-wrap {
+                padding: 0 8px;
+                max-width: 100%;
+            }
+            #game-container {
+                max-width: 100%;
+                border-radius: 8px;
+            }
+            .game-bgm {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+            .game-bgm button {
+                font-size: 12px;
+                padding: 10px 12px;
+            }
+        }
+
+        .hr-description h2 {
+            font-size: 17px;
+            color: #FFD700;
+            margin: 22px 0 8px;
+        }
+
+        .hr-description p, .hr-description li {
+            font-size: 14px;
+            color: #aaaaaa;
+            line-height: 1.7;
+        }
+
+        .hr-description strong { color: #dddddd; }
+    </style>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+<th:block th:include="common/header"></th:block>
+
+<div class="main-content">
+    <div class="container">
+
+        <div class="nav-back">
+            <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+        </div>
+
+        <h1 class="game-title">🏇 말달리자 – 경마게임 · 사다리타기 · 룰렛 · 핀볼 뽑기 추첨</h1>
+
+        <div id="horserace-fullscreen-wrap">
+        <div class="game-bgm">
+            <button id="bgmToggle">🔊 BGM 켜짐</button>
+            <label for="volumeControl">볼륨:</label>
+            <input type="range" id="volumeControl" min="0" max="100" value="50">
+            <button id="fsToggle" title="전체화면 전환">⛶ 전체화면</button>
+        </div>
+
+        <div id="game-container"></div>
+        </div><!-- /#horserace-fullscreen-wrap -->
+
+        <!-- 소개 & 사용법 -->
+        <div class="hr-description">
+            <h2>게임 방법</h2>
+            <ol>
+                <li>참가자 이름을 <strong>쉼표( , ) 또는 줄바꿈</strong>으로 구분해 붙여넣기 하세요. (최소 2명, 최대 30명)</li>
+                <li><strong>1등 우승 뽑기</strong> / <strong>꼴찌 벌칙 뽑기</strong> 중 모드를 고른 뒤 <strong>경주 시작!</strong> 버튼을 누르세요.</li>
+                <li>3·2·1 카운트다운 후 경마가 시작됩니다. 화면 우측 <strong>실시간 순위</strong>와 하단 <strong>미니맵</strong>으로 상황을 확인하세요.</li>
+                <li>가장 먼저 결승선을 통과한 말의 주인이 <strong>우승!</strong> 🏆 (꼴찌 모드는 마지막 도착자가 벌칙)</li>
+                <li>우승 후 <strong>같은 참가자로 재시작</strong> 또는 <strong>새로 설정</strong>으로 다음 판을 즐기세요.</li>
+            </ol>
+
+            <h2>핵심 특징</h2>
+            <ul>
+                <li><strong>사다리타기·룰렛·핀볼</strong>처럼 뽑기·추첨·내기에 딱! 벌칙·당번·커피 뽑기 등에 활용.</li>
+                <li><strong>역전의 명수</strong> – 뒤처진 말이 갑자기 🔥 부스터로 치고 올라올 수 있어요!</li>
+                <li><strong>선두의 위기</strong> – 1등 말이 결승 직전에 걸려 멈칫하는 변수.</li>
+                <li><strong>슬로우모션 & 폭죽</strong> – 우승 순간 슬로우모션과 함께 화면 가득 폭죽!</li>
+                <li>최대 <strong>30명</strong>까지 동시 참가, 미니맵으로 전체 순위 한눈에 확인.</li>
+                <li>게임 위에서 <strong>BGM</strong>·<strong>볼륨</strong>·<strong>전체화면</strong>을 조절할 수 있어요.</li>
+                <li>PC·모바일 모두 반응형으로 동작.</li>
+            </ul>
+
+            <h2>안내</h2>
+            <p>
+                결과는 매번 달라질 수 있어요. 특정 참가자가 유리하지 않도록 랜덤 알고리즘이 설계되어 있습니다.<br>
+                <strong>사다리타기·룰렛·핀볼</strong>처럼 뽑기·추첨용 <strong>경마게임</strong>·<strong>경마내기</strong>로 커피 내기·벌칙·당번·경품 추첨 등에 활용해 보세요. 소리를 켜면 더 몰입감 있어요!
+            </p>
+        </div>
+
+    </div><!-- /.container -->
+</div><!-- /.main-content -->
+
+<th:block th:include="common/footer"></th:block>
+
+<!-- 사이드 광고 -->
+<div class="side-ad left-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-ePAs1c7mONqnY32w"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
+<div class="side-ad right-ad">
+    <ins class="kakao_ad_area"
+         style="display:none;"
+         data-ad-unit="DAN-qpEsz6jYmwJE0cE7"
+         data-ad-width="160"
+         data-ad-height="600"></ins>
+</div>
+
+<!-- Phaser 3 & 게임 스크립트 -->
+<script th:src="@{/js/phaser.min.js}"></script>
+<script th:src="@{/js/horserace.js}"></script>
+
+</body>
+</html>
