@@ -61,13 +61,15 @@ const SFX_JUMP      = 'sfx_jump';
 const SFX_COUNTDOWN = 'sfx_countdown';
 const SFX_FINISH    = 'sfx_finish';
 const SFX_FANFARE   = 'sfx_fanfare';
+const BGM_KEY       = 'bgm';
 
 // ============================================================
-// PreloadScene – 효과음 로드
+// PreloadScene – BGM·효과음 로드 (Phaser Sound Manager 사용, 모바일/iOS 볼륨 대응)
 // ============================================================
 class PreloadScene extends Phaser.Scene {
     constructor() { super({ key: 'PreloadScene' }); }
     preload() {
+        this.load.audio(BGM_KEY,       '/assets/horseRace/audio/bgm.mp3');
         this.load.audio(SFX_ROCK,      '/assets/horseRace/rock.mp3');
         this.load.audio(SFX_PUDDLE,    '/assets/horseRace/puddle.mp3');
         this.load.audio(SFX_CARROT,    '/assets/horseRace/carrot.mp3');
@@ -212,6 +214,52 @@ class SetupScene extends Phaser.Scene {
         // 창 리사이즈 시 textarea DOM 위치 재계산(정중앙 유지)
         this._resizeHandler = () => this._onResize();
         this.scale.on('resize', this._resizeHandler, this);
+
+        // BGM: Phaser Sound Manager 사용 (모바일/iOS에서 볼륨 슬라이더 정상 동작)
+        if (!this.game.bgmSound) {
+            this.game.bgmSound = this.sound.add(BGM_KEY, { loop: true });
+        }
+        let vol = this.registry.get('bgmVolume');
+        if (vol === undefined) {
+            const volEl = document.getElementById('volumeControl');
+            vol = volEl ? Number(volEl.value) / 100 : 0.5;
+            this.registry.set('bgmVolume', vol);
+        }
+        this.game.bgmSound.volume = vol;
+        if (this.registry.get('bgmOn', true)) this.game.bgmSound.play();
+
+        // 전체화면 시 씬 내부 '닫기' 버튼 (모바일에서 HTML 버튼이 보이지 않을 때 대비)
+        this._createFullscreenExitButton();
+    }
+
+    _createFullscreenExitButton() {
+        const camW = this.cameras.main.width;
+        const btnW = 140, btnH = 40;
+        const bx = camW - btnW / 2 - 16;
+        const by = 36;
+        const bg = this.add.graphics().setScrollFactor(0).setDepth(9999);
+        const drawBg = (c) => {
+            bg.clear();
+            bg.fillStyle(c, 0.95);
+            bg.fillRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
+            bg.lineStyle(2, 0xFFD700, 1);
+            bg.strokeRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
+        };
+        drawBg(0x1a1a3a);
+        const lbl = this.add.text(bx, by, '⛶ 닫기(전체화면 종료)', {
+            fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#FFD700',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(10000);
+        const hit = this.add.rectangle(bx, by, btnW, btnH).setScrollFactor(0).setDepth(10001)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerover', () => drawBg(0x2a2a5a))
+            .on('pointerout', () => drawBg(0x1a1a3a))
+            .on('pointerdown', () => { if (this.scale.isFullscreen) this.scale.stopFullscreen(); });
+        this._fsExitContainer = [bg, lbl, hit];
+        this._fsExitContainer.forEach(o => o.setVisible(false));
+        this._onFsEnter = () => this._fsExitContainer.forEach(o => o.setVisible(true));
+        this._onFsLeave = () => this._fsExitContainer.forEach(o => o.setVisible(false));
+        this.scale.on('enterfullscreen', this._onFsEnter);
+        this.scale.on('leavefullscreen', this._onFsLeave);
     }
 
     _createModeButtons() {
@@ -295,7 +343,7 @@ class SetupScene extends Phaser.Scene {
         this.time.delayedCall(3000, () => this.msgText.setText(''));
     }
 
-    // 리사이즈 시 textarea DOM 위치 유지 + 모바일에서 DOM 컨테이너 스케일 동기화
+    // 리사이즈 시 textarea DOM 위치 유지 (scale.refresh는 여기서 호출 금지 — resize 이벤트와 무한 루프 유발)
     _onResize() {
         if (this.domInput && this.scene.isActive()) {
             const cx = this.scale.width / 2;
@@ -307,7 +355,7 @@ class SetupScene extends Phaser.Scene {
         }
     }
 
-    // 모바일 등에서 캔버스가 스케일될 때 DOM 오버레이도 같은 비율로 스케일해 입력창이 화면 안에 보이게
+    // 모바일 등에서 캔버스가 스케일될 때 DOM 오버레이도 같은 비율로 스케일 (좌표 오차 방지)
     _syncDomContainerScale() {
         const node = this.domInput && this.domInput.node;
         if (!node || !node.parentElement) return;
@@ -317,8 +365,8 @@ class SetupScene extends Phaser.Scene {
         const dw = (this.scale.displaySize && this.scale.displaySize.width) || this.scale.width;
         const dh = (this.scale.displaySize && this.scale.displaySize.height) || this.scale.height;
         if (!dw || !dh) return;
-        const sx = dw / gw;
-        const sy = dh / gh;
+        const sx = Number((dw / gw).toFixed(6));
+        const sy = Number((dh / gh).toFixed(6));
         container.style.width = gw + 'px';
         container.style.height = gh + 'px';
         container.style.transformOrigin = '0 0';
@@ -329,6 +377,8 @@ class SetupScene extends Phaser.Scene {
         if (this._resizeHandler) {
             this.scale.off('resize', this._resizeHandler, this);
         }
+        if (this._onFsEnter) this.scale.off('enterfullscreen', this._onFsEnter);
+        if (this._onFsLeave) this.scale.off('leavefullscreen', this._onFsLeave);
     }
 }
 
@@ -356,6 +406,8 @@ class GameScene extends Phaser.Scene {
         this.sound.stopAll();
         this.tweens.killAll();
         if (this.time && typeof this.time.removeAllEvents === 'function') this.time.removeAllEvents();
+        if (this._onFsEnter) this.scale.off('enterfullscreen', this._onFsEnter);
+        if (this._onFsLeave) this.scale.off('leavefullscreen', this._onFsLeave);
     }
 
     create() {
@@ -499,8 +551,41 @@ class GameScene extends Phaser.Scene {
         this.finalLapOverlay = this.add.rectangle(cw / 2, ch / 2, cw + 200, ch + 200, 0xFF0000, 0)
             .setScrollFactor(0).setDepth(88).setVisible(false);
 
+        // 전체화면 시 씬 내부 '닫기' 버튼 (모바일에서 HTML 버튼이 보이지 않을 때 대비)
+        this._createFullscreenExitButton();
+
         // ── 카운트다운 ──────────────────────────────────────
         this.time.delayedCall(400, () => this._showCountdown());
+    }
+
+    _createFullscreenExitButton() {
+        const camW = this.cameras.main.width;
+        const btnW = 140, btnH = 40;
+        const bx = camW - btnW / 2 - 16;
+        const by = 36;
+        const bg = this.add.graphics().setScrollFactor(0).setDepth(9999);
+        const drawBg = (c) => {
+            bg.clear();
+            bg.fillStyle(c, 0.95);
+            bg.fillRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
+            bg.lineStyle(2, 0xFFD700, 1);
+            bg.strokeRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
+        };
+        drawBg(0x1a1a3a);
+        const lbl = this.add.text(bx, by, '⛶ 닫기(전체화면 종료)', {
+            fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#FFD700',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(10000);
+        const hit = this.add.rectangle(bx, by, btnW, btnH).setScrollFactor(0).setDepth(10001)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerover', () => drawBg(0x2a2a5a))
+            .on('pointerout', () => drawBg(0x1a1a3a))
+            .on('pointerdown', () => { if (this.scale.isFullscreen) this.scale.stopFullscreen(); });
+        this._fsExitContainer = [bg, lbl, hit];
+        this._fsExitContainer.forEach(o => o.setVisible(false));
+        this._onFsEnter = () => this._fsExitContainer.forEach(o => o.setVisible(true));
+        this._onFsLeave = () => this._fsExitContainer.forEach(o => o.setVisible(false));
+        this.scale.on('enterfullscreen', this._onFsEnter);
+        this.scale.on('leavefullscreen', this._onFsLeave);
     }
 
     // ── Track ─────────────────────────────────────────────────
@@ -1351,44 +1436,42 @@ const horseRaceConfig = {
 const horseRaceGame = new Phaser.Game(horseRaceConfig);
 
 // ============================================================
-// 외부 UI (BGM 토글, 전체화면)
+// 외부 UI (BGM 토글·볼륨은 Phaser Sound로 제어, 전체화면)
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    const bgmAudio = new Audio('/assets/horseRace/audio/bgm.mp3');
-    bgmAudio.loop = true;
-    bgmAudio.volume = 0.5;
-
-    let bgmOn = true;  // 기본값: 켜진 상태로 시작
-
     const bgmToggle  = document.getElementById('bgmToggle');
     const volumeCtrl = document.getElementById('volumeControl');
     const fsToggle   = document.getElementById('fsToggle');
 
-    // 페이지 로드 시 BGM 무조건 재생 시도 (브라우저 정책으로 막히면 첫 사용자 동작 시 재시도)
-    const tryPlayBgm = () => {
-        if (!bgmOn) return;
-        bgmAudio.play().catch(() => {});
+    // 모바일: 사용자 상호작용 시 AudioContext 잠금 해제 (효과음 재생 가능)
+    const unlockAudio = () => {
+        if (horseRaceGame.sound && horseRaceGame.sound.context && horseRaceGame.sound.context.state === 'suspended') {
+            horseRaceGame.sound.context.resume();
+        }
+        const s = horseRaceGame.bgmSound;
+        if (s && horseRaceGame.registry.get('bgmOn', true)) s.play().catch(() => {});
     };
-    tryPlayBgm();
-
-    // 자동재생이 막힌 경우: 첫 클릭/터치 시 한 번만 재생 재시도
-    const once = (el, ev, fn) => {
-        const handler = () => { fn(); el.removeEventListener(ev, handler); };
-        el.addEventListener(ev, handler);
-    };
-    once(document, 'click', tryPlayBgm);
-    once(document, 'touchstart', tryPlayBgm);
+    document.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
 
     if (bgmToggle) {
         bgmToggle.addEventListener('click', () => {
-            bgmOn = !bgmOn;
-            bgmToggle.textContent = bgmOn ? '🔊 BGM 켜짐' : '🔇 BGM 꺼짐';
-            if (bgmOn) bgmAudio.play().catch(() => {});
-            else bgmAudio.pause();
+            const on = !horseRaceGame.registry.get('bgmOn', true);
+            horseRaceGame.registry.set('bgmOn', on);
+            bgmToggle.textContent = on ? '🔊 BGM 켜짐' : '🔇 BGM 꺼짐';
+            const s = horseRaceGame.bgmSound;
+            if (s) {
+                if (on) s.play().catch(() => {});
+                else s.pause();
+            }
         });
     }
     if (volumeCtrl) {
-        const applyVolume = () => { bgmAudio.volume = volumeCtrl.value / 100; };
+        const applyVolume = () => {
+            const v = volumeCtrl.value / 100;
+            horseRaceGame.registry.set('bgmVolume', v);
+            if (horseRaceGame.bgmSound) horseRaceGame.bgmSound.volume = v;
+        };
         applyVolume();
         volumeCtrl.addEventListener('input', applyVolume);
         volumeCtrl.addEventListener('change', applyVolume);
@@ -1495,9 +1578,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 창 크기/회전 시 캔버스 재계산 (모바일 회전 시 확대 버그 방지)
+    // 창 크기/회전 시 캔버스·입력 좌표계 동기화 (모바일 터치 히트박스 정렬)
     const refreshScale = () => {
-        if (horseRaceGame.scale) horseRaceGame.scale.refresh();
+        if (!horseRaceGame.scale) return;
+        if (typeof horseRaceGame.scale.updateBounds === 'function') horseRaceGame.scale.updateBounds();
+        horseRaceGame.scale.refresh();
     };
     let resizeTimer = 0;
     window.addEventListener('resize', () => {
