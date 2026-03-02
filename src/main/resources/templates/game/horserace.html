@@ -3,7 +3,7 @@
 <head>
     <title>말달리자 - 경마게임 경마내기 사다리타기 룰렛 핀볼 뽑기 추첨 무료 | Binary World</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
     <!-- SEO: 경마게임, 사다리타기, 룰렛, 핀볼 등 뽑기·추첨 검색 유입 최적화 -->
     <meta name="description" content="말달리자 - 경마게임, 경마내기, 사다리타기·룰렛·핀볼처럼 뽑기·추첨용! 등급(일반/레어/에픽) 랜덤, 역전·막판 스퍼트·선두 억까. 최대 30명 참가 웹 2D 경마. 무료.">
@@ -112,41 +112,62 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 전체화면: 화면 끝까지 꽉 채우기 (max-width/aspect-ratio 제거, Scale.FIT이 캔버스 확대) */
+        /* 전체화면: BGM 바는 상단 고정, 게임 영역은 그 아래에서만 클릭/터치 받도록 */
         #horserace-fullscreen-wrap:fullscreen .game-bgm,
         #horserace-fullscreen-wrap:-webkit-full-screen .game-bgm,
         #horserace-fullscreen-wrap:-moz-full-screen .game-bgm,
-        #horserace-fullscreen-wrap:-ms-fullscreen .game-bgm {
+        #horserace-fullscreen-wrap:-ms-fullscreen .game-bgm,
+        #horserace-fullscreen-wrap.hr-fullscreen-active .game-bgm {
             margin-top: max(14px, env(safe-area-inset-top));
             flex-shrink: 0;
+            flex: 0 0 auto;
+            position: relative;
+            z-index: 2;
         }
         #horserace-fullscreen-wrap:fullscreen,
         #horserace-fullscreen-wrap:-webkit-full-screen,
         #horserace-fullscreen-wrap:-moz-full-screen,
-        #horserace-fullscreen-wrap:-ms-fullscreen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        #horserace-fullscreen-wrap:-ms-fullscreen,
+        #horserace-fullscreen-wrap.hr-fullscreen-active {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
             max-width: none !important;
             margin: 0 !important;
             padding: 0 !important;
             padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box !important;
+            background: #060614 !important;
+            display: flex !important;
+            flex-direction: column !important;
         }
+        /* 게임 영역: BGM 바 아래를 절대 위치로 전부 채움, 클릭/터치 수신 보장 */
         #horserace-fullscreen-wrap:fullscreen #game-container,
         #horserace-fullscreen-wrap:-webkit-full-screen #game-container,
         #horserace-fullscreen-wrap:-moz-full-screen #game-container,
-        #horserace-fullscreen-wrap:-ms-fullscreen #game-container {
-            width: 100vw !important;
-            height: 100vh !important;
+        #horserace-fullscreen-wrap:-ms-fullscreen #game-container,
+        #horserace-fullscreen-wrap.hr-fullscreen-active #game-container {
+            position: absolute !important;
+            top: calc(44px + env(safe-area-inset-top, 0px)) !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: auto !important;
+            height: auto !important;
             max-width: none !important;
-            min-height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
             aspect-ratio: unset !important;
-            flex: 1 1 auto;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            background: #060614 !important;
+            pointer-events: auto !important;
+            z-index: 1;
         }
 
         #game-container canvas {
@@ -162,22 +183,25 @@
         #horserace-fullscreen-wrap:-ms-fullscreen #game-container canvas {
             width: 100% !important;
             height: 100% !important;
-            object-fit: contain;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            object-fit: contain !important;
+            pointer-events: auto !important;
         }
-        /* Phaser DOM(닉네임 입력)이 캔버스 위에 보이도록, 내부 스크롤 방지 */
+        /* Phaser DOM(닉네임 입력): div는 터치 통과, 자식(textarea 등)만 클릭 받음 → 버튼 클릭이 캔버스까지 전달 */
         #game-container > div {
             z-index: 10;
-            pointer-events: none;
+            pointer-events: none !important;
             overflow: visible !important;
             max-height: none !important;
         }
         #game-container > div * {
-            pointer-events: auto;
+            pointer-events: auto !important;
         }
         #hrNamesInput {
             opacity: 1 !important;
             visibility: visible !important;
-            min-height: 120px !important;
+            min-height: 72px !important;
         }
 
         /* iOS 등 전체화면 API 미지원 시 가상 전체화면 (브라우저 창 전체 덮기) */
@@ -198,32 +222,49 @@
             object-fit: contain !important;
         }
 
-        /* 모바일 세로 모드 시 가로 모드 유도 오버레이 */
-        .hr-portrait-overlay {
+        /* 모바일 세로 모드 시 가로 모드 권장 알림 (화면 막지 않음, 닫기 가능) */
+        .hr-portrait-notice {
             position: fixed;
-            top: 0;
+            bottom: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 99999;
-            background: #0a0a12;
+            right: 0;
+            z-index: 9999;
             display: none;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            background: rgba(10, 10, 24, 0.92);
+            border-top: 1px solid rgba(255, 215, 0, 0.35);
             box-sizing: border-box;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
         }
-        .hr-portrait-overlay.visible {
+        .hr-portrait-notice.visible {
             display: flex;
         }
-        .hr-portrait-overlay p {
+        .hr-portrait-notice p {
+            flex: 1;
             color: #e8e8ff;
-            font-size: 1.15rem;
-            line-height: 1.6;
-            text-align: center;
+            font-size: 0.9rem;
+            line-height: 1.4;
             margin: 0;
             font-family: 'Pretendard', Arial, sans-serif;
         }
+        .hr-portrait-notice button {
+            flex-shrink: 0;
+            padding: 10px 16px;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            border-radius: 8px;
+            background: rgba(255, 215, 0, 0.15);
+            color: #FFD700;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hr-portrait-notice button:hover { background: rgba(255, 215, 0, 0.25); }
+        .hr-portrait-notice button:active { background: rgba(255, 215, 0, 0.35); }
 
         .game-bgm {
             display: flex;
@@ -321,9 +362,10 @@
         <div id="game-container"></div>
         </div><!-- /#horserace-fullscreen-wrap -->
 
-        <!-- 모바일 세로 모드 시 가로 모드 유도 오버레이 (가로로 돌리면 사라짐) -->
-        <div id="hr-portrait-overlay" class="hr-portrait-overlay" aria-hidden="true">
-            <p>📱 원활한 게임을 위해 기기를 가로로 눕혀주세요</p>
+        <!-- 모바일 세로 모드 시 가로 모드 권장 알림 (닫으면 세로에서도 계속 이용 가능) -->
+        <div id="hr-portrait-notice" class="hr-portrait-notice" aria-hidden="true">
+            <p>📱 가로 모드에서 더 쾌적하게 즐기실 수 있어요</p>
+            <button type="button" id="hr-portrait-notice-close" aria-label="알림 닫기">확인</button>
         </div>
 
         <!-- 소개 & 사용법 -->

@@ -126,11 +126,11 @@ class SetupScene extends Phaser.Scene {
             shadow: textShadow,
         }).setOrigin(0.5);
 
-        // 이름 입력: 반응형(80vw/25vh) + 화면 정중앙 약간 위(H/2-30)에 고정, 리사이즈 시에도 동기화
-        const domY = H / 2 - 30;
+        // 이름 입력: 타이틀/안내 아래에 배치, 높이 제한해 모드 버튼·시작 버튼과 겹치지 않게
+        const domY = titleY + 118;
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="예시:&#10;홍길동, 김철수, 이영희&#10;또는 한 줄에 한 명씩 입력"
-            style="width:80vw;max-width:500px;min-width:180px;height:25vh;min-height:120px;
+            style="width:80vw;max-width:500px;min-width:180px;height:90px;max-height:20vh;
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
                    font-size:15px;line-height:1.65;padding:14px 18px;
                    font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
@@ -139,7 +139,7 @@ class SetupScene extends Phaser.Scene {
             onblur="this.style.borderColor='#2e2e5a'"></textarea>`;
         this.domInput = this.add.dom(cx, domY).createFromHTML(taHtml);
         this.domInput.setOrigin(0.5, 0.5);
-        this.domInput.setDepth(200);
+        this.domInput.setDepth(5);
         this._setupDomLayoutY = domY;
 
         // "몇명 입력됨" → 내기·추첨 문구 바로 위, 글자 크기 키움
@@ -156,19 +156,20 @@ class SetupScene extends Phaser.Scene {
             if (last && last.length) { taEl.value = last.join('\n'); this._updateCount(taEl.value); }
         }
 
-        // 모드 선택 라벨 (버튼 위에 배치, 잘 보이게) + 가독성 그림자
-        this.add.text(cx, titleY + 228, '게임 모드 선택', {
+        // 모드 선택 라벨 (닉네임 입력 아래, 버튼 위에 배치)
+        const modeLabelY = titleY + 228;
+        this.add.text(cx, modeLabelY, '게임 모드 선택', {
             fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#b0b0dd', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
 
-        // 모드 토글 버튼 생성
+        // 모드 토글 버튼 생성 (닉네임 입력·라벨 아래에 고정 배치)
         this.gameMode = this.registry.get('gameMode') || 'winner';
         this._createModeButtons();
 
-        // 시작 버튼
+        // 시작 버튼 (모드 버튼 아래에 배치)
         const startBg  = this.add.graphics();
-        const SBY = titleY + 335;
+        const SBY = modeLabelY + 130;
         const SBX = cx - 132, SBW = 264, SBH = 50;
         const drawStartBtn = (c) => {
             startBg.clear();
@@ -217,7 +218,9 @@ class SetupScene extends Phaser.Scene {
         const cx = this.scale.width / 2;
         const x1 = cx - BW - GAP / 2;
         const x2 = cx + GAP / 2;
-        const BY = this.scale.height / 2 - 62;  // 모드 라벨 아래
+        const titleY = 52 + 28;
+        const modeLabelY = titleY + 228;
+        const BY = modeLabelY + 36;  // "게임 모드 선택" 라벨 바로 아래
 
         this._modePos = { x1, x2, y: BY, w: BW, h: BH };
         this.modeBtnGfx = this.add.graphics();
@@ -291,11 +294,12 @@ class SetupScene extends Phaser.Scene {
         this.time.delayedCall(3000, () => this.msgText.setText(''));
     }
 
-    // 리사이즈 시 textarea DOM을 캔버스 비율에 맞춰 정중앙(세로 중앙 약간 위)에 유지
+    // 리사이즈 시 textarea DOM 위치 유지 (타이틀/안내 아래 고정)
     _onResize() {
         if (this.domInput && this.scene.isActive()) {
             const cx = this.scale.width / 2;
-            const domY = this.scale.height / 2 - 30;
+            const titleY = 52 + 28;
+            const domY = titleY + 118;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
         }
@@ -325,6 +329,13 @@ class GameScene extends Phaser.Scene {
         this.allFinished = 0;
         this.finalLapTriggered = false;
         this.finalLapUntil     = 0;
+    }
+
+    shutdown() {
+        // 재시작/씬 전환 시 밀려 있던 효과음·예약된 콜백이 한꺼번에 터지는 것 방지
+        this.sound.stopAll();
+        this.tweens.killAll();
+        if (this.time && typeof this.time.removeAllEvents === 'function') this.time.removeAllEvents();
     }
 
     create() {
@@ -819,7 +830,7 @@ class GameScene extends Phaser.Scene {
 
         if (horse.isBoosting) {
             horse.boostFrames -= dt;
-            spd *= 3.0;
+            spd *= 2.2;  // 선두 독주 완화: 3.0 → 2.2
             if (horse.boostFrames <= 0) {
                 horse.isBoosting = false;
                 horse.consecutiveBoosts = 0; // 연속 부스터 카운트 리셋
@@ -945,8 +956,8 @@ class GameScene extends Phaser.Scene {
         });
 
         if (obs.type === 'carrot') {
-            // 🥕 당근: 부스터 + 크기 확대
-            this._triggerBoost(horse);
+            // 🥕 당근: 1등이면 부스터(속도) 없음 — 크기 확대만. 2등 이하는 부스터 + 크기 확대
+            if (horse.rank !== 1) this._triggerBoost(horse);
             horse.scaleBonus = 1.45;
             this._spawnPopupText(horse.x, horse.y, '🥕 냠냠!', '#FF8800');
 
@@ -1064,7 +1075,7 @@ class GameScene extends Phaser.Scene {
         if (consecutive > 2) return;
         horse.consecutiveBoosts = consecutive;
         horse.isBoosting  = true;
-        horse.boostFrames = Phaser.Math.Between(65, 145);
+        horse.boostFrames = Phaser.Math.Between(48, 100);  // 선두 독주 완화: 지속시간 단축
         this._spawnBoostFx(horse);
     }
     _triggerStumble(horse) {
@@ -1324,14 +1335,28 @@ document.addEventListener('DOMContentLoaded', () => {
     bgmAudio.loop = true;
     bgmAudio.volume = 0.5;
 
-    let bgmOn = true;
+    let bgmOn = true;  // 기본값: 켜진 상태로 시작
 
     const bgmToggle  = document.getElementById('bgmToggle');
     const volumeCtrl = document.getElementById('volumeControl');
     const fsToggle   = document.getElementById('fsToggle');
 
+    // 페이지 로드 시 BGM 무조건 재생 시도 (브라우저 정책으로 막히면 첫 사용자 동작 시 재시도)
+    const tryPlayBgm = () => {
+        if (!bgmOn) return;
+        bgmAudio.play().catch(() => {});
+    };
+    tryPlayBgm();
+
+    // 자동재생이 막힌 경우: 첫 클릭/터치 시 한 번만 재생 재시도
+    const once = (el, ev, fn) => {
+        const handler = () => { fn(); el.removeEventListener(ev, handler); };
+        el.addEventListener(ev, handler);
+    };
+    once(document, 'click', tryPlayBgm);
+    once(document, 'touchstart', tryPlayBgm);
+
     if (bgmToggle) {
-        bgmAudio.play().catch(() => { bgmOn = false; bgmToggle.textContent = '🔇 BGM 꺼짐'; });
         bgmToggle.addEventListener('click', () => {
             bgmOn = !bgmOn;
             bgmToggle.textContent = bgmOn ? '🔊 BGM 켜짐' : '🔇 BGM 꺼짐';
@@ -1348,9 +1373,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // 전체화면: Phaser 네이티브 API 사용, iOS 등 미지원 시 CSS 폴백
     const gameContainer = document.getElementById('game-container');
     const fullscreenWrap = document.getElementById('horserace-fullscreen-wrap');
+
+    const isFullscreen = () => {
+        const doc = document;
+        return !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+    };
+    const exitFullscreen = () => {
+        const doc = document;
+        if (doc.exitFullscreen) doc.exitFullscreen();
+        else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+        else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
+        else if (doc.msExitFullscreen) doc.msExitFullscreen();
+    };
+    const updateFullscreenButton = () => {
+        if (!fsToggle) return;
+        fsToggle.textContent = isFullscreen() ? '⛶ 전체화면 종료' : '⛶ 전체화면';
+        fsToggle.setAttribute('title', isFullscreen() ? '전체화면 나가기' : '전체화면 전환');
+        if (fullscreenWrap) {
+            if (isFullscreen()) fullscreenWrap.classList.add('hr-fullscreen-active');
+            else fullscreenWrap.classList.remove('hr-fullscreen-active');
+        }
+    };
+
     if (fullscreenWrap && horseRaceGame.scale) {
         horseRaceGame.scale.fullscreenTarget = fullscreenWrap;
     }
+    const BGM_BAR_HEIGHT = 44;
+    const refreshScaleOnFullscreen = () => {
+        if (!gameContainer || !horseRaceGame.scale) return;
+        const w = window.innerWidth;
+        const h = Math.max(200, window.innerHeight - BGM_BAR_HEIGHT);
+        gameContainer.style.width = w + 'px';
+        gameContainer.style.height = h + 'px';
+        const doRefresh = () => horseRaceGame.scale && horseRaceGame.scale.refresh();
+        // 레이아웃 반영 후 refresh → 화면은 크게, 클릭 좌표도 맞게
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => { doRefresh(); });
+            setTimeout(doRefresh, 80);
+            setTimeout(doRefresh, 250);
+        });
+    };
+    horseRaceGame.scale.on('enterfullscreen', () => {
+        updateFullscreenButton();
+        refreshScaleOnFullscreen();
+    });
     horseRaceGame.scale.on('fullscreenfailed', () => {
         if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
     });
@@ -1358,44 +1424,84 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
     });
     horseRaceGame.scale.on('leavefullscreen', () => {
-        if (gameContainer) gameContainer.classList.remove('fullscreen-fallback');
+        if (gameContainer) {
+            gameContainer.classList.remove('fullscreen-fallback');
+            gameContainer.style.width = '';
+            gameContainer.style.height = '';
+        }
+        updateFullscreenButton();
     });
+    const onFullscreenChange = () => {
+        updateFullscreenButton();
+        if (!isFullscreen() && gameContainer) {
+            gameContainer.style.width = '';
+            gameContainer.style.height = '';
+        } else if (isFullscreen()) {
+            refreshScaleOnFullscreen();
+        }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+
     if (fsToggle) {
         fsToggle.addEventListener('click', () => {
             if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
                 gameContainer.classList.remove('fullscreen-fallback');
+                updateFullscreenButton();
+            } else if (isFullscreen()) {
+                exitFullscreen();
             } else {
                 horseRaceGame.scale.toggleFullscreen();
             }
         });
     }
 
-    // 창 크기 변경 시 캔버스 즉시 대응
-    window.addEventListener('resize', () => {
+    // 창 크기/회전 시 캔버스 재계산 (모바일 회전 시 확대 버그 방지)
+    const refreshScale = () => {
         if (horseRaceGame.scale) horseRaceGame.scale.refresh();
+    };
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(refreshScale, 50);
+    });
+    window.addEventListener('orientationchange', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(refreshScale, 150);
     });
 
-    // 모바일/태블릿 세로 모드에서만 가로 모드 유도 오버레이 (PC 창 축소 시에는 미표시)
-    const portraitOverlay = document.getElementById('hr-portrait-overlay');
+    // 모바일 세로 모드 시 가로 모드 권장 알림 (화면 막지 않음, 확인 시 닫고 이번 세션 동안 미표시)
+    const PORTRAIT_NOTICE_KEY = 'hr-portrait-notice-dismissed';
+    const portraitNotice = document.getElementById('hr-portrait-notice');
+    const portraitNoticeClose = document.getElementById('hr-portrait-notice-close');
     const isMobileDevice = () => {
         if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
-        const ua = navigator.userAgent;
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     };
-    const updatePortraitOverlay = () => {
-        if (!portraitOverlay) return;
+    const updatePortraitNotice = () => {
+        if (!portraitNotice) return;
         const isPortrait = typeof window.matchMedia !== 'undefined' && window.matchMedia('(orientation: portrait)').matches;
-        if (isMobileDevice() && isPortrait) {
-            portraitOverlay.classList.add('visible');
-            portraitOverlay.setAttribute('aria-hidden', 'false');
+        const dismissed = typeof sessionStorage !== 'undefined' && sessionStorage.getItem(PORTRAIT_NOTICE_KEY);
+        if (isMobileDevice() && isPortrait && !dismissed) {
+            portraitNotice.classList.add('visible');
+            portraitNotice.setAttribute('aria-hidden', 'false');
         } else {
-            portraitOverlay.classList.remove('visible');
-            portraitOverlay.setAttribute('aria-hidden', 'true');
+            portraitNotice.classList.remove('visible');
+            portraitNotice.setAttribute('aria-hidden', 'true');
         }
     };
-    updatePortraitOverlay();
-    window.addEventListener('resize', updatePortraitOverlay);
-    window.addEventListener('orientationchange', () => {
-        setTimeout(updatePortraitOverlay, 100);
-    });
+    if (portraitNoticeClose) {
+        portraitNoticeClose.addEventListener('click', () => {
+            try { sessionStorage.setItem(PORTRAIT_NOTICE_KEY, '1'); } catch (e) {}
+            if (portraitNotice) {
+                portraitNotice.classList.remove('visible');
+                portraitNotice.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
+    updatePortraitNotice();
+    window.addEventListener('resize', updatePortraitNotice);
+    window.addEventListener('orientationchange', () => { setTimeout(updatePortraitNotice, 100); });
 });
