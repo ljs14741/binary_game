@@ -34,6 +34,34 @@ function pickObstacleDef() {
     return OBSTACLE_DEF[0];
 }
 
+// 효과음 키 (카메라 시점일 때만 재생)
+const SFX_ROCK      = 'sfx_rock';
+const SFX_PUDDLE    = 'sfx_puddle';
+const SFX_CARROT    = 'sfx_carrot';
+const SFX_JUMP      = 'sfx_jump';
+const SFX_COUNTDOWN = 'sfx_countdown';
+const SFX_FINISH    = 'sfx_finish';
+const SFX_FANFARE   = 'sfx_fanfare';
+
+// ============================================================
+// PreloadScene – 효과음 로드
+// ============================================================
+class PreloadScene extends Phaser.Scene {
+    constructor() { super({ key: 'PreloadScene' }); }
+    preload() {
+        this.load.audio(SFX_ROCK,      '/assets/horseRace/rock.mp3');
+        this.load.audio(SFX_PUDDLE,    '/assets/horseRace/puddle.mp3');
+        this.load.audio(SFX_CARROT,    '/assets/horseRace/carrot.mp3');
+        this.load.audio(SFX_JUMP,      '/assets/horseRace/jump.mp3');
+        this.load.audio(SFX_COUNTDOWN, '/assets/horseRace/countdown.mp3');
+        this.load.audio(SFX_FINISH,    '/assets/horseRace/finish.mp3');
+        this.load.audio(SFX_FANFARE,   '/assets/horseRace/fanfare.mp3');
+    }
+    create() {
+        this.scene.start('SetupScene');
+    }
+}
+
 // ============================================================
 // SetupScene – 참가자 설정 화면
 // ============================================================
@@ -77,19 +105,23 @@ class SetupScene extends Phaser.Scene {
             fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#7a7aaa',
         }).setOrigin(0.5);
 
-        // DOM 텍스트에어리어 (모바일·스케일에서도 보이도록 고정 크기·depth)
-        const taW = Math.min(560, W - 40);
+        // 이름 입력: 1000px 이상에서만 왼쪽, 그 미만은 중앙(캔버스 밖으로 안 벗어나게)
+        const displayW = (this.scale.displaySize && this.scale.displaySize.width)
+            || (typeof window !== 'undefined' ? window.innerWidth : W);
+        const isNarrow = displayW < 1000;
         const taH = Math.max(120, Math.min(182, Math.floor(H * 0.28)));
+        const taW = isNarrow ? Math.min(320, W - 60) : Math.min(300, Math.floor(W * 0.35)) - 20;
+        const taX = isNarrow ? cx : MARGIN_SIDE + (Math.min(300, Math.floor(W * 0.35)) - 20) / 2 + 20;
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="예시:&#10;홍길동, 김철수, 이영희&#10;또는 한 줄에 한 명씩 입력"
-            style="width:${taW}px;min-width:200px;min-height:${taH}px;height:${taH}px;max-width:100%;
+            style="width:${taW}px;min-width:180px;min-height:${taH}px;height:${taH}px;max-width:100%;
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
                    font-size:15px;line-height:1.65;padding:14px 18px;
                    font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
                    box-sizing:border-box;opacity:1;visibility:visible;display:block;"
             onfocus="this.style.borderColor='#FFD700'"
             onblur="this.style.borderColor='#2e2e5a'"></textarea>`;
-        this.domInput = this.add.dom(cx, titleY + 128).createFromHTML(taHtml);
+        this.domInput = this.add.dom(taX, titleY + 128).createFromHTML(taHtml);
         this.domInput.setDepth(200);
 
         // "몇명 입력됨" → 경주 시작 버튼 바로 아래 (겹침 방지)
@@ -526,6 +558,7 @@ class GameScene extends Phaser.Scene {
         let n = 3;
         const tick = () => {
             if (n > 0) {
+                if (n === 3) this.sound.play(SFX_COUNTDOWN);  // 카운트다운 효과음 한 번만
                 cd.setText(`${n}`).setAlpha(1).setScale(1.6).setColor('#FFD700');
                 this.tweens.add({ targets: cd, scaleX: 0.75, scaleY: 0.75, alpha: 0.25, duration: 880, ease: 'Power2' });
                 n--;
@@ -711,6 +744,11 @@ class GameScene extends Phaser.Scene {
                 if (Math.random() < dodgeChance) {
                     horse.obstacleDecisions.set(obs.id, 'dodge');
                     horse.isDodging = true;
+                    const cam = this.cameras.main;
+                    const inViewForJump = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + cam.width);
+                    if (inViewForJump) {
+                        this.sound.play(SFX_JUMP);
+                    }
                     const dir = horse.y <= obs.y ? -1 : 1;
                     horse.dodgeTargetY = Phaser.Math.Clamp(
                         horse.baseY + dir * LANE_H * 0.32,
@@ -732,6 +770,15 @@ class GameScene extends Phaser.Scene {
     }
 
     _applyObstacleEffect(horse, obs) {
+        // 카메라 시점에 있을 때만 효과음 재생 (사람이 보는 화면 안에서만)
+        const cam = this.cameras.main;
+        const inView = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + cam.width);
+        if (inView) {
+            if (obs.type === 'rock')   this.sound.play(SFX_ROCK);
+            if (obs.type === 'puddle') this.sound.play(SFX_PUDDLE);
+            if (obs.type === 'carrot') this.sound.play(SFX_CARROT);
+        }
+
         // 장애물 소멸 애니메이션
         this.tweens.add({
             targets: obs.textObj, scaleX: 2.2, scaleY: 2.2, alpha: 0, duration: 380,
@@ -873,6 +920,11 @@ class GameScene extends Phaser.Scene {
 
     // ── Race Finish ───────────────────────────────────────────
     _onHorseFinish(horse) {
+        const cam = this.cameras.main;
+        const inView = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + cam.width);
+        if (inView) {
+            this.sound.play(SFX_FINISH);
+        }
         if (this.mode === 'winner' && horse.finishOrder === 1) {
             // 1등 우승 모드: 첫 번째 통과자가 우승
             this.winner = horse;
@@ -896,7 +948,10 @@ class GameScene extends Phaser.Scene {
             targets: this.cameras.main, scrollX: targetX, duration: 1100, ease: 'Power2',
             onComplete: () => {
                 this._launchConfetti();
-                this.time.delayedCall(350, () => this._showResultPanel(this.winner));
+                this.time.delayedCall(350, () => {
+                    this.sound.play(SFX_FANFARE);  // 우승/꼴찌 패널 뜰 때 fanfare (finish와 겹치지 않게)
+                    this._showResultPanel(this.winner);
+                });
             },
         });
     }
@@ -1040,7 +1095,7 @@ const horseRaceConfig = {
         mode:       Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [SetupScene, GameScene],
+    scene: [PreloadScene, SetupScene, GameScene],
 };
 
 const horseRaceGame = new Phaser.Game(horseRaceConfig);
@@ -1049,7 +1104,7 @@ const horseRaceGame = new Phaser.Game(horseRaceConfig);
 // 외부 UI (BGM 토글, 전체화면)
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    const bgmAudio = new Audio('/assets/luckyRacing/audio/luckyRacingBGM.mp3');
+    const bgmAudio = new Audio('/assets/horseRace/audio/bgm.mp3');
     bgmAudio.loop = true;
     bgmAudio.volume = 0.5;
 
