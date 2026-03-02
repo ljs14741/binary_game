@@ -112,17 +112,22 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 전체화면: BGM 바는 상단 고정, 게임 영역은 그 아래에서만 클릭/터치 받도록 */
+        /* 전체화면: BGM 바 상단 고정(항상 보이게), 버튼 터치 가능하도록 z-index·pointer-events */
         #horserace-fullscreen-wrap:fullscreen .game-bgm,
         #horserace-fullscreen-wrap:-webkit-full-screen .game-bgm,
         #horserace-fullscreen-wrap:-moz-full-screen .game-bgm,
         #horserace-fullscreen-wrap:-ms-fullscreen .game-bgm,
         #horserace-fullscreen-wrap.hr-fullscreen-active .game-bgm {
             margin-top: max(14px, env(safe-area-inset-top));
+            padding-top: max(8px, env(safe-area-inset-top));
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            min-height: 52px;
             flex-shrink: 0;
             flex: 0 0 auto;
             position: relative;
-            z-index: 2;
+            z-index: 20;
+            pointer-events: auto;
+            touch-action: manipulation;
         }
         #horserace-fullscreen-wrap:fullscreen,
         #horserace-fullscreen-wrap:-webkit-full-screen,
@@ -145,18 +150,20 @@
             display: flex !important;
             flex-direction: column !important;
         }
-        /* 게임 영역: BGM 바 아래를 절대 위치로 전부 채움, 클릭/터치 수신 보장 */
+        /* 게임 영역: BGM 바 아래 flex로 채움 → 버튼 클릭 영역과 겹치지 않음 */
         #horserace-fullscreen-wrap:fullscreen #game-container,
         #horserace-fullscreen-wrap:-webkit-full-screen #game-container,
         #horserace-fullscreen-wrap:-moz-full-screen #game-container,
         #horserace-fullscreen-wrap:-ms-fullscreen #game-container,
         #horserace-fullscreen-wrap.hr-fullscreen-active #game-container {
-            position: absolute !important;
-            top: calc(44px + env(safe-area-inset-top, 0px)) !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            width: auto !important;
+            flex: 1 1 auto;
+            min-height: 0;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            width: 100% !important;
             height: auto !important;
             max-width: none !important;
             margin: 0 !important;
@@ -319,6 +326,24 @@
                 font-size: 12px;
                 padding: 10px 12px;
             }
+            /* 닉네임 입력창: 모바일에서 캔버스 스케일과 맞춰 보이도록 */
+            #game-container > div:not(canvas) {
+                width: 100% !important;
+                height: 100% !important;
+                left: 0 !important;
+                top: 0 !important;
+                transform-origin: 0 0;
+                box-sizing: border-box;
+            }
+            #game-container #hrNamesInput {
+                width: 92% !important;
+                max-width: none !important;
+                min-width: 0 !important;
+                display: block !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                box-sizing: border-box;
+            }
         }
 
         .hr-description h2 {
@@ -370,35 +395,20 @@
 
         <!-- 소개 & 사용법 -->
         <div class="hr-description">
-            <h2>게임 방법</h2>
+            <h2>방법</h2>
             <ol>
-                <li>참가자 이름을 <strong>쉼표( , ) 또는 줄바꿈</strong>으로 구분해 붙여넣기 하세요. (최소 2명, 최대 30명)</li>
-                <li><strong>1등 우승 뽑기</strong> / <strong>꼴찌 벌칙 뽑기</strong> 중 모드를 고른 뒤 <strong>경주 시작!</strong> 버튼을 누르세요.</li>
-                <li>시작 시 각 말에게 <strong>등급이 랜덤</strong>으로 부여됩니다. 🏇 일반 / 🦄 레어 유니콘 / 🐉 에픽 드래곤 (레어·에픽은 확률이 낮은 잭팟)</li>
-                <li>3·2·1 카운트다운 후 경주가 시작됩니다. 우측 <strong>실시간 순위</strong>(말 색상으로 구분)와 하단 <strong>미니맵</strong>으로 상황을 확인하세요.</li>
-                <li>트랙에는 <strong>🥕 당근(버프)</strong>, <strong>🪨 돌멩이</strong>, <strong>💧 웅덩이</strong>가 나옵니다. 당근은 꼭 먹고, 나쁜 장애물은 피해 가면 유리해요.</li>
-                <li>가장 먼저 결승선을 통과한 말의 주인이 <strong>우승!</strong> 🏆 (꼴찌 모드는 마지막 도착자가 벌칙)</li>
-                <li>우승 후 <strong>같은 참가자로 재시작</strong> 또는 <strong>새로 설정</strong>으로 다음 판을 즐기세요.</li>
+                <li>참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명)</li>
+                <li><strong>1등 우승 뽑기</strong> / <strong>꼴찌 벌칙 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong></li>
+                <li>시작 시 말마다 등급 랜덤: 🏇 일반 / 🦄 레어 / 🐉 에픽</li>
+                <li>🥕 당근은 먹고, 🪨 돌·💧 웅덩이는 피하기. 결승선 통과한 말의 주인이 우승(또는 꼴찌)</li>
             </ol>
 
-            <h2>핵심 특징</h2>
+            <h2>특징</h2>
             <ul>
-                <li><strong>사다리타기·룰렛·핀볼</strong>처럼 뽑기·추첨·내기에 딱! 벌칙·당번·커피 뽑기 등에 활용.</li>
-                <li><strong>등급(티어) 시스템</strong> – 🏇 일반(대다수) / 🦄 레어 유니콘(소수) / 🐉 에픽 드래곤(드물게). 레어·에픽은 스탯 보너스가 있지만, 운과 장애물에 따라 일반 말에게도 질 수 있어요.</li>
-                <li><strong>말마다 고유 색상</strong> – 오라와 닉네임·순위표 색이 같아서 누가 누군지 한눈에 구분 가능.</li>
-                <li><strong>역전 메커니즘</strong> – 꼴찌 그룹은 부스터 발동 확률이 올라가고, 막판 스퍼트 때는 하위권이 더 자주 부스터로 치고 올라옵니다.</li>
-                <li><strong>선두 억까(파란 등껍질)</strong> – 트랙 절반 넘긴 뒤 1~3위 말은 나쁜 장애물을 피하지 못하고, 랜덤으로 발이 꼬여 넘어질 수 있어요. 후반 역전 포인트!</li>
-                <li><strong>마지막 스퍼트</strong> – 선두가 결승 1000m 전에 도달하면 화면에 "🔥 마지막 스퍼트! 🔥" 연출과 함께 막판 대역전극이 펼쳐져요.</li>
-                <li><strong>슬로우모션 & 폭죽</strong> – 우승 순간 슬로우모션과 함께 화면 가득 폭죽!</li>
-                <li>최대 <strong>30명</strong>까지 동시 참가. 참가 인원이 적을수록 이름·순위표 글자가 커져서 보기 편해요.</li>
-                <li>게임 위에서 <strong>BGM</strong>·<strong>볼륨</strong>·<strong>전체화면</strong>을 조절할 수 있어요. PC·모바일 모두 반응형.</li>
+                <li>벌칙·당번·커피 뽑기 등 <strong>뽑기·추첨용</strong> (사다리·룰렛 대신)</li>
+                <li><strong>역전 요소</strong> – 꼴찌 부스터, 막판 스퍼트, 1~3위만 걸리는 선두 억까</li>
+                <li>말마다 고유 색상으로 순위 한눈에 구분, 최대 30명 참가</li>
             </ul>
-
-            <h2>안내</h2>
-            <p>
-                등급은 매 경주 시작 시 랜덤으로 정해지며, 레어·에픽은 확률이 낮아 진짜 어쩌다 나오는 잭팟 느낌이에요. 성능 격차는 의도적으로 줄여 두어서, 부딪히거나 운이 없으면 일반 말에게도 질 수 있습니다.<br>
-                <strong>사다리타기·룰렛·핀볼</strong>처럼 뽑기·추첨용 <strong>경마게임</strong>·<strong>경마내기</strong>로 커피 내기·벌칙·당번·경품 추첨 등에 활용해 보세요. 소리를 켜면 더 몰입감 있어요!
-            </p>
         </div>
 
     </div><!-- /.container -->

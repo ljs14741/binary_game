@@ -141,6 +141,7 @@ class SetupScene extends Phaser.Scene {
         this.domInput.setOrigin(0.5, 0.5);
         this.domInput.setDepth(5);
         this._setupDomLayoutY = domY;
+        this._syncDomContainerScale();
 
         // "몇명 입력됨" → 내기·추첨 문구 바로 위, 글자 크기 키움
         const FOOT_H = 36;
@@ -294,7 +295,7 @@ class SetupScene extends Phaser.Scene {
         this.time.delayedCall(3000, () => this.msgText.setText(''));
     }
 
-    // 리사이즈 시 textarea DOM 위치 유지 (타이틀/안내 아래 고정)
+    // 리사이즈 시 textarea DOM 위치 유지 + 모바일에서 DOM 컨테이너 스케일 동기화
     _onResize() {
         if (this.domInput && this.scene.isActive()) {
             const cx = this.scale.width / 2;
@@ -302,7 +303,26 @@ class SetupScene extends Phaser.Scene {
             const domY = titleY + 118;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
+            this._syncDomContainerScale();
         }
+    }
+
+    // 모바일 등에서 캔버스가 스케일될 때 DOM 오버레이도 같은 비율로 스케일해 입력창이 화면 안에 보이게
+    _syncDomContainerScale() {
+        const node = this.domInput && this.domInput.node;
+        if (!node || !node.parentElement) return;
+        const container = node.parentElement;
+        const gw = (this.scale.gameSize && this.scale.gameSize.width) || this.scale.width || HR_W;
+        const gh = (this.scale.gameSize && this.scale.gameSize.height) || this.scale.height || HR_H;
+        const dw = (this.scale.displaySize && this.scale.displaySize.width) || this.scale.width;
+        const dh = (this.scale.displaySize && this.scale.displaySize.height) || this.scale.height;
+        if (!dw || !dh) return;
+        const sx = dw / gw;
+        const sy = dh / gh;
+        container.style.width = gw + 'px';
+        container.style.height = gh + 'px';
+        container.style.transformOrigin = '0 0';
+        container.style.transform = 'scale(' + sx + ',' + sy + ')';
     }
 
     shutdown() {
@@ -341,6 +361,9 @@ class GameScene extends Phaser.Scene {
     create() {
         const W = this.scale.width, H = this.scale.height;
         const cx = W / 2, cy = H / 2;
+
+        // 모바일 포함 효과음 잘 들리도록 마스터 볼륨 확보
+        this.sound.volume = 1;
 
         // ── 레이아웃 계산 ─────────────────────────────────────
         const MARGIN_TOP = 44;
@@ -1398,15 +1421,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fullscreenWrap && horseRaceGame.scale) {
         horseRaceGame.scale.fullscreenTarget = fullscreenWrap;
     }
-    const BGM_BAR_HEIGHT = 44;
     const refreshScaleOnFullscreen = () => {
         if (!gameContainer || !horseRaceGame.scale) return;
-        const w = window.innerWidth;
-        const h = Math.max(200, window.innerHeight - BGM_BAR_HEIGHT);
-        gameContainer.style.width = w + 'px';
-        gameContainer.style.height = h + 'px';
+        // flex 레이아웃으로 높이 결정되므로 고정 크기 제거 → BGM 바·버튼이 가리지 않음
+        gameContainer.style.width = '';
+        gameContainer.style.height = '';
         const doRefresh = () => horseRaceGame.scale && horseRaceGame.scale.refresh();
-        // 레이아웃 반영 후 refresh → 화면은 크게, 클릭 좌표도 맞게
         requestAnimationFrame(() => {
             requestAnimationFrame(() => { doRefresh(); });
             setTimeout(doRefresh, 80);
