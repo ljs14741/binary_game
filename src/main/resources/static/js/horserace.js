@@ -1388,10 +1388,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if (volumeCtrl) {
-        bgmAudio.volume = volumeCtrl.value / 100;
-        volumeCtrl.addEventListener('input', () => {
-            bgmAudio.volume = volumeCtrl.value / 100;
-        });
+        const applyVolume = () => { bgmAudio.volume = volumeCtrl.value / 100; };
+        applyVolume();
+        volumeCtrl.addEventListener('input', applyVolume);
+        volumeCtrl.addEventListener('change', applyVolume);
+        volumeCtrl.addEventListener('touchend', applyVolume);
     }
     // 전체화면: Phaser 네이티브 API 사용, iOS 등 미지원 시 CSS 폴백
     const gameContainer = document.getElementById('game-container');
@@ -1408,12 +1409,15 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
         else if (doc.msExitFullscreen) doc.msExitFullscreen();
     };
+    const hrFsExitBtn = document.getElementById('hrFsExitBtn');
     const updateFullscreenButton = () => {
-        if (!fsToggle) return;
-        fsToggle.textContent = isFullscreen() ? '⛶ 전체화면 종료' : '⛶ 전체화면';
-        fsToggle.setAttribute('title', isFullscreen() ? '전체화면 나가기' : '전체화면 전환');
+        const fs = isFullscreen();
+        if (fsToggle) {
+            fsToggle.textContent = fs ? '⛶ 전체화면 종료' : '⛶ 전체화면';
+            fsToggle.setAttribute('title', fs ? '전체화면 나가기' : '전체화면 전환');
+        }
         if (fullscreenWrap) {
-            if (isFullscreen()) fullscreenWrap.classList.add('hr-fullscreen-active');
+            if (fs) fullscreenWrap.classList.add('hr-fullscreen-active');
             else fullscreenWrap.classList.remove('hr-fullscreen-active');
         }
     };
@@ -1439,9 +1443,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     horseRaceGame.scale.on('fullscreenfailed', () => {
         if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
+        if (fullscreenWrap) fullscreenWrap.classList.add('hr-fullscreen-active');
+        updateFullscreenButton();
     });
     horseRaceGame.scale.on('fullscreenunsupported', () => {
         if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
+        if (fullscreenWrap) fullscreenWrap.classList.add('hr-fullscreen-active');
+        updateFullscreenButton();
     });
     horseRaceGame.scale.on('leavefullscreen', () => {
         if (gameContainer) {
@@ -1474,6 +1482,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 exitFullscreen();
             } else {
                 horseRaceGame.scale.toggleFullscreen();
+            }
+        });
+    }
+    if (hrFsExitBtn) {
+        hrFsExitBtn.addEventListener('click', () => {
+            if (isFullscreen()) exitFullscreen();
+            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
+                gameContainer.classList.remove('fullscreen-fallback');
+                updateFullscreenButton();
             }
         });
     }
