@@ -20,6 +20,25 @@ const HORSE_COLORS = [
     0x40E0D0, 0xF0E68C, 0xADFF2F, 0xFF00FF, 0x00BFFF,
 ];
 
+// 말 등급 (뽑기): 일반 대다수, 레어 5%, 에픽 1~2% (잭팟 느낌)
+const TIER_COMMON = 'common';
+const TIER_RARE   = 'rare';
+const TIER_EPIC   = 'epic';
+const TIER_DEF = [
+    { tier: TIER_COMMON, prob: 0.94, emoji: '🏇', speedBonus: 0,   boosterMul: 1.0, trail: null, dodgeMul: 1.0 },
+    { tier: TIER_RARE,   prob: 0.05, emoji: '🦄', speedBonus: 0.1, boosterMul: 1.5, trail: '✨', dodgeMul: 1.0 },
+    { tier: TIER_EPIC,   prob: 0.01, emoji: '🐉', speedBonus: 0.2, boosterMul: 1.0, trail: '🔥', dodgeMul: 0.35 },
+];
+function pickTier() {
+    const r = Math.random();
+    let acc = 0;
+    for (const d of TIER_DEF) {
+        acc += d.prob;
+        if (r < acc) return d;
+    }
+    return TIER_DEF[0];
+}
+
 // 장애물 정의 (가중치 랜덤)
 const OBSTACLE_DEF = [
     { type: 'rock',   emoji: '🪨', weight: 3 },
@@ -276,6 +295,8 @@ class GameScene extends Phaser.Scene {
         this.winner      = null;
         this.finishOrder = 0;
         this.allFinished = 0;
+        this.finalLapTriggered = false;
+        this.finalLapUntil     = 0;
     }
 
     create() {
@@ -293,7 +314,9 @@ class GameScene extends Phaser.Scene {
         // 실제 Sprite로 교체 시 HORSE_FONT 대신 Sprite.width/height를 사용하세요.
         // this.add.sprite(x, y, 'horse_texture').setDepth(10);
         const HORSE_FONT = Phaser.Math.Clamp(Math.floor(LANE_H * 0.78), 10, 44);
-        const FONT_SZ    = Phaser.Math.Clamp(Math.floor(LANE_H * 0.42), 7, 14);
+        const FONT_SZ    = this.numHorses <= 10
+            ? Phaser.Math.Clamp(Math.floor(LANE_H * 0.52), 12, 22)
+            : Phaser.Math.Clamp(Math.floor(LANE_H * 0.42), 7, 14);
         this.layout = { TRACK_TOP, TRACK_H, LANE_H, HORSE_FONT, FONT_SZ };
 
         // ── 카메라 경계 ──────────────────────────────────────
@@ -331,19 +354,32 @@ class GameScene extends Phaser.Scene {
         this.nameLabels  = [];
         this.statusIcons = [];
 
+        // 등급별 고유 색상: 일반만 랜덤, 레어/에픽은 고정 (오라·이름표에 사용)
+        const TIER_COLOR_RARE = 0x8A2BE2;   // 보라 (신비로운)
+        const TIER_COLOR_EPIC = 0xFFD700;   // 황금 (압도적)
+
         for (let i = 0; i < this.numHorses; i++) {
             const laneY = TRACK_TOP + i * LANE_H + LANE_H / 2;
-            const color = HORSE_COLORS[i % HORSE_COLORS.length];
+            const tierDef = pickTier();
+            const color = tierDef.tier === TIER_EPIC ? TIER_COLOR_EPIC
+                : tierDef.tier === TIER_RARE ? TIER_COLOR_RARE
+                    : HORSE_COLORS[i % HORSE_COLORS.length];
+            const baseSpeed = Phaser.Math.FloatBetween(2.8, 4.3) + tierDef.speedBonus;
 
             this.horses.push({
                 idx:               i,
                 name:              this.names[i],
                 color,
+                tier:              tierDef.tier,
+                emoji:             tierDef.emoji,
+                trailParticle:     tierDef.trail,
+                boosterChanceMul:  tierDef.boosterMul,
+                dodgeMul:          tierDef.dodgeMul,
                 x:                 120,
                 baseY:             laneY,
                 y:                 laneY,
                 speed:             0,
-                baseSpeed:         Phaser.Math.FloatBetween(2.8, 4.3),
+                baseSpeed,
                 rank:              i + 1,
                 finished:          false,
                 finishOrder:       -1,
@@ -360,9 +396,9 @@ class GameScene extends Phaser.Scene {
                 obstacleDecisions: new Map(),
             });
 
-            // 🏇 이모지 텍스트 (TODO: 말 이미지 교체 부분 – Sprite로 대체 가능)
+            // 등급별 이모지 텍스트 (TODO: 말 이미지 교체 부분 – Sprite로 대체 가능)
             this.horseEmojis.push(
-                this.add.text(120, laneY, '🏇', { fontSize: `${HORSE_FONT}px` })
+                this.add.text(120, laneY, tierDef.emoji, { fontSize: `${HORSE_FONT}px` })
                     .setOrigin(0.5).setDepth(10)
             );
 
@@ -395,6 +431,11 @@ class GameScene extends Phaser.Scene {
 
         // ── 미니맵 (하단, 안전 여백) ─────────────────────────
         this._createMinimap();
+
+        // ── 마지막 스퍼트 연출용 오버레이 (숨김) ─────────────
+        const cw = this.cameras.main.width, ch = this.cameras.main.height;
+        this.finalLapOverlay = this.add.rectangle(cw / 2, ch / 2, cw + 200, ch + 200, 0xFF0000, 0)
+            .setScrollFactor(0).setDepth(88).setVisible(false);
 
         // ── 카운트다운 ──────────────────────────────────────
         this.time.delayedCall(400, () => this._showCountdown());
@@ -493,7 +534,7 @@ class GameScene extends Phaser.Scene {
         const ROW_H = Math.max(12, Math.floor((LBH - HEADER_H) / this.numHorses));
 
         const bg = this.add.graphics().setScrollFactor(0).setDepth(50);
-        bg.fillStyle(0x05050e, 0.82);
+        bg.fillStyle(0x05050e, 0.30);
         bg.fillRoundedRect(LBX, LBY, LBW, LBH, 10);
         bg.lineStyle(1.5, 0xFFD700, 0.65);
         bg.strokeRoundedRect(LBX, LBY, LBW, LBH, 10);
@@ -504,15 +545,18 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
 
         this.lbTexts = [];
-        const fs = Math.max(8, Math.min(11, ROW_H - 3));
+        const lbFontSz = this.numHorses <= 10
+            ? Phaser.Math.Clamp(ROW_H - 2, 14, 18)
+            : Math.max(8, Math.min(11, ROW_H - 3));
         let y0 = LBY + HEADER_H;
         for (let i = 0; i < this.numHorses; i++) {
             this.lbTexts.push(
                 this.add.text(LBX + 10, y0 + i * ROW_H + ROW_H / 2, `${i + 1}위  -`, {
-                    fontSize: `${fs}px`, fontFamily: '"Pretendard",Arial', color: '#cccccc',
+                    fontSize: `${lbFontSz}px`, fontFamily: '"Pretendard",Arial', color: '#cccccc',
                 }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(51)
             );
         }
+        this.lbFontSz = lbFontSz;
 
         this.lbRowH = ROW_H;
         this.lbX = LBX;
@@ -621,14 +665,26 @@ class GameScene extends Phaser.Scene {
 
         const activeCount = this.horses.filter(h => !h.finished).length;
 
+        // 마지막 스퍼트: 선두가 결승 1000px 전이면 한 번만 팝업 + 붉은 점멸 + 막판 부스터 구간 시작
+        if (!this.raceFinished && !this.finalLapTriggered && sortedByX[0] && !sortedByX[0].finished && sortedByX[0].x >= FINISH_X - 1000) {
+            this._triggerFinalLap(time);
+        }
+
         // 말 업데이트 & 그리기
         this.nameGfx.clear();
         for (const horse of this.horses) {
             if (!horse.finished) {
-                this._updateHorse(horse, activeCount, dt);
+                this._updateHorse(horse, activeCount, dt, time);
                 this._checkObstacles(horse);
             }
             this._drawHorseVisuals(horse);
+        }
+
+        // 레어/에픽 달리기 트레일 파티클 (✨ / 🔥)
+        for (const horse of this.horses) {
+            if (!horse.finished && horse.trailParticle && Math.random() < 0.22) {
+                this._spawnTrailParticle(horse);
+            }
         }
 
         // 카메라
@@ -639,17 +695,72 @@ class GameScene extends Phaser.Scene {
         this._updateMinimap();
     }
 
-    // ── Camera Follow: 항상 선두(1등) 추적 ────────────────────
+    // ── Camera Follow: 선두 추적, 화면 우측(0.65)에 두어 후발 추격전이 잘 보이게 ─
     _updateCamera(sortedByX) {
         const targetHorse = sortedByX[0];
         const viewW       = this.cameras.main.width;
-        const offset      = 0.35;
+        const offset      = 0.65;
         const targetX     = Phaser.Math.Clamp(targetHorse.x - viewW * offset, 0, TRACK_LEN - viewW + 300);
         this.cameras.main.scrollX = Phaser.Math.Linear(this.cameras.main.scrollX, targetX, 0.07);
     }
 
+    _triggerFinalLap(time) {
+        this.finalLapTriggered = true;
+        this.finalLapUntil    = time + 3000;
+
+        const cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
+
+        const popup = this.add.text(cx, cy, '🔥 마지막 스퍼트! 🔥', {
+            fontFamily: '"Orbitron","Pretendard",Arial',
+            fontSize: '52px',
+            color: '#FFDD00',
+            stroke: '#CC0000',
+            strokeThickness: 8,
+            shadow: { offsetX: 0, offsetY: 0, color: '#FF4400', blur: 20, fill: true },
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(95).setAlpha(0).setScale(0.5);
+
+        this.tweens.add({
+            targets: popup,
+            alpha: 1,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 280,
+            ease: 'Back.easeOut',
+        });
+        this.tweens.add({
+            targets: popup,
+            alpha: 0,
+            scaleX: 1.35,
+            scaleY: 1.35,
+            duration: 600,
+            delay: 1400,
+            ease: 'Power2',
+            onComplete: () => popup.destroy(),
+        });
+
+        this.finalLapOverlay.setVisible(true).setAlpha(0);
+        const doFlash = (count) => {
+            if (count <= 0) {
+                this.finalLapOverlay.setAlpha(0).setVisible(false);
+                return;
+            }
+            this.tweens.add({
+                targets: this.finalLapOverlay,
+                alpha: 0.4,
+                duration: 100,
+                yoyo: true,
+                hold: 60,
+                onComplete: () => {
+                    this.finalLapOverlay.setAlpha(0);
+                    this.time.delayedCall(80, () => doFlash(count - 1));
+                },
+            });
+        };
+        doFlash(3);
+    }
+
     // ── Horse Physics ─────────────────────────────────────────
-    _updateHorse(horse, activeCount, dt) {
+    _updateHorse(horse, activeCount, dt, time) {
         // Y 회피 복귀
         if (horse.isDodging) {
             horse.y = Phaser.Math.Linear(horse.y, horse.dodgeTargetY, 0.08);
@@ -696,17 +807,27 @@ class GameScene extends Phaser.Scene {
         else if (horse.isStumbling) this.statusIcons[horse.idx].setText('❗');
         else                        this.statusIcons[horse.idx].setText('');
 
-        // ★ Rubber-banding: 꼴찌 그룹 부스터
+        // ★ Rubber-banding: 꼴찌 그룹 부스터 (레어 1.5배, 막판 스퍼트 시 하위권 대폭 상승)
         if (!horse.isBoosting && !horse.isStumbling && activeCount >= 3) {
-            if (horse.rank > activeCount * 0.72 && Math.random() < 0.009) {
+            const chance = 0.009 * (horse.boosterChanceMul || 1.0);
+            const inBack = horse.rank > activeCount * 0.72;
+            const finalLapActive = this.finalLapUntil && time < this.finalLapUntil;
+            const inBackFinal = horse.rank > activeCount * 0.6;
+            const finalChance = 0.048;
+            if (finalLapActive && inBackFinal && Math.random() < finalChance) {
+                this._triggerBoost(horse);
+            } else if (inBack && Math.random() < chance) {
                 this._triggerBoost(horse);
             }
         }
 
-        // ★ 선두의 위기: 1위 말 걸림
-        if (!horse.isStumbling && !horse.isBoosting && !horse.isSpinning && horse.rank === 1 && activeCount >= 2) {
+        // ★ 선두 그룹(1~3위) '파란 등껍질' 억까: 트랙 절반 넘은 뒤 랜덤 발 꼬임 (1등 > 2등 > 3등 확률)
+        if (!horse.isStumbling && !horse.isBoosting && !horse.isSpinning && horse.rank <= 3 && horse.x > TRACK_LEN * 0.5 && activeCount >= 2) {
             const nearFinish = horse.x > FINISH_X * 0.55;
-            if (Math.random() < (nearFinish ? 0.0038 : 0.0012)) {
+            const stumbleChance = horse.rank === 1 ? (nearFinish ? 0.0042 : 0.0014)
+                : horse.rank === 2 ? (nearFinish ? 0.0030 : 0.0010)
+                    : (nearFinish ? 0.0020 : 0.0007);
+            if (Math.random() < stumbleChance) {
                 this._triggerStumble(horse);
             }
         }
@@ -738,9 +859,16 @@ class GameScene extends Phaser.Scene {
             const yDist    = Math.abs(horse.y - obs.y);
             const decision = horse.obstacleDecisions.get(obs.id);
 
-            // 1. 미결정 & 감지 구역 → 회피/충돌 결정
+            // 1. 미결정 & 감지 구역 → 회피/충돌 결정 (당근은 무조건 먹음, 선두 1~3위는 나쁜 장애물 회피 불가)
             if (!decision && xDist > -20 && xDist < 190 && yDist < LANE_H * 0.60 && !horse.isDodging) {
-                const dodgeChance = obs.type === 'carrot' ? 0.12 : 0.48;
+                let dodgeChance;
+                if (obs.type === 'carrot') {
+                    dodgeChance = 0;
+                } else {
+                    const isLeaderPenalty = horse.x > TRACK_LEN * 0.5 && horse.rank <= 3;
+                    const baseDodge = isLeaderPenalty ? 0 : 0.48;
+                    dodgeChance = baseDodge * (horse.dodgeMul !== undefined ? horse.dodgeMul : 1.0);
+                }
                 if (Math.random() < dodgeChance) {
                     horse.obstacleDecisions.set(obs.id, 'dodge');
                     horse.isDodging = true;
@@ -833,11 +961,17 @@ class GameScene extends Phaser.Scene {
         const si = this.statusIcons[horse.idx];
         const g  = this.nameGfx;
 
-        // 이모지 위치 & 변환
+        // 이모지 위치 & 변환 (등급별 이모지 유지)
         ht.setPosition(horse.x, horse.y);
         ht.setRotation(horse.rotation);
         ht.setScale(horse.scaleBonus * (horse.isBoosting ? 1.08 : 1.0));
         ht.setAlpha(horse.finished ? 0.5 : 1.0);
+        if (horse.emoji) ht.setText(horse.emoji);
+
+        // 고유 색상 오라 (이모지 뒤쪽 은은한 원형 글로우)
+        const auraR = HORSE_FONT * 0.72;
+        g.fillStyle(horse.color, 0.3);
+        g.fillCircle(horse.x, horse.y, auraR);
 
         // 바닥 그림자 (ellipse)
         g.fillStyle(0x000000, 0.24);
@@ -856,17 +990,33 @@ class GameScene extends Phaser.Scene {
         const lx   = horse.x;
         const ly   = horse.y - HORSE_FONT * 0.62;
 
-        g.fillStyle(0x000000, 0.78);
-        g.fillRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
-        g.lineStyle(2, horse.color, 1.0);  // 말 고유 색상 테두리
-        g.strokeRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
+        // 등급별 이름표: 오라와 동일한 고정 색상을 테두리에 적용
+        const isRare = horse.tier === TIER_RARE;
+        const isEpic = horse.tier === TIER_EPIC;
+        if (isEpic) {
+            g.fillStyle(0x2a0a3a, 0.92);
+            g.fillRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
+            g.lineStyle(2.5, horse.color, 1.0);
+            g.strokeRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
+        } else if (isRare) {
+            g.fillStyle(0x2a2810, 0.92);
+            g.fillRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
+            g.lineStyle(2.5, horse.color, 1.0);
+            g.strokeRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
+        } else {
+            g.fillStyle(0x000000, 0.78);
+            g.fillRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
+            g.lineStyle(2, horse.color, 1.0);
+            g.strokeRoundedRect(lx - lblW / 2, ly - lblH, lblW, lblH, 4);
+        }
 
         nl.setPosition(lx, ly - lblH / 2).setOrigin(0.5);
-        nl.setColor(horse.isBoosting ? '#FFD700' : '#ffffff');
+        const nameColor = '#' + ((horse.color & 0xFFFFFF).toString(16).padStart(6, '0')).toUpperCase();
+        nl.setColor(horse.isBoosting ? '#FFD700' : nameColor);
 
-        // 부스터 발광 링
+        // 부스터 발광 링 (말 고유 색상 톤)
         if (horse.isBoosting) {
-            g.lineStyle(2.5, 0xFF8800, 0.72);
+            g.lineStyle(2.5, horse.color, 0.85);
             g.strokeCircle(horse.x, horse.y, HORSE_FONT * 0.60);
         }
 
@@ -888,7 +1038,15 @@ class GameScene extends Phaser.Scene {
 
     _spawnBoostFx(horse) {
         const { HORSE_FONT } = this.layout;
-        const cols = [0xFF6600, 0xFFAA00, 0xFF2200, 0xFFFF00];
+        const base = horse.color;
+        const r = (base >> 16) & 0xFF, g = (base >> 8) & 0xFF, b = base & 0xFF;
+        const bright = 0xFFDD88;
+        const cols = [
+            base,
+            (Math.min(255, r + 40) << 16) | (Math.min(255, g + 40) << 8) | Math.min(255, b + 40),
+            (Math.min(255, r + 80) << 16) | (Math.min(255, g + 80) << 8) | Math.min(255, b + 80),
+            bright,
+        ];
         for (let i = 0; i < 10; i++) {
             const px  = horse.x - HORSE_FONT * 0.35 + Phaser.Math.Between(-6, 6);
             const py  = horse.y + Phaser.Math.Between(-Math.floor(HORSE_FONT / 4), Math.floor(HORSE_FONT / 4));
@@ -907,15 +1065,34 @@ class GameScene extends Phaser.Scene {
 
     _spawnStumbleFx(horse) {
         const { HORSE_FONT } = this.layout;
+        const col = horse.color;
         for (let i = 0; i < 7; i++) {
             const px = horse.x + Phaser.Math.Between(-12, 24);
             const py = horse.y + Phaser.Math.Between(-Math.floor(HORSE_FONT / 2), 4);
-            const p  = this.add.ellipse(px, py, 5, 8, 0x55CCFF, 0.9).setDepth(9);
+            const p  = this.add.ellipse(px, py, 5, 8, col, 0.9).setDepth(9);
             this.tweens.add({
                 targets: p, y: py + 22, alpha: 0, duration: 500, ease: 'Sine.easeIn',
                 onComplete: () => p.destroy(),
             });
         }
+    }
+
+    _spawnTrailParticle(horse) {
+        const { HORSE_FONT } = this.layout;
+        const emoji = horse.trailParticle || '✨';
+        const px = horse.x - HORSE_FONT * 0.5 + Phaser.Math.Between(-8, 8);
+        const py = horse.y + Phaser.Math.Between(-4, 4);
+        const t = this.add.text(px, py, emoji, { fontSize: `${Math.max(12, Math.floor(HORSE_FONT * 0.35))}px` })
+            .setOrigin(0.5).setDepth(8.5).setAlpha(0.9);
+        this.tweens.add({
+            targets: t,
+            x: px - Phaser.Math.Between(18, 45),
+            y: py + Phaser.Math.Between(-8, 8),
+            alpha: 0,
+            duration: 400,
+            ease: 'Power1',
+            onComplete: () => t.destroy(),
+        });
     }
 
     // ── Race Finish ───────────────────────────────────────────
@@ -1067,7 +1244,8 @@ class GameScene extends Phaser.Scene {
             const h   = sortedByX[i];
             const nm  = h.name.length > maxLen ? h.name.slice(0, maxLen - 1) + '…' : h.name;
             const sfx = h.isSpinning ? ' 💫' : h.isBoosting ? ' 🔥' : h.isStumbling ? ' 💦' : '';
-            const col = h.finished ? '#FFD700' : h.isBoosting ? '#FF8C00' : h.isStumbling ? '#FF6B6B' : '#cccccc';
+            const horseColorCss = '#' + ((h.color & 0xFFFFFF).toString(16).padStart(6, '0')).toUpperCase();
+            const col = h.finished ? '#FFD700' : h.isBoosting ? '#FF8C00' : h.isStumbling ? '#FF6B6B' : horseColorCss;
             this.lbTexts[i].setText(`${i + 1}위  ${nm}${sfx}`).setColor(col);
         }
     }
