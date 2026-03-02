@@ -111,41 +111,42 @@ class SetupScene extends Phaser.Scene {
             );
         }
 
-        // 타이틀 (캔버스 상단에 안 짤리도록 여백 확보)
+        // 타이틀 (캔버스 상단에 안 짤리도록 여백 확보) + 가독성 그림자
         const titleY = MARGIN_TOP + 28;
+        const textShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
         this.add.text(cx, titleY, '🏇 말달리자', {
             fontFamily: '"Orbitron","Pretendard",Arial',
             fontSize: '44px', color: '#FFD700',
             stroke: '#2a1500', strokeThickness: 6,
-            shadow: { offsetX: 0, offsetY: 4, color: '#FF6B00', blur: 14, fill: true },
+            shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true },
         }).setOrigin(0.5);
 
         this.add.text(cx, titleY + 58, '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요', {
-            fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#7a7aaa',
+            fontFamily: '"Pretendard",Arial', fontSize: '18px', color: '#EEEEEE', fontStyle: 'bold',
+            shadow: textShadow,
         }).setOrigin(0.5);
 
-        // 이름 입력: 1000px 이상에서만 왼쪽, 그 미만은 중앙(캔버스 밖으로 안 벗어나게)
-        const displayW = (this.scale.displaySize && this.scale.displaySize.width)
-            || (typeof window !== 'undefined' ? window.innerWidth : W);
-        const isNarrow = displayW < 1000;
-        const taH = Math.max(120, Math.min(182, Math.floor(H * 0.28)));
-        const taW = isNarrow ? Math.min(320, W - 60) : Math.min(300, Math.floor(W * 0.35)) - 20;
-        const taX = isNarrow ? cx : MARGIN_SIDE + (Math.min(300, Math.floor(W * 0.35)) - 20) / 2 + 20;
+        // 이름 입력: 반응형(80vw/25vh) + 화면 정중앙 약간 위(H/2-30)에 고정, 리사이즈 시에도 동기화
+        const domY = H / 2 - 30;
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="예시:&#10;홍길동, 김철수, 이영희&#10;또는 한 줄에 한 명씩 입력"
-            style="width:${taW}px;min-width:180px;min-height:${taH}px;height:${taH}px;max-width:100%;
+            style="width:80vw;max-width:500px;min-width:180px;height:25vh;min-height:120px;
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
                    font-size:15px;line-height:1.65;padding:14px 18px;
                    font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
                    box-sizing:border-box;opacity:1;visibility:visible;display:block;"
             onfocus="this.style.borderColor='#FFD700'"
             onblur="this.style.borderColor='#2e2e5a'"></textarea>`;
-        this.domInput = this.add.dom(taX, titleY + 128).createFromHTML(taHtml);
+        this.domInput = this.add.dom(cx, domY).createFromHTML(taHtml);
+        this.domInput.setOrigin(0.5, 0.5);
         this.domInput.setDepth(200);
+        this._setupDomLayoutY = domY;
 
-        // "몇명 입력됨" → 경주 시작 버튼 바로 아래 (겹침 방지)
-        this.countText = this.add.text(cx, titleY + 335 + 50 + 22, '0명 입력됨', {
-            fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#8888aa',
+        // "몇명 입력됨" → 내기·추첨 문구 바로 위, 글자 크기 키움
+        const FOOT_H = 36;
+        this.countText = this.add.text(cx, H - FOOT_H - 22, '0명 입력됨', {
+            fontFamily: '"Pretendard",Arial', fontSize: '21px', color: '#8888aa',
+            shadow: textShadow,
         }).setOrigin(0.5);
 
         const taEl = document.getElementById('hrNamesInput');
@@ -155,9 +156,10 @@ class SetupScene extends Phaser.Scene {
             if (last && last.length) { taEl.value = last.join('\n'); this._updateCount(taEl.value); }
         }
 
-        // 모드 선택 라벨 (버튼 위에 배치, 잘 보이게)
+        // 모드 선택 라벨 (버튼 위에 배치, 잘 보이게) + 가독성 그림자
         this.add.text(cx, titleY + 228, '게임 모드 선택', {
             fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#b0b0dd', fontStyle: 'bold',
+            shadow: textShadow,
         }).setOrigin(0.5);
 
         // 모드 토글 버튼 생성
@@ -176,6 +178,7 @@ class SetupScene extends Phaser.Scene {
         drawStartBtn(0xFFD700);
         this.add.text(cx, SBY + SBH / 2, '🏁  경주 시작!', {
             fontFamily: '"Orbitron",Arial', fontSize: '21px', color: '#1a1000', fontStyle: 'bold',
+            shadow: textShadow,
         }).setOrigin(0.5);
         this.add.rectangle(cx, SBY + SBH / 2, SBW, SBH)
             .setInteractive({ useHandCursor: true })
@@ -191,17 +194,22 @@ class SetupScene extends Phaser.Scene {
                 this.scene.start('GameScene', { names, mode: this.gameMode });
             });
 
-        // 오류 메시지 (몇명입력됨 아래)
-        this.msgText = this.add.text(cx, titleY + 335 + 50 + 52, '', {
+        // 오류 메시지 (몇명입력됨 위쪽에 표시) + 가독성 그림자
+        this.msgText = this.add.text(cx, H - FOOT_H - 48, '', {
             fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#FF6B6B',
+            shadow: textShadow,
         }).setOrigin(0.5);
 
         // 하단 바 (여백 확보)
-        const FOOT_H = 36;
         this.add.graphics().fillStyle(0x1a1a3a, 0.55).fillRect(0, H - FOOT_H, W, FOOT_H);
         this.add.text(cx, H - FOOT_H / 2, '내기 · 추첨 · 이벤트에 딱!  사다리타기 · 룰렛 · 핀볼 대신 말달리자 🐎', {
-            fontFamily: '"Pretendard",Arial', fontSize: '12px', color: '#555577',
+            fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#ffffff',
+            shadow: textShadow,
         }).setOrigin(0.5);
+
+        // 창 리사이즈 시 textarea DOM 위치 재계산(정중앙 유지)
+        this._resizeHandler = () => this._onResize();
+        this.scale.on('resize', this._resizeHandler, this);
     }
 
     _createModeButtons() {
@@ -214,11 +222,14 @@ class SetupScene extends Phaser.Scene {
         this._modePos = { x1, x2, y: BY, w: BW, h: BH };
         this.modeBtnGfx = this.add.graphics();
 
+        const lblShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
         this.modeLbl1 = this.add.text(x1 + BW / 2, BY + BH / 2, '🏆 1등 우승 뽑기', {
             fontFamily: '"Pretendard",Arial', fontSize: '16px', fontStyle: 'bold',
+            shadow: lblShadow,
         }).setOrigin(0.5);
         this.modeLbl2 = this.add.text(x2 + BW / 2, BY + BH / 2, '💣 꼴찌 벌칙 뽑기', {
             fontFamily: '"Pretendard",Arial', fontSize: '16px', fontStyle: 'bold',
+            shadow: lblShadow,
         }).setOrigin(0.5);
 
         this.add.rectangle(x1 + BW / 2, BY + BH / 2, BW, BH)
@@ -255,8 +266,9 @@ class SetupScene extends Phaser.Scene {
         g.lineStyle(2.5, !isWinner ? 0xFF6666 : 0xaa5555, 1);
         g.strokeRoundedRect(x2, y, w, h, 12);
 
-        this.modeLbl1.setColor(isWinner ? '#111111' : '#c8c8ee');
-        this.modeLbl2.setColor(!isWinner ? '#111111' : '#e8c0c0');
+        // 선택된 쪽은 흰색으로 해서 금/빨강 배경에서 잘 보이게
+        this.modeLbl1.setColor(isWinner ? '#ffffff' : '#c8c8ee');
+        this.modeLbl2.setColor(!isWinner ? '#ffffff' : '#e8c0c0');
     }
 
     _parseNames(text) {
@@ -270,13 +282,29 @@ class SetupScene extends Phaser.Scene {
     }
     _updateCount(val) {
         const n = this._parseNames(val).length;
-        const col = (n > 0 && n < 2) || n > 30 ? '#FF6B6B' : n >= 2 ? '#4ECDC4' : '#55557a';
+        const col = (n > 0 && n < 2) || n > 30 ? '#FF4444' : n >= 2 ? '#00FF88' : '#8888aa';
         const sfx = (n > 0 && n < 2) ? ' (최소 2명)' : n > 30 ? ' (최대 30명 초과!)' : n >= 2 ? ' ✓' : '';
         this.countText.setText(`${n}명 입력됨${sfx}`).setColor(col);
     }
     _showMsg(msg) {
         this.msgText.setText(msg).setColor('#FF6B6B');
         this.time.delayedCall(3000, () => this.msgText.setText(''));
+    }
+
+    // 리사이즈 시 textarea DOM을 캔버스 비율에 맞춰 정중앙(세로 중앙 약간 위)에 유지
+    _onResize() {
+        if (this.domInput && this.scene.isActive()) {
+            const cx = this.scale.width / 2;
+            const domY = this.scale.height / 2 - 30;
+            this.domInput.setPosition(cx, domY);
+            this._setupDomLayoutY = domY;
+        }
+    }
+
+    shutdown() {
+        if (this._resizeHandler) {
+            this.scale.off('resize', this._resizeHandler, this);
+        }
     }
 }
 
@@ -792,7 +820,10 @@ class GameScene extends Phaser.Scene {
         if (horse.isBoosting) {
             horse.boostFrames -= dt;
             spd *= 3.0;
-            if (horse.boostFrames <= 0) horse.isBoosting = false;
+            if (horse.boostFrames <= 0) {
+                horse.isBoosting = false;
+                horse.consecutiveBoosts = 0; // 연속 부스터 카운트 리셋
+            }
         }
         if (horse.isStumbling) {
             horse.stumbleFrames -= dt;
@@ -1026,6 +1057,12 @@ class GameScene extends Phaser.Scene {
 
     // ── Effects ───────────────────────────────────────────────
     _triggerBoost(horse) {
+        // 1등일 때는 부스터 없음 (혼자 앞서가서 다른 말이 안 보이는 것 방지, 순위 바뀌면 다시 가능)
+        if (horse.rank === 1) return;
+        // 연속 부스터 3개 방지: 이미 2번 연속이면 이번 부스터는 스킵
+        const consecutive = (horse.consecutiveBoosts || 0) + 1;
+        if (consecutive > 2) return;
+        horse.consecutiveBoosts = consecutive;
         horse.isBoosting  = true;
         horse.boostFrames = Phaser.Math.Between(65, 145);
         this._spawnBoostFx(horse);
@@ -1244,8 +1281,9 @@ class GameScene extends Phaser.Scene {
             const h   = sortedByX[i];
             const nm  = h.name.length > maxLen ? h.name.slice(0, maxLen - 1) + '…' : h.name;
             const sfx = h.isSpinning ? ' 💫' : h.isBoosting ? ' 🔥' : h.isStumbling ? ' 💦' : '';
+            // 닉네임·아이콘 모두 말 고유 색상 유지 (아이템에 따라 색 바꾸지 않음)
             const horseColorCss = '#' + ((h.color & 0xFFFFFF).toString(16).padStart(6, '0')).toUpperCase();
-            const col = h.finished ? '#FFD700' : h.isBoosting ? '#FF8C00' : h.isStumbling ? '#FF6B6B' : horseColorCss;
+            const col = h.finished ? '#FFD700' : horseColorCss;
             this.lbTexts[i].setText(`${i + 1}위  ${nm}${sfx}`).setColor(col);
         }
     }
@@ -1307,18 +1345,57 @@ document.addEventListener('DOMContentLoaded', () => {
             bgmAudio.volume = volumeCtrl.value / 100;
         });
     }
+    // 전체화면: Phaser 네이티브 API 사용, iOS 등 미지원 시 CSS 폴백
+    const gameContainer = document.getElementById('game-container');
+    const fullscreenWrap = document.getElementById('horserace-fullscreen-wrap');
+    if (fullscreenWrap && horseRaceGame.scale) {
+        horseRaceGame.scale.fullscreenTarget = fullscreenWrap;
+    }
+    horseRaceGame.scale.on('fullscreenfailed', () => {
+        if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
+    });
+    horseRaceGame.scale.on('fullscreenunsupported', () => {
+        if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
+    });
+    horseRaceGame.scale.on('leavefullscreen', () => {
+        if (gameContainer) gameContainer.classList.remove('fullscreen-fallback');
+    });
     if (fsToggle) {
         fsToggle.addEventListener('click', () => {
-            const el = document.getElementById('horserace-fullscreen-wrap') || document.getElementById('game-container');
-            if (!document.fullscreenElement) {
-                const fn = el.requestFullscreen || el.webkitRequestFullscreen
-                        || el.mozRequestFullScreen || el.msRequestFullscreen;
-                if (fn) fn.call(el);
+            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
+                gameContainer.classList.remove('fullscreen-fallback');
             } else {
-                const fn = document.exitFullscreen || document.webkitExitFullscreen
-                        || document.mozCancelFullScreen || document.msExitFullscreen;
-                if (fn) fn.call(document);
+                horseRaceGame.scale.toggleFullscreen();
             }
         });
     }
+
+    // 창 크기 변경 시 캔버스 즉시 대응
+    window.addEventListener('resize', () => {
+        if (horseRaceGame.scale) horseRaceGame.scale.refresh();
+    });
+
+    // 모바일/태블릿 세로 모드에서만 가로 모드 유도 오버레이 (PC 창 축소 시에는 미표시)
+    const portraitOverlay = document.getElementById('hr-portrait-overlay');
+    const isMobileDevice = () => {
+        if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
+        const ua = navigator.userAgent;
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    };
+    const updatePortraitOverlay = () => {
+        if (!portraitOverlay) return;
+        const isPortrait = typeof window.matchMedia !== 'undefined' && window.matchMedia('(orientation: portrait)').matches;
+        if (isMobileDevice() && isPortrait) {
+            portraitOverlay.classList.add('visible');
+            portraitOverlay.setAttribute('aria-hidden', 'false');
+        } else {
+            portraitOverlay.classList.remove('visible');
+            portraitOverlay.setAttribute('aria-hidden', 'true');
+        }
+    };
+    updatePortraitOverlay();
+    window.addEventListener('resize', updatePortraitOverlay);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(updatePortraitOverlay, 100);
+    });
 });

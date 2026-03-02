@@ -35,7 +35,9 @@ body {
 .binary-header {
     position: fixed;
     top: 0;
-    width: 100%;
+    left: 0;
+    right: 17px; /* 스크롤바가 헤더에 가리지 않도록 오른쪽 여백 */
+    width: auto;
     background: rgba(255, 255, 255, 0.95);
     color: #4682B4;
     z-index: 9999;

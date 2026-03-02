@@ -73,6 +73,10 @@
 
     <!-- 게임 캔버스 & BGM 컨트롤 스타일 -->
     <style>
+        /* 스크롤바 하나만: html은 스크롤 비활성화, body만 스크롤 (이중 스크롤 제거) */
+        html { overflow: hidden; }
+        body { overflow-y: auto; overflow-x: hidden; min-height: 100vh; }
+
         /* 제목 → BGM → 게임 순서, 겹치지 않게 */
         #horserace-fullscreen-wrap {
             display: flex;
@@ -108,7 +112,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 전체화면: BGM/전체화면 버튼이 상단에 잘리지 않도록 여백, 노치 대응 */
+        /* 전체화면: 화면 끝까지 꽉 채우기 (max-width/aspect-ratio 제거, Scale.FIT이 캔버스 확대) */
         #horserace-fullscreen-wrap:fullscreen .game-bgm,
         #horserace-fullscreen-wrap:-webkit-full-screen .game-bgm,
         #horserace-fullscreen-wrap:-moz-full-screen .game-bgm,
@@ -116,7 +120,6 @@
             margin-top: max(14px, env(safe-area-inset-top));
             flex-shrink: 0;
         }
-        /* 전체화면 시 게임 영역 최대 활용 (비율 유지, 짤림 방지) */
         #horserace-fullscreen-wrap:fullscreen,
         #horserace-fullscreen-wrap:-webkit-full-screen,
         #horserace-fullscreen-wrap:-moz-full-screen,
@@ -124,33 +127,49 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            max-width: none;
-            width: 100vw;
+            justify-content: center;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
             padding-bottom: env(safe-area-inset-bottom);
         }
         #horserace-fullscreen-wrap:fullscreen #game-container,
         #horserace-fullscreen-wrap:-webkit-full-screen #game-container,
         #horserace-fullscreen-wrap:-moz-full-screen #game-container,
         #horserace-fullscreen-wrap:-ms-fullscreen #game-container {
-            max-width: none;
-            flex: 1;
-            min-height: 0;
-            width: min(100%, min(100vw, (100vh - 80px) * 1000 / 720));
-            aspect-ratio: 1000 / 720;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            aspect-ratio: unset !important;
+            flex: 1 1 auto;
         }
 
         #game-container canvas {
             display: block;
             width: 100% !important;
-            height: auto !important;
+            height: 100% !important;
             max-width: 100%;
             object-fit: contain;
         }
-        /* Phaser DOM(닉네임 입력)이 캔버스 위에 보이도록 */
+        #horserace-fullscreen-wrap:fullscreen #game-container canvas,
+        #horserace-fullscreen-wrap:-webkit-full-screen #game-container canvas,
+        #horserace-fullscreen-wrap:-moz-full-screen #game-container canvas,
+        #horserace-fullscreen-wrap:-ms-fullscreen #game-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+        /* Phaser DOM(닉네임 입력)이 캔버스 위에 보이도록, 내부 스크롤 방지 */
         #game-container > div {
             z-index: 10;
             pointer-events: none;
+            overflow: visible !important;
+            max-height: none !important;
         }
         #game-container > div * {
             pointer-events: auto;
@@ -159,6 +178,51 @@
             opacity: 1 !important;
             visibility: visible !important;
             min-height: 120px !important;
+        }
+
+        /* iOS 등 전체화면 API 미지원 시 가상 전체화면 (브라우저 창 전체 덮기) */
+        #game-container.fullscreen-fallback {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            min-height: 100vh !important;
+            z-index: 9999 !important;
+            border-radius: 0 !important;
+        }
+        #game-container.fullscreen-fallback canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+        }
+
+        /* 모바일 세로 모드 시 가로 모드 유도 오버레이 */
+        .hr-portrait-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 99999;
+            background: #0a0a12;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .hr-portrait-overlay.visible {
+            display: flex;
+        }
+        .hr-portrait-overlay p {
+            color: #e8e8ff;
+            font-size: 1.15rem;
+            line-height: 1.6;
+            text-align: center;
+            margin: 0;
+            font-family: 'Pretendard', Arial, sans-serif;
         }
 
         .game-bgm {
@@ -256,6 +320,11 @@
 
         <div id="game-container"></div>
         </div><!-- /#horserace-fullscreen-wrap -->
+
+        <!-- 모바일 세로 모드 시 가로 모드 유도 오버레이 (가로로 돌리면 사라짐) -->
+        <div id="hr-portrait-overlay" class="hr-portrait-overlay" aria-hidden="true">
+            <p>📱 원활한 게임을 위해 기기를 가로로 눕혀주세요</p>
+        </div>
 
         <!-- 소개 & 사용법 -->
         <div class="hr-description">
