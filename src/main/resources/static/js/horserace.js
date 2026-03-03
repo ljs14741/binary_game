@@ -252,7 +252,10 @@ class SetupScene extends Phaser.Scene {
             this.registry.set('bgmVolume', vol);
         }
         this.game.bgmSound.volume = vol;
-        if (this.registry.get('bgmOn', true)) this.game.bgmSound.play();
+        // BGM/효과음 통합: 레지스트리 값에 맞춰 mute 동기화 (SetupScene 진입 시점에 한 번)
+        const bgmOn = this.registry.get('bgmOn', true);
+        this.sound.mute = !bgmOn;
+        if (bgmOn) { try { this.game.bgmSound.play(); } catch (e) {} }
 
         // 전체화면 시 씬 내부 '닫기' 버튼 (모바일에서 HTML 버튼이 보이지 않을 때 대비)
         this._createFullscreenExitButton();
@@ -1474,26 +1477,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeCtrl = document.getElementById('volumeControl');
     const fsToggle   = document.getElementById('fsToggle');
 
-    // 모바일: 사용자 상호작용 시 AudioContext 잠금 해제 (효과음 재생 가능)
+    // 모바일: 사용자 상호작용 시 AudioContext 잠금 해제 후 BGM 재생 시도 (자동재생 차단 대응)
+    let audioJustUnlocked = false;
     const unlockAudio = () => {
         if (horseRaceGame.sound && horseRaceGame.sound.context && horseRaceGame.sound.context.state === 'suspended') {
             horseRaceGame.sound.context.resume();
         }
         const s = horseRaceGame.bgmSound;
-        if (s && horseRaceGame.registry.get('bgmOn', true)) s.play().catch(() => {});
+        if (s && horseRaceGame.registry.get('bgmOn', true)) {
+            try { s.play(); } catch (e) {}
+            audioJustUnlocked = true;
+            setTimeout(() => { audioJustUnlocked = false; }, 100);
+        }
     };
     document.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
-    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true, capture: true }); // capture로 BGM 버튼 클릭보다 먼저 실행
 
     if (bgmToggle) {
+        function updateBgmUI() {
+            const on = horseRaceGame.registry.get('bgmOn', true);
+            bgmToggle.textContent = on ? '🔊 BGM 켜짐' : '🔇 BGM 꺼짐';
+        }
+        updateBgmUI();
+
         bgmToggle.addEventListener('click', () => {
+            if (audioJustUnlocked) return; // 첫 클릭은 잠금 해제만, 토글 무시
             const on = !horseRaceGame.registry.get('bgmOn', true);
             horseRaceGame.registry.set('bgmOn', on);
             bgmToggle.textContent = on ? '🔊 BGM 켜짐' : '🔇 BGM 꺼짐';
+            if (horseRaceGame.sound) horseRaceGame.sound.mute = !on;
             const s = horseRaceGame.bgmSound;
             if (s) {
-                if (on) s.play().catch(() => {});
-                else s.pause();
+                if (on) {
+                    if (horseRaceGame.sound.context && horseRaceGame.sound.context.state === 'suspended') {
+                        horseRaceGame.sound.context.resume();
+                    }
+                    try { s.play(); } catch (e) {}
+                } else {
+                    s.pause();
+                }
             }
         });
     }
