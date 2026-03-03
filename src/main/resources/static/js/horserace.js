@@ -154,11 +154,15 @@ class SetupScene extends Phaser.Scene {
             shadow: textShadow,
         }).setOrigin(0.5);
 
-        // 이름 입력: 타이틀/안내 아래에 배치, 높이 제한해 모드 버튼·시작 버튼과 겹치지 않게
-        const domY = titleY + 118;
+        // 이름 입력: PC는 그대로, 모바일에서 더 아래로. 실제 화면 너비 기준(표시 크기 사용)
+        const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
+        const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
+        const domY = titleY + 158 + layoutOffset;
+        this._modeLabelY = titleY + 228 + layoutOffset;
+        this._startBtnY = this._modeLabelY + 130;
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="예시:&#10;홍길동, 김철수, 이영희&#10;또는 한 줄에 한 명씩 입력"
-            style="width:80vw;max-width:500px;min-width:180px;height:90px;max-height:20vh;
+            style="width:80vw;max-width:500px;min-width:180px;height:118px;max-height:24vh;
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
                    font-size:15px;line-height:1.65;padding:14px 18px;
                    font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
@@ -186,8 +190,7 @@ class SetupScene extends Phaser.Scene {
         }
 
         // 모드 선택 라벨 (닉네임 입력 아래, 버튼 위에 배치)
-        const modeLabelY = titleY + 228;
-        this.add.text(cx, modeLabelY, '게임 모드 선택', {
+        this.add.text(cx, this._modeLabelY, '게임 모드 선택', {
             fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#b0b0dd', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
@@ -198,7 +201,7 @@ class SetupScene extends Phaser.Scene {
 
         // 시작 버튼 (모드 버튼 아래에 배치)
         const startBg  = this.add.graphics();
-        const SBY = modeLabelY + 130;
+        const SBY = this._startBtnY;
         const SBX = cx - 132, SBW = 264, SBH = 50;
         const drawStartBtn = (c) => {
             startBg.clear();
@@ -207,7 +210,12 @@ class SetupScene extends Phaser.Scene {
         };
         drawStartBtn(0xFFD700);
         this.add.text(cx, SBY + SBH / 2, '🏁  경주 시작!', {
-            fontFamily: '"Orbitron",Arial', fontSize: '21px', color: '#1a1000', fontStyle: 'bold',
+            fontFamily: '"Orbitron",Arial',
+            fontSize: '23px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4,
             shadow: textShadow,
         }).setOrigin(0.5);
         this.add.rectangle(cx, SBY + SBH / 2, SBW, SBH)
@@ -296,8 +304,7 @@ class SetupScene extends Phaser.Scene {
         const cx = this.scale.width / 2;
         const x1 = cx - BW - GAP / 2;
         const x2 = cx + GAP / 2;
-        const titleY = 52 + 28;
-        const modeLabelY = titleY + 228;
+        const modeLabelY = this._modeLabelY !== undefined ? this._modeLabelY : (52 + 28) + 228;
         const BY = modeLabelY + 36;  // "게임 모드 선택" 라벨 바로 아래
 
         this._modePos = { x1, x2, y: BY, w: BW, h: BH };
@@ -305,11 +312,19 @@ class SetupScene extends Phaser.Scene {
 
         const lblShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
         this.modeLbl1 = this.add.text(x1 + BW / 2, BY + BH / 2, '🏆 1등 우승 뽑기', {
-            fontFamily: '"Pretendard",Arial', fontSize: '16px', fontStyle: 'bold',
+            fontFamily: '"Pretendard",Arial',
+            fontSize: '18px',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3,
             shadow: lblShadow,
         }).setOrigin(0.5);
         this.modeLbl2 = this.add.text(x2 + BW / 2, BY + BH / 2, '💣 꼴찌 벌칙 뽑기', {
-            fontFamily: '"Pretendard",Arial', fontSize: '16px', fontStyle: 'bold',
+            fontFamily: '"Pretendard",Arial',
+            fontSize: '18px',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3,
             shadow: lblShadow,
         }).setOrigin(0.5);
 
@@ -377,7 +392,9 @@ class SetupScene extends Phaser.Scene {
         if (this.domInput && this.scene.isActive()) {
             const cx = this.scale.width / 2;
             const titleY = 52 + 28;
-            const domY = titleY + 118;
+            const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
+            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
+            const domY = titleY + 158 + layoutOffset;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
             this._syncDomContainerScale();
