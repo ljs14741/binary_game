@@ -1493,6 +1493,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const bgmToggle  = document.getElementById('bgmToggle');
     const volumeCtrl = document.getElementById('volumeControl');
     const fsToggle   = document.getElementById('fsToggle');
+    const fullscreenWrap = document.getElementById('horserace-fullscreen-wrap');
+    const isMobileDevice = () => {
+        if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
+    };
+    if (fullscreenWrap && isMobileDevice()) {
+        fullscreenWrap.classList.add('hr-mobile-device');
+        // 모바일: 레이아웃 확정 후 입력 좌표계 동기화 (버튼 터치 히트 보정)
+        const syncMobileInput = () => {
+            if (horseRaceGame && horseRaceGame.scale) {
+                if (typeof horseRaceGame.scale.updateBounds === 'function') horseRaceGame.scale.updateBounds();
+                horseRaceGame.scale.refresh();
+            }
+        };
+        setTimeout(syncMobileInput, 100);
+        setTimeout(syncMobileInput, 400);
+    }
 
     // 모바일: 사용자 상호작용 시 AudioContext 잠금 해제 후 BGM 재생 시도 (자동재생 차단 대응)
     let audioJustUnlocked = false;
@@ -1549,7 +1566,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // 전체화면: Phaser 네이티브 API 사용, iOS 등 미지원 시 CSS 폴백
     const gameContainer = document.getElementById('game-container');
-    const fullscreenWrap = document.getElementById('horserace-fullscreen-wrap');
 
     const isFullscreen = () => {
         const doc = document;

@@ -241,21 +241,22 @@
             align-items: center !important;
             justify-content: center !important;
         }
-        /* 캔버스 래퍼(첫 번째 div): 터치/클릭 수신 — 모바일에서 버튼 히트 영역 정상화 */
-        #game-container > div:first-child {
+        /* 캔버스 래퍼(캔버스 포함 div): 터치 수신 — 모바일 버튼 히트 영역 정상화 (DOM 순서 무관) */
+        #game-container > div:has(canvas) {
             pointer-events: auto !important;
             z-index: 1;
+            transform: none !important;
         }
         /* Phaser DOM(닉네임 입력) 래퍼: div는 터치 통과, 자식(textarea 등)만 클릭 받음 */
         #game-container > div {
             overflow: visible !important;
             max-height: none !important;
         }
-        #game-container > div:not(:first-child) {
+        #game-container > div:not(:has(canvas)) {
             z-index: 10;
             pointer-events: none !important;
         }
-        #game-container > div:not(:first-child) * {
+        #game-container > div:not(:has(canvas)) * {
             pointer-events: auto !important;
         }
         #hrNamesInput {
@@ -299,14 +300,13 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-        @media (max-width: 768px) {
-            #horserace-fullscreen-wrap:fullscreen .hr-mobile-fs-exit,
-            #horserace-fullscreen-wrap:-webkit-full-screen .hr-mobile-fs-exit,
-            #horserace-fullscreen-wrap:-moz-full-screen .hr-mobile-fs-exit,
-            #horserace-fullscreen-wrap:-ms-fullscreen .hr-mobile-fs-exit,
-            #horserace-fullscreen-wrap.hr-fullscreen-active .hr-mobile-fs-exit {
-                display: flex !important;
-            }
+        /* 모바일 기기일 때만 하단 전체화면 종료 바 표시 (뷰포트 너비 아님 — 가로 전체화면에서도 노출) */
+        #horserace-fullscreen-wrap.hr-mobile-device:fullscreen .hr-mobile-fs-exit,
+        #horserace-fullscreen-wrap.hr-mobile-device:-webkit-full-screen .hr-mobile-fs-exit,
+        #horserace-fullscreen-wrap.hr-mobile-device:-moz-full-screen .hr-mobile-fs-exit,
+        #horserace-fullscreen-wrap.hr-mobile-device:-ms-fullscreen .hr-mobile-fs-exit,
+        #horserace-fullscreen-wrap.hr-mobile-device.hr-fullscreen-active .hr-mobile-fs-exit {
+            display: flex !important;
         }
         .hr-mobile-fs-exit button {
             padding: 12px 24px;
@@ -360,15 +360,16 @@
             touch-action: none;
             pointer-events: auto;
         }
-        /* 모바일: 좁은 화면에서 레이아웃·터치 영역 보정 */
+        /* 모바일: 좁은 화면에서 레이아웃·터치 영역 보정 (min-height 제거로 터치 좌표 불일치 방지) */
         @media (max-width: 640px) {
             #horserace-fullscreen-wrap {
                 padding: 0 8px;
                 max-width: 100%;
             }
-            #game-container {
+            #horserace-fullscreen-wrap #game-container {
                 max-width: 100%;
                 border-radius: 8px;
+                min-height: 0 !important;
             }
             .game-bgm {
                 padding: 10px 12px;
