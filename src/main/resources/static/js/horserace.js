@@ -149,31 +149,17 @@ class SetupScene extends Phaser.Scene {
             shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true },
         }).setOrigin(0.5);
 
-        // 이름 입력·라벨 Y: 모바일은 "게임 모드 선택 → 입력창 → 참가자 이름을 쉼표" 순서
-        const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-        const isMobileLayout = displayW < 640;
-        let gameModeLabelY, domY, instructionY;
-        if (isMobileLayout) {
-            gameModeLabelY = titleY + 52;
-            domY = gameModeLabelY + 28;
-            instructionY = domY + 59 + 28;
-            this._modeLabelY = instructionY + 36;
-            this._startBtnY = this._modeLabelY + 52 + 30;
-        } else {
-            const layoutOffset = displayW < 386 ? 180 : 0;
-            instructionY = titleY + 58;
-            domY = titleY + 158 + layoutOffset;
-            this._modeLabelY = titleY + 228 + layoutOffset;
-            this._startBtnY = this._modeLabelY + 130;
-            gameModeLabelY = this._modeLabelY;
-        }
-        this._gameModeLabelY = gameModeLabelY;
-        this._instructionY = instructionY;
-
-        this.add.text(cx, instructionY, '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요', {
+        this.add.text(cx, titleY + 58, '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요', {
             fontFamily: '"Pretendard",Arial', fontSize: '18px', color: '#EEEEEE', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
+
+        // 이름 입력: PC는 그대로, 모바일에서 더 아래로. 실제 화면 너비 기준(표시 크기 사용)
+        const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
+        const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
+        const domY = titleY + 158 + layoutOffset;
+        this._modeLabelY = titleY + 228 + layoutOffset;
+        this._startBtnY = this._modeLabelY + 130;
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="예시:&#10;홍길동, 김철수, 이영희&#10;또는 한 줄에 한 명씩 입력"
             style="width:80vw;max-width:500px;min-width:180px;height:118px;max-height:24vh;
@@ -203,8 +189,8 @@ class SetupScene extends Phaser.Scene {
             if (last && last.length) { taEl.value = last.join('\n'); this._updateCount(taEl.value); }
         }
 
-        // 모드 선택 라벨 (PC: 버튼 위, 모바일: 입력창 위)
-        this.add.text(cx, this._gameModeLabelY, '게임 모드 선택', {
+        // 모드 선택 라벨 (닉네임 입력 아래, 버튼 위에 배치)
+        this.add.text(cx, this._modeLabelY, '게임 모드 선택', {
             fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#b0b0dd', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
@@ -401,13 +387,14 @@ class SetupScene extends Phaser.Scene {
         this.time.delayedCall(3000, () => this.msgText.setText(''));
     }
 
-    // 리사이즈 시 textarea DOM 위치 유지 (모바일/PC 레이아웃 동일 로직)
+    // 리사이즈 시 textarea DOM 위치 재계산(정중앙 유지)
     _onResize() {
         if (this.domInput && this.scene.isActive()) {
             const cx = this.scale.width / 2;
             const titleY = 52 + 28;
             const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-            const domY = displayW < 640 ? (titleY + 52 + 28) : (titleY + 158 + (displayW < 386 ? 180 : 0));
+            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
+            const domY = titleY + 158 + layoutOffset;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
             this._syncDomContainerScale();
@@ -1604,8 +1591,8 @@ document.addEventListener('DOMContentLoaded', () => {
             else fullscreenWrap.classList.remove('hr-fullscreen-active');
         }
         if (mobileFsExitBar) {
-            const inFullscreen = fs || (fullscreenWrap && fullscreenWrap.classList.contains('hr-fullscreen-active')) || (gameContainer && gameContainer.classList.contains('fullscreen-fallback'));
-            if (inFullscreen && isMobileDevice()) {
+            const active = fullscreenWrap && fullscreenWrap.classList.contains('hr-fullscreen-active');
+            if (active && isMobileDevice()) {
                 mobileFsExitBar.style.display = 'flex';
             } else {
                 mobileFsExitBar.style.display = 'none';
@@ -1618,20 +1605,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const forceFullscreenFill = () => {
         if (!gameContainer || !isFullscreen()) return;
-        // 모바일 기기: 캔버스를 letterbox 없이 채워 터치 좌표가 버튼과 일치하도록 함
+        // 모바일 기기에서는 Phaser의 FIT 스케일에만 맡기고, 추가 CSS 스케일은 건너뛰어 터치 좌표를 맞춘다.
         if (fullscreenWrap && fullscreenWrap.classList.contains('hr-mobile-device')) {
             fixFullscreenDomOverlay();
-            const canvas = gameContainer.querySelector('canvas');
-            if (canvas) {
-                canvas.style.width = '100%';
-                canvas.style.height = '100%';
-                canvas.style.maxWidth = '100%';
-                canvas.style.maxHeight = '100%';
-                canvas.style.objectFit = 'fill';
-                canvas.style.objectPosition = 'center center';
-            }
-            if (horseRaceGame.scale && typeof horseRaceGame.scale.updateBounds === 'function') horseRaceGame.scale.updateBounds();
-            if (horseRaceGame.scale) horseRaceGame.scale.refresh();
             return;
         }
         gameContainer.style.position = 'absolute';
