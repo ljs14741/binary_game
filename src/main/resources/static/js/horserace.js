@@ -20,6 +20,32 @@ const HORSE_COLORS = [
     0x40E0D0, 0xF0E68C, 0xADFF2F, 0xFF00FF, 0x00BFFF,
 ];
 
+// 6명 이하일 때 색 겹침 없이 서로 다른 색 부류에서 한 개씩 뽑기 위한 그룹
+const HORSE_COLOR_FAMILIES = [
+    [0xFF6B6B, 0xDC143C, 0xFF6347, 0xFF4500],           // 빨강
+    [0xFF8C00, 0xFF7F50],                             // 주황
+    [0xFFD700, 0xF0E68C, 0xADFF2F],                   // 노랑/금
+    [0x90EE90, 0x3CB371, 0x32CD32, 0x00FA9A, 0x00FF7F], // 초록
+    [0x4ECDC4, 0x45B7D1, 0x20B2AA, 0x40E0D0, 0x00BFFF], // 시안/하늘
+    [0x4169E1, 0x7B68EE, 0x1E90FF, 0x6495ED],         // 파랑
+    [0xDDA0DD, 0x9370DB, 0x8A2BE2],                   // 보라
+    [0xFF69B4, 0xFF1493, 0xFF00FF],                   // 분홍/마젠타
+];
+
+function pickDistinctColorsForCount(n) {
+    if (n <= 0) return [];
+    if (n <= HORSE_COLOR_FAMILIES.length) {
+        const order = Phaser.Utils.Array.Shuffle([...Array(HORSE_COLOR_FAMILIES.length).keys()]);
+        const out = [];
+        for (let i = 0; i < n; i++) {
+            const fam = HORSE_COLOR_FAMILIES[order[i]];
+            out.push(fam[Phaser.Math.Between(0, fam.length - 1)]);
+        }
+        return out;
+    }
+    return Phaser.Utils.Array.Shuffle([...HORSE_COLORS]);
+}
+
 // 말 등급 (뽑기): 일반 대다수, 레어 5%, 에픽 1~2% (잭팟 느낌)
 const TIER_COMMON = 'common';
 const TIER_RARE   = 'rare';
@@ -471,14 +497,17 @@ class GameScene extends Phaser.Scene {
         // 등급별 고유 색상: 일반만 랜덤, 레어/에픽은 고정 (오라·이름표에 사용)
         const TIER_COLOR_RARE = 0x8A2BE2;   // 보라 (신비로운)
         const TIER_COLOR_EPIC = 0xFFD700;   // 황금 (압도적)
+        // 6명 이하: 색 겹침 없이 서로 다른 색 부류에서 1개씩. 7명 이상: 30색 셔플.
+        const palette = pickDistinctColorsForCount(this.numHorses);
+        const isSmallRace = this.numHorses <= 6;
 
         for (let i = 0; i < this.numHorses; i++) {
             const laneY = TRACK_TOP + i * LANE_H + LANE_H / 2;
             const tierDef = pickTier();
             const color = tierDef.tier === TIER_EPIC ? TIER_COLOR_EPIC
                 : tierDef.tier === TIER_RARE ? TIER_COLOR_RARE
-                    : HORSE_COLORS[i % HORSE_COLORS.length];
-            const baseSpeed = Phaser.Math.FloatBetween(2.8, 4.3) + tierDef.speedBonus;
+                    : (isSmallRace ? palette[i] : palette[i % palette.length]);
+            const baseSpeed = Phaser.Math.FloatBetween(3.4, 5.0) + tierDef.speedBonus;
 
             this.horses.push({
                 idx:               i,
@@ -1117,6 +1146,8 @@ class GameScene extends Phaser.Scene {
         ht.setScale(horse.scaleBonus * (horse.isBoosting ? 1.08 : 1.0));
         ht.setAlpha(horse.finished ? 0.5 : 1.0);
         if (horse.emoji) ht.setText(horse.emoji);
+        // 이모지(기본 말 이미지는 원본 색 유지)
+        ht.clearTint();
 
         // 고유 색상 오라 (이모지 뒤쪽 은은한 원형 글로우)
         const auraR = HORSE_FONT * 0.72;
