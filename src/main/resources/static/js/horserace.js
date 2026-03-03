@@ -1578,16 +1578,74 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fullscreenWrap && horseRaceGame.scale) {
         horseRaceGame.scale.fullscreenTarget = fullscreenWrap;
     }
+    const forceFullscreenFill = () => {
+        if (!gameContainer || !isFullscreen()) return;
+        gameContainer.style.position = 'absolute';
+        gameContainer.style.top = '0';
+        gameContainer.style.left = '0';
+        gameContainer.style.right = '0';
+        gameContainer.style.bottom = '0';
+        gameContainer.style.width = '100vw';
+        gameContainer.style.height = '100vh';
+        gameContainer.style.display = 'flex';
+        gameContainer.style.alignItems = 'center';
+        gameContainer.style.justifyContent = 'center';
+        const wrapper = gameContainer.querySelector(':scope > div');
+        if (wrapper) {
+            wrapper.style.position = 'absolute';
+            wrapper.style.top = '0';
+            wrapper.style.left = '0';
+            wrapper.style.right = '0';
+            wrapper.style.bottom = '0';
+            wrapper.style.width = '100%';
+            wrapper.style.height = '100%';
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = 'center';
+        }
+        const canvas = gameContainer.querySelector('canvas');
+        if (canvas) {
+            canvas.style.width = '100vw';
+            canvas.style.height = '100vh';
+            canvas.style.maxWidth = '100vw';
+            canvas.style.maxHeight = '100vh';
+            canvas.style.objectFit = 'contain';
+            canvas.style.objectPosition = 'center center';
+        }
+        fixFullscreenDomOverlay();
+    };
+    const fixFullscreenDomOverlay = () => {
+        if (!isFullscreen()) return;
+        const scene = horseRaceGame.scene.getScene('SetupScene');
+        if (!scene || !scene.scene.isActive() || !scene.domInput || !scene.domInput.node) return;
+        const container = scene.domInput.node.parentElement;
+        if (!container) return;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const scale = Math.min(vw / HR_W, vh / HR_H);
+        const offsetX = (vw - HR_W * scale) / 2;
+        const offsetY = (vh - HR_H * scale) / 2;
+        container.style.position = 'absolute';
+        container.style.left = offsetX + 'px';
+        container.style.top = offsetY + 'px';
+        container.style.width = HR_W + 'px';
+        container.style.height = HR_H + 'px';
+        container.style.transformOrigin = '0 0';
+        container.style.transform = 'scale(' + scale + ')';
+    };
     const refreshScaleOnFullscreen = () => {
         if (!gameContainer || !horseRaceGame.scale) return;
-        // flex 레이아웃으로 높이 결정되므로 고정 크기 제거 → BGM 바·버튼이 가리지 않음
-        gameContainer.style.width = '';
-        gameContainer.style.height = '';
-        const doRefresh = () => horseRaceGame.scale && horseRaceGame.scale.refresh();
+        const doRefresh = () => {
+            forceFullscreenFill();
+            if (horseRaceGame.scale) horseRaceGame.scale.refresh();
+            forceFullscreenFill();
+        };
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => { doRefresh(); });
-            setTimeout(doRefresh, 80);
-            setTimeout(doRefresh, 250);
+            doRefresh();
+            requestAnimationFrame(() => doRefresh());
+            setTimeout(doRefresh, 50);
+            setTimeout(doRefresh, 150);
+            setTimeout(doRefresh, 400);
         });
     };
     horseRaceGame.scale.on('enterfullscreen', () => {
@@ -1604,20 +1662,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fullscreenWrap) fullscreenWrap.classList.add('hr-fullscreen-active');
         updateFullscreenButton();
     });
-    horseRaceGame.scale.on('leavefullscreen', () => {
-        if (gameContainer) {
-            gameContainer.classList.remove('fullscreen-fallback');
-            gameContainer.style.width = '';
-            gameContainer.style.height = '';
+    const clearFullscreenStyles = () => {
+        if (!gameContainer) return;
+        gameContainer.classList.remove('fullscreen-fallback');
+        gameContainer.style.width = '';
+        gameContainer.style.height = '';
+        gameContainer.style.position = '';
+        gameContainer.style.top = '';
+        gameContainer.style.left = '';
+        gameContainer.style.right = '';
+        gameContainer.style.bottom = '';
+        gameContainer.style.display = '';
+        gameContainer.style.alignItems = '';
+        gameContainer.style.justifyContent = '';
+        const wrapper = gameContainer.querySelector(':scope > div');
+        if (wrapper) {
+            wrapper.style.position = '';
+            wrapper.style.top = '';
+            wrapper.style.left = '';
+            wrapper.style.right = '';
+            wrapper.style.bottom = '';
+            wrapper.style.width = '';
+            wrapper.style.height = '';
+            wrapper.style.display = '';
+            wrapper.style.alignItems = '';
+            wrapper.style.justifyContent = '';
         }
+        const canvas = gameContainer.querySelector('canvas');
+        if (canvas) {
+            canvas.style.width = '';
+            canvas.style.height = '';
+            canvas.style.maxWidth = '';
+            canvas.style.maxHeight = '';
+            canvas.style.objectFit = '';
+            canvas.style.objectPosition = '';
+        }
+        const setupScene = horseRaceGame.scene.getScene('SetupScene');
+        if (setupScene && setupScene.domInput && setupScene.domInput.node && setupScene.domInput.node.parentElement) {
+            const c = setupScene.domInput.node.parentElement;
+            c.style.position = '';
+            c.style.left = '';
+            c.style.top = '';
+            c.style.width = '';
+            c.style.height = '';
+            c.style.transformOrigin = '';
+            c.style.transform = '';
+            if (setupScene._syncDomContainerScale) setupScene._syncDomContainerScale();
+        }
+    };
+    horseRaceGame.scale.on('leavefullscreen', () => {
+        clearFullscreenStyles();
         updateFullscreenButton();
     });
     const onFullscreenChange = () => {
         updateFullscreenButton();
-        if (!isFullscreen() && gameContainer) {
-            gameContainer.style.width = '';
-            gameContainer.style.height = '';
-        } else if (isFullscreen()) {
+        if (!isFullscreen()) {
+            clearFullscreenStyles();
+        } else {
             refreshScaleOnFullscreen();
         }
     };

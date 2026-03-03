@@ -514,6 +514,26 @@ body {
     box-shadow: 0 0 20px rgba(144, 202, 249, 0.2);
 }
 
+/* 말달리자 – 전체화면일 때 모니터 전체 채움(첫 번째 스크린샷처럼) */
+#horserace-fullscreen-wrap.hr-fullscreen-active {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #060614;
+}
+#horserace-fullscreen-wrap.hr-fullscreen-active #game-container {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    aspect-ratio: unset !important;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
 .description {
     margin-top: 40px;
     background: #181818;
