@@ -1748,6 +1748,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    const hrMobileFsExitBtn = document.getElementById('hrMobileFsExitBtn');
+    if (hrMobileFsExitBtn) {
+        hrMobileFsExitBtn.addEventListener('click', () => {
+            if (isFullscreen()) exitFullscreen();
+            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
+                gameContainer.classList.remove('fullscreen-fallback');
+                updateFullscreenButton();
+            }
+        });
+    }
 
     // 창 크기/회전 시 캔버스·입력 좌표계 동기화 (모바일 터치 히트박스 정렬)
     const refreshScale = () => {
@@ -1765,36 +1775,4 @@ document.addEventListener('DOMContentLoaded', () => {
         resizeTimer = setTimeout(refreshScale, 150);
     });
 
-    // 모바일 세로 모드 시 가로 모드 권장 알림 (화면 막지 않음, 확인 시 닫고 이번 세션 동안 미표시)
-    const PORTRAIT_NOTICE_KEY = 'hr-portrait-notice-dismissed';
-    const portraitNotice = document.getElementById('hr-portrait-notice');
-    const portraitNoticeClose = document.getElementById('hr-portrait-notice-close');
-    const isMobileDevice = () => {
-        if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    };
-    const updatePortraitNotice = () => {
-        if (!portraitNotice) return;
-        const isPortrait = typeof window.matchMedia !== 'undefined' && window.matchMedia('(orientation: portrait)').matches;
-        const dismissed = typeof sessionStorage !== 'undefined' && sessionStorage.getItem(PORTRAIT_NOTICE_KEY);
-        if (isMobileDevice() && isPortrait && !dismissed) {
-            portraitNotice.classList.add('visible');
-            portraitNotice.setAttribute('aria-hidden', 'false');
-        } else {
-            portraitNotice.classList.remove('visible');
-            portraitNotice.setAttribute('aria-hidden', 'true');
-        }
-    };
-    if (portraitNoticeClose) {
-        portraitNoticeClose.addEventListener('click', () => {
-            try { sessionStorage.setItem(PORTRAIT_NOTICE_KEY, '1'); } catch (e) {}
-            if (portraitNotice) {
-                portraitNotice.classList.remove('visible');
-                portraitNotice.setAttribute('aria-hidden', 'true');
-            }
-        });
-    }
-    updatePortraitNotice();
-    window.addEventListener('resize', updatePortraitNotice);
-    window.addEventListener('orientationchange', () => { setTimeout(updatePortraitNotice, 100); });
 });

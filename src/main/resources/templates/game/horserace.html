@@ -241,14 +241,21 @@
             align-items: center !important;
             justify-content: center !important;
         }
-        /* Phaser DOM(닉네임 입력): div는 터치 통과, 자식(textarea 등)만 클릭 받음 → 버튼 클릭이 캔버스까지 전달 */
+        /* 캔버스 래퍼(첫 번째 div): 터치/클릭 수신 — 모바일에서 버튼 히트 영역 정상화 */
+        #game-container > div:first-child {
+            pointer-events: auto !important;
+            z-index: 1;
+        }
+        /* Phaser DOM(닉네임 입력) 래퍼: div는 터치 통과, 자식(textarea 등)만 클릭 받음 */
         #game-container > div {
-            z-index: 10;
-            pointer-events: none !important;
             overflow: visible !important;
             max-height: none !important;
         }
-        #game-container > div * {
+        #game-container > div:not(:first-child) {
+            z-index: 10;
+            pointer-events: none !important;
+        }
+        #game-container > div:not(:first-child) * {
             pointer-events: auto !important;
         }
         #hrNamesInput {
@@ -275,49 +282,46 @@
             object-fit: contain !important;
         }
 
-        /* 모바일 세로 모드 시 가로 모드 권장 알림 (화면 막지 않음, 닫기 가능) */
-        .hr-portrait-notice {
-            position: fixed;
+        /* 모바일 전용: 전체화면일 때 하단에 '전체화면 종료' 버튼 (가로 권장 알림 제거, 이 자리로 대체) */
+        .hr-mobile-fs-exit {
+            display: none;
+            position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
             z-index: 9999;
-            display: none;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px 16px;
-            padding-bottom: max(12px, env(safe-area-inset-bottom));
-            background: rgba(10, 10, 24, 0.92);
-            border-top: 1px solid rgba(255, 215, 0, 0.35);
+            justify-content: center;
+            padding: 14px 16px;
+            padding-bottom: max(14px, env(safe-area-inset-bottom));
+            background: rgba(10, 10, 24, 0.95);
+            border-top: 1px solid rgba(255, 215, 0, 0.4);
             box-sizing: border-box;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-        }
-        .hr-portrait-notice.visible {
-            display: flex;
-        }
-        .hr-portrait-notice p {
-            flex: 1;
-            color: #e8e8ff;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin: 0;
-            font-family: 'Pretendard', Arial, sans-serif;
-        }
-        .hr-portrait-notice button {
-            flex-shrink: 0;
-            padding: 10px 16px;
-            border: 1px solid rgba(255, 215, 0, 0.5);
-            border-radius: 8px;
-            background: rgba(255, 215, 0, 0.15);
-            color: #FFD700;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
             -webkit-tap-highlight-color: transparent;
         }
-        .hr-portrait-notice button:hover { background: rgba(255, 215, 0, 0.25); }
-        .hr-portrait-notice button:active { background: rgba(255, 215, 0, 0.35); }
+        @media (max-width: 768px) {
+            #horserace-fullscreen-wrap:fullscreen .hr-mobile-fs-exit,
+            #horserace-fullscreen-wrap:-webkit-full-screen .hr-mobile-fs-exit,
+            #horserace-fullscreen-wrap:-moz-full-screen .hr-mobile-fs-exit,
+            #horserace-fullscreen-wrap:-ms-fullscreen .hr-mobile-fs-exit,
+            #horserace-fullscreen-wrap.hr-fullscreen-active .hr-mobile-fs-exit {
+                display: flex !important;
+            }
+        }
+        .hr-mobile-fs-exit button {
+            padding: 12px 24px;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            border-radius: 8px;
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            min-height: 44px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hr-mobile-fs-exit button:hover { background: rgba(255, 215, 0, 0.3); }
+        .hr-mobile-fs-exit button:active { background: rgba(255, 215, 0, 0.4); }
 
         .game-bgm {
             display: flex;
@@ -426,6 +430,9 @@
 
         <div id="horserace-fullscreen-wrap">
         <button type="button" id="hrFsExitBtn" class="hr-fs-exit-btn" aria-label="전체화면 나가기">✕ 나가기</button>
+        <div id="hr-mobile-fs-exit" class="hr-mobile-fs-exit" aria-hidden="true">
+            <button type="button" id="hrMobileFsExitBtn" aria-label="전체화면 종료">✕ 전체화면 종료</button>
+        </div>
         <div class="game-bgm">
             <button id="bgmToggle">🔊 BGM 켜짐</button>
             <label for="volumeControl">볼륨:</label>
@@ -435,12 +442,6 @@
 
         <div id="game-container"></div>
         </div><!-- /#horserace-fullscreen-wrap -->
-
-        <!-- 모바일 세로 모드 시 가로 모드 권장 알림 (닫으면 세로에서도 계속 이용 가능) -->
-        <div id="hr-portrait-notice" class="hr-portrait-notice" aria-hidden="true">
-            <p>📱 가로 모드에서 더 쾌적하게 즐기실 수 있어요</p>
-            <button type="button" id="hr-portrait-notice-close" aria-label="알림 닫기">확인</button>
-        </div>
 
         <!-- 소개 & 사용법 -->
         <div class="hr-description">
