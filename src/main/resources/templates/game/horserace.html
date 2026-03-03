@@ -300,14 +300,7 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-        /* 모바일 기기일 때만 하단 전체화면 종료 바 표시 (뷰포트 너비 아님 — 가로 전체화면에서도 노출) */
-        #horserace-fullscreen-wrap.hr-mobile-device:fullscreen .hr-mobile-fs-exit,
-        #horserace-fullscreen-wrap.hr-mobile-device:-webkit-full-screen .hr-mobile-fs-exit,
-        #horserace-fullscreen-wrap.hr-mobile-device:-moz-full-screen .hr-mobile-fs-exit,
-        #horserace-fullscreen-wrap.hr-mobile-device:-ms-fullscreen .hr-mobile-fs-exit,
-        #horserace-fullscreen-wrap.hr-mobile-device.hr-fullscreen-active .hr-mobile-fs-exit {
-            display: flex !important;
-        }
+        /* 기본적으로는 숨겨두고, JS에서 hr-fullscreen-active + 모바일 기기일 때 display:flex로 토글 */
         .hr-mobile-fs-exit button {
             padding: 12px 24px;
             border: 1px solid rgba(255, 215, 0, 0.5);

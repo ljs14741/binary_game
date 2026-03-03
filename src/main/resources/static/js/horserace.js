@@ -1494,6 +1494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeCtrl = document.getElementById('volumeControl');
     const fsToggle   = document.getElementById('fsToggle');
     const fullscreenWrap = document.getElementById('horserace-fullscreen-wrap');
+    const mobileFsExitBar = document.getElementById('hr-mobile-fs-exit');
     const isMobileDevice = () => {
         if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
@@ -1589,6 +1590,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fs) fullscreenWrap.classList.add('hr-fullscreen-active');
             else fullscreenWrap.classList.remove('hr-fullscreen-active');
         }
+        if (mobileFsExitBar) {
+            const active = fullscreenWrap && fullscreenWrap.classList.contains('hr-fullscreen-active');
+            if (active && isMobileDevice()) {
+                mobileFsExitBar.style.display = 'flex';
+            } else {
+                mobileFsExitBar.style.display = 'none';
+            }
+        }
     };
 
     if (fullscreenWrap && horseRaceGame.scale) {
@@ -1596,6 +1605,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const forceFullscreenFill = () => {
         if (!gameContainer || !isFullscreen()) return;
+        // 모바일 기기에서는 Phaser의 FIT 스케일에만 맡기고, 추가 CSS 스케일은 건너뛰어 터치 좌표를 맞춘다.
+        if (fullscreenWrap && fullscreenWrap.classList.contains('hr-mobile-device')) {
+            fixFullscreenDomOverlay();
+            return;
+        }
         gameContainer.style.position = 'absolute';
         gameContainer.style.top = '0';
         gameContainer.style.left = '0';
