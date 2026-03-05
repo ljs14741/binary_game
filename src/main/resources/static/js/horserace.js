@@ -5,6 +5,173 @@
 // Binary World (game.binaryworld.kr)
 // ============================================================
 
+// ============================================================
+// 다국어 지원 (i18n) – Internationalization
+// 브라우저 언어 감지: ko / ja 외엔 모두 en 폴백
+// ============================================================
+const _navLang = (typeof navigator !== 'undefined' && navigator.language)
+    ? navigator.language.toLowerCase() : '';
+const currentLang = _navLang.startsWith('ko') ? 'ko' : _navLang.startsWith('ja') ? 'ja' : 'en';
+
+const I18N = {
+    ko: {
+        // SetupScene
+        title:           '🏇 말달리자',
+        subtitle:        '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요',
+        placeholder:     '예시:\n홍길동, 김철수, 이영희\n또는 한 줄에 한 명씩 입력',
+        countSuffix:     '명 입력됨',
+        countMin:        ' (최소 2명)',
+        countMax:        ' (최대 30명 초과!)',
+        countOk:         ' ✓',
+        modeLabel:       '게임 모드 선택',
+        modeWinner:      '🏆 1등 우승 뽑기',
+        modeLoser:       '💣 꼴찌 벌칙 뽑기',
+        startBtn:        '🏁  경주 시작!',
+        msgMin:          '최소 2명 이상 입력해주세요!',
+        msgMax:          '최대 30명까지 가능합니다!',
+        footerPromo:     '내기 · 추첨 · 이벤트에 딱!  사다리타기 · 룰렛 · 핀볼 대신 말달리자 🐎',
+        defaultNames:    ['참가자1', '참가자2'],
+        // In-game UI (Phaser)
+        fsExitLabel:     '⛶ 닫기(전체화면 종료)',
+        leaderboard:     '🏆 실시간 순위',
+        rankPrefix:      '',
+        rankSuffix:      '위',
+        finalSpurt:      '🔥 마지막 스퍼트! 🔥',
+        carrotEat:       '🥕 냠냠!',
+        rockHit:         '🪨 쿵!',
+        puddleHit:       '💧 첨벙!',
+        resultWin:       '🎉  우승!  🎉',
+        resultLose:      '💣  당첨(벌칙)!  💣',
+        btnRestart:      '🔄 같은 참가자로 재시작',
+        btnNewSetup:     '✏️ 새로 설정',
+        // HTML DOM
+        bgmOn:           '🔊 BGM 켜짐',
+        bgmOff:          '🔇 BGM 꺼짐',
+        domHomeBtn:      '🏠 홈으로 돌아가기',
+        domFsExitBtn:    '✕ 나가기',
+        domMobileFsBtn:  '✕ 전체화면 종료',
+        domVolumeLabel:  '볼륨:',
+        domFsToggle:     '⛶ 전체화면',
+        domFsToggleExit: '⛶ 전체화면 종료',
+        domFsToggleTip:  '전체화면 전환',
+        domFsExitTip:    '전체화면 나가기',
+        domDescH2_1:     '방법',
+        domDescH2_2:     '특징',
+        domDescStep1:    '참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명)',
+        domDescStep2:    '<strong>1등 우승 뽑기</strong> / <strong>꼴찌 벌칙 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong>',
+        domDescStep3:    '시작 시 말마다 등급 랜덤: 🏇 일반 / 🦄 레어 / 🐉 에픽',
+        domDescStep4:    '🥕 당근은 먹고, 🪨 돌·💧 웅덩이는 피하기. 결승선 통과한 말의 주인이 우승(또는 꼴찌)',
+        domDescFeat1:    '벌칙·당번·커피 뽑기 등 <strong>뽑기·추첨용</strong> (사다리·룰렛 대신)',
+        domDescFeat2:    '<strong>역전 요소</strong> – 꼴찌 부스터, 막판 스퍼트, 1~3위만 걸리는 선두 억까',
+        domDescFeat3:    '말마다 고유 색상으로 순위 한눈에 구분, 최대 30명 참가',
+        mobileFsBlockTitle:   '모바일 전체화면 안내',
+        mobileFsBlockMessage: '모바일 기기에서는 전체화면 모드에서\\n일부 기기에서 터치 또는 화면 레이아웃 문제가 발생할 수 있습니다.\\n\\n화면이 조금 작더라도 기본 보기(전체화면 아님)를 권장합니다.',
+        mobileFsBlockOk:       '알겠어요',
+    },
+    en: {
+        title:           '🏇 Let\'s Race!',
+        subtitle:        'Enter names separated by comma ( , ) or newline',
+        placeholder:     'Example:\nAlice, Bob, Charlie\nor one name per line',
+        countSuffix:     ' entered',
+        countMin:        ' (min. 2)',
+        countMax:        ' (over 30 max!)',
+        countOk:         ' ✓',
+        modeLabel:       'Select Game Mode',
+        modeWinner:      '🏆 Pick the Winner',
+        modeLoser:       '💣 Pick the Loser',
+        startBtn:        '🏁  Start Race!',
+        msgMin:          'Please enter at least 2 participants!',
+        msgMax:          'Maximum 30 participants allowed!',
+        footerPromo:     'Perfect for bets, draws & events! Instead of ladder, roulette, or pinball 🐎',
+        defaultNames:    ['Player 1', 'Player 2'],
+        fsExitLabel:     '⛶ Close (Exit Fullscreen)',
+        leaderboard:     '🏆 Live Rankings',
+        rankPrefix:      '#',
+        rankSuffix:      '',
+        finalSpurt:      '🔥 Final Spurt! 🔥',
+        carrotEat:       '🥕 Munch!',
+        rockHit:         '🪨 Bang!',
+        puddleHit:       '💧 Splash!',
+        resultWin:       '🎉  Winner!  🎉',
+        resultLose:      '💣  Last Place!  💣',
+        btnRestart:      '🔄 Restart (Same Players)',
+        btnNewSetup:     '✏️ New Setup',
+        bgmOn:           '🔊 BGM On',
+        bgmOff:          '🔇 BGM Off',
+        domHomeBtn:      '🏠 Back to Home',
+        domFsExitBtn:    '✕ Exit',
+        domMobileFsBtn:  '✕ Exit Fullscreen',
+        domVolumeLabel:  'Vol:',
+        domFsToggle:     '⛶ Fullscreen',
+        domFsToggleExit: '⛶ Exit Fullscreen',
+        domFsToggleTip:  'Toggle Fullscreen',
+        domFsExitTip:    'Exit Fullscreen',
+        domDescH2_1:     'How to Play',
+        domDescH2_2:     'Features',
+        domDescStep1:    'Enter names separated by <strong>comma or newline</strong> (2–30 players)',
+        domDescStep2:    'Choose <strong>Pick the Winner</strong> or <strong>Pick the Loser</strong>, then click <strong>Start Race!</strong>',
+        domDescStep3:    'Each horse gets a random tier at start: 🏇 Common / 🦄 Rare / 🐉 Epic',
+        domDescStep4:    '🥕 Eat carrots, avoid 🪨 rocks & 💧 puddles. The owner of the first (or last) horse to finish wins!',
+        domDescFeat1:    'Great for penalty draws, chore picks, coffee bets — <strong>random picker</strong> (instead of ladder or roulette)',
+        domDescFeat2:    '<strong>Comeback mechanics</strong> — last-place boost, final spurt, leader stumble penalty',
+        domDescFeat3:    'Each horse has a unique color for easy rank tracking, up to 30 players',
+        mobileFsBlockTitle:   'Fullscreen on Mobile',
+        mobileFsBlockMessage: 'On some mobile devices, fullscreen mode may cause touch or layout issues.\\n\\nWe recommend using the normal view (non-fullscreen) even if the screen is a bit smaller.',
+        mobileFsBlockOk:       'OK',
+    },
+    ja: {
+        title:           '🏇 馬を走らせよう！',
+        subtitle:        '参加者名をカンマ（，）または改行で区切って入力してください',
+        placeholder:     '例：\n田中, 鈴木, 佐藤\nまたは1行に1名ずつ入力',
+        countSuffix:     '名入力済み',
+        countMin:        '（最低2名）',
+        countMax:        '（最大30名超過！）',
+        countOk:         ' ✓',
+        modeLabel:       'ゲームモードを選択',
+        modeWinner:      '🏆 1位優勝を決める',
+        modeLoser:       '💣 最下位罰ゲーム',
+        startBtn:        '🏁  レーススタート！',
+        msgMin:          '最低2名以上入力してください！',
+        msgMax:          '最大30名まで参加できます！',
+        footerPromo:     '内輪の賭け・抽選・イベントにぴったり！ラダー・ルーレット・ピンボールの代わりに 🐎',
+        defaultNames:    ['プレイヤー1', 'プレイヤー2'],
+        fsExitLabel:     '⛶ 閉じる（全画面終了）',
+        leaderboard:     '🏆 リアルタイム順位',
+        rankPrefix:      '',
+        rankSuffix:      '位',
+        finalSpurt:      '🔥 ラストスパート！ 🔥',
+        carrotEat:       '🥕 パクッ！',
+        rockHit:         '🪨 ドン！',
+        puddleHit:       '💧 ザブン！',
+        resultWin:       '🎉  優勝！  🎉',
+        resultLose:      '💣  最下位（罰ゲーム）！  💣',
+        btnRestart:      '🔄 同じメンバーで再スタート',
+        btnNewSetup:     '✏️ 新しく設定',
+        bgmOn:           '🔊 BGM オン',
+        bgmOff:          '🔇 BGM オフ',
+        domHomeBtn:      '🏠 ホームへ戻る',
+        domFsExitBtn:    '✕ 閉じる',
+        domMobileFsBtn:  '✕ 全画面終了',
+        domVolumeLabel:  '音量:',
+        domFsToggle:     '⛶ 全画面',
+        domFsToggleExit: '⛶ 全画面終了',
+        domFsToggleTip:  '全画面切り替え',
+        domFsExitTip:    '全画面を閉じる',
+        domDescH2_1:     '遊び方',
+        domDescH2_2:     '特徴',
+        domDescStep1:    '参加者名を<strong>カンマまたは改行</strong>で区切って入力（2〜30名）',
+        domDescStep2:    '<strong>1位優勝</strong>または<strong>最下位罰ゲーム</strong>を選んで<strong>レーススタート！</strong>をクリック',
+        domDescStep3:    'スタート時に馬ごとにティアがランダム決定：🏇 コモン / 🦄 レア / 🐉 エピック',
+        domDescStep4:    '🥕 にんじんを食べ、🪨 岩・💧 水たまりを避けよう。ゴールを通過した馬のオーナーが優勝（または罰ゲーム）',
+        domDescFeat1:    '罰ゲーム・当番・コーヒー争奪など<strong>抽選・くじ引き用途</strong>に最適（はしご・ルーレットの代替）',
+        domDescFeat2:    '<strong>逆転要素あり</strong> — 最下位ブースター・ラストスパート・先頭馬への横やり',
+        domDescFeat3:    '馬ごとに固有カラーで順位が一目でわかる、最大30名参加可能',
+        mobileFsBlockTitle:   'モバイル全画面について',
+        mobileFsBlockMessage: '一部のモバイル端末では、全画面モードでタッチやレイアウトの不具合が発生する場合があります。\\n\\n画面が少し小さくても、通常表示（非全画面）でのご利用をおすすめします。',
+        mobileFsBlockOk:       'OK',
+    },
+};
+
 const HR_W      = 1000;
 const HR_H      = 720;
 const TRACK_LEN = 10000;
@@ -142,14 +309,14 @@ class SetupScene extends Phaser.Scene {
         // 타이틀 (캔버스 상단에 안 짤리도록 여백 확보) + 가독성 그림자
         const titleY = MARGIN_TOP + 28;
         const textShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
-        this.add.text(cx, titleY, '🏇 말달리자', {
+        this.add.text(cx, titleY, I18N[currentLang].title, {
             fontFamily: '"Orbitron","Pretendard",Arial',
             fontSize: '44px', color: '#FFD700',
             stroke: '#2a1500', strokeThickness: 6,
             shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true },
         }).setOrigin(0.5);
 
-        this.add.text(cx, titleY + 58, '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요', {
+        this.add.text(cx, titleY + 58, I18N[currentLang].subtitle, {
             fontFamily: '"Pretendard",Arial', fontSize: '18px', color: '#EEEEEE', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
@@ -160,8 +327,9 @@ class SetupScene extends Phaser.Scene {
         const domY = titleY + 158 + layoutOffset;
         this._modeLabelY = titleY + 228 + layoutOffset;
         this._startBtnY = this._modeLabelY + 130;
+        const _ph = I18N[currentLang].placeholder.replace(/\n/g, '&#10;');
         const taHtml = `<textarea id="hrNamesInput"
-            placeholder="예시:&#10;홍길동, 김철수, 이영희&#10;또는 한 줄에 한 명씩 입력"
+            placeholder="${_ph}"
             style="width:80vw;max-width:500px;min-width:180px;height:118px;max-height:24vh;
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
                    font-size:15px;line-height:1.65;padding:14px 18px;
@@ -177,7 +345,7 @@ class SetupScene extends Phaser.Scene {
 
         // "몇명 입력됨" → 내기·추첨 문구 바로 위, 글자 크기 키움
         const FOOT_H = 36;
-        this.countText = this.add.text(cx, H - FOOT_H - 22, '0명 입력됨', {
+        this.countText = this.add.text(cx, H - FOOT_H - 22, `0${I18N[currentLang].countSuffix}`, {
             fontFamily: '"Pretendard",Arial', fontSize: '21px', color: '#8888aa',
             shadow: textShadow,
         }).setOrigin(0.5);
@@ -190,7 +358,7 @@ class SetupScene extends Phaser.Scene {
         }
 
         // 모드 선택 라벨 (닉네임 입력 아래, 버튼 위에 배치)
-        this.add.text(cx, this._modeLabelY, '게임 모드 선택', {
+        this.add.text(cx, this._modeLabelY, I18N[currentLang].modeLabel, {
             fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#b0b0dd', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
@@ -209,7 +377,7 @@ class SetupScene extends Phaser.Scene {
             startBg.fillRoundedRect(SBX, SBY, SBW, SBH, 12);
         };
         drawStartBtn(0xFFD700);
-        this.add.text(cx, SBY + SBH / 2, '🏁  경주 시작!', {
+        this.add.text(cx, SBY + SBH / 2, I18N[currentLang].startBtn, {
             fontFamily: '"Orbitron",Arial',
             fontSize: '23px',
             color: '#ffffff',
@@ -225,8 +393,8 @@ class SetupScene extends Phaser.Scene {
             .on('pointerdown',  () => {
                 const ta    = document.getElementById('hrNamesInput');
                 const names = this._parseNames(ta ? ta.value : '');
-                if (names.length < 2)  return this._showMsg('최소 2명 이상 입력해주세요!');
-                if (names.length > 30) return this._showMsg('최대 30명까지 가능합니다!');
+                if (names.length < 2)  return this._showMsg(I18N[currentLang].msgMin);
+                if (names.length > 30) return this._showMsg(I18N[currentLang].msgMax);
                 this.registry.set('lastNames', names);
                 this.registry.set('gameMode', this.gameMode);
                 this.scene.start('GameScene', { names, mode: this.gameMode });
@@ -240,7 +408,7 @@ class SetupScene extends Phaser.Scene {
 
         // 하단 바 (여백 확보)
         this.add.graphics().fillStyle(0x1a1a3a, 0.55).fillRect(0, H - FOOT_H, W, FOOT_H);
-        this.add.text(cx, H - FOOT_H / 2, '내기 · 추첨 · 이벤트에 딱!  사다리타기 · 룰렛 · 핀볼 대신 말달리자 🐎', {
+        this.add.text(cx, H - FOOT_H / 2, I18N[currentLang].footerPromo, {
             fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#ffffff',
             shadow: textShadow,
         }).setOrigin(0.5);
@@ -283,7 +451,7 @@ class SetupScene extends Phaser.Scene {
             bg.strokeRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
         };
         drawBg(0x1a1a3a);
-        const lbl = this.add.text(bx, by, '⛶ 닫기(전체화면 종료)', {
+        const lbl = this.add.text(bx, by, I18N[currentLang].fsExitLabel, {
             fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#FFD700',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(10000);
         const hit = this.add.rectangle(bx, by, btnW, btnH).setScrollFactor(0).setDepth(10001)
@@ -311,7 +479,7 @@ class SetupScene extends Phaser.Scene {
         this.modeBtnGfx = this.add.graphics();
 
         const lblShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
-        this.modeLbl1 = this.add.text(x1 + BW / 2, BY + BH / 2, '🏆 1등 우승 뽑기', {
+        this.modeLbl1 = this.add.text(x1 + BW / 2, BY + BH / 2, I18N[currentLang].modeWinner, {
             fontFamily: '"Pretendard",Arial',
             fontSize: '18px',
             fontStyle: 'bold',
@@ -319,7 +487,7 @@ class SetupScene extends Phaser.Scene {
             strokeThickness: 3,
             shadow: lblShadow,
         }).setOrigin(0.5);
-        this.modeLbl2 = this.add.text(x2 + BW / 2, BY + BH / 2, '💣 꼴찌 벌칙 뽑기', {
+        this.modeLbl2 = this.add.text(x2 + BW / 2, BY + BH / 2, I18N[currentLang].modeLoser, {
             fontFamily: '"Pretendard",Arial',
             fontSize: '18px',
             fontStyle: 'bold',
@@ -379,8 +547,8 @@ class SetupScene extends Phaser.Scene {
     _updateCount(val) {
         const n = this._parseNames(val).length;
         const col = (n > 0 && n < 2) || n > 30 ? '#FF4444' : n >= 2 ? '#00FF88' : '#8888aa';
-        const sfx = (n > 0 && n < 2) ? ' (최소 2명)' : n > 30 ? ' (최대 30명 초과!)' : n >= 2 ? ' ✓' : '';
-        this.countText.setText(`${n}명 입력됨${sfx}`).setColor(col);
+        const sfx = (n > 0 && n < 2) ? I18N[currentLang].countMin : n > 30 ? I18N[currentLang].countMax : n >= 2 ? I18N[currentLang].countOk : '';
+        this.countText.setText(`${n}${I18N[currentLang].countSuffix}${sfx}`).setColor(col);
     }
     _showMsg(msg) {
         this.msgText.setText(msg).setColor('#FF6B6B');
@@ -435,7 +603,7 @@ class GameScene extends Phaser.Scene {
     constructor() { super({ key: 'GameScene' }); }
 
     init(data) {
-        this.names       = data.names || ['참가자1', '참가자2'];
+        this.names       = data.names || I18N[currentLang].defaultNames;
         this.mode        = data.mode  || 'winner';   // 'winner' | 'loser'
         this.numHorses   = this.names.length;
         this.raceStarted = false;
@@ -585,7 +753,7 @@ class GameScene extends Phaser.Scene {
         this._createLeaderboard();
 
         // ── 모드 표시 라벨 ───────────────────────────────────
-        const modeLabel = this.mode === 'winner' ? '🏆 1등 우승 뽑기' : '💣 꼴찌 벌칙 뽑기';
+        const modeLabel = this.mode === 'winner' ? I18N[currentLang].modeWinner : I18N[currentLang].modeLoser;
         const modeColor = this.mode === 'winner' ? '#FFD700' : '#FF6666';
         this.add.text(16, 8, modeLabel, {
             fontFamily: '"Pretendard",Arial', fontSize: '12px',
@@ -621,7 +789,7 @@ class GameScene extends Phaser.Scene {
             bg.strokeRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
         };
         drawBg(0x1a1a3a);
-        const lbl = this.add.text(bx, by, '⛶ 닫기(전체화면 종료)', {
+        const lbl = this.add.text(bx, by, I18N[currentLang].fsExitLabel, {
             fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#FFD700',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(10000);
         const hit = this.add.rectangle(bx, by, btnW, btnH).setScrollFactor(0).setDepth(10001)
@@ -735,7 +903,7 @@ class GameScene extends Phaser.Scene {
         bg.lineStyle(1.5, 0xFFD700, 0.65);
         bg.strokeRoundedRect(LBX, LBY, LBW, LBH, 10);
 
-        this.add.text(LBX + LBW / 2, LBY + 12, '🏆 실시간 순위', {
+        this.add.text(LBX + LBW / 2, LBY + 12, I18N[currentLang].leaderboard, {
             fontSize: '11px', fontFamily: '"Pretendard",Arial',
             color: '#FFD700', fontStyle: 'bold',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
@@ -747,7 +915,7 @@ class GameScene extends Phaser.Scene {
         let y0 = LBY + HEADER_H;
         for (let i = 0; i < this.numHorses; i++) {
             this.lbTexts.push(
-                this.add.text(LBX + 10, y0 + i * ROW_H + ROW_H / 2, `${i + 1}위  -`, {
+                this.add.text(LBX + 10, y0 + i * ROW_H + ROW_H / 2, `${I18N[currentLang].rankPrefix}${i + 1}${I18N[currentLang].rankSuffix}  -`, {
                     fontSize: `${lbFontSz}px`, fontFamily: '"Pretendard",Arial', color: '#cccccc',
                 }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(51)
             );
@@ -906,7 +1074,7 @@ class GameScene extends Phaser.Scene {
 
         const cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
 
-        const popup = this.add.text(cx, cy, '🔥 마지막 스퍼트! 🔥', {
+        const popup = this.add.text(cx, cy, I18N[currentLang].finalSpurt, {
             fontFamily: '"Orbitron","Pretendard",Arial',
             fontSize: '52px',
             color: '#FFDD00',
@@ -1116,7 +1284,7 @@ class GameScene extends Phaser.Scene {
             // 🥕 당근: 1등이면 부스터(속도) 없음 — 크기 확대만. 2등 이하는 부스터 + 크기 확대
             if (horse.rank !== 1) this._triggerBoost(horse);
             horse.scaleBonus = 1.45;
-            this._spawnPopupText(horse.x, horse.y, '🥕 냠냠!', '#FF8800');
+            this._spawnPopupText(horse.x, horse.y, I18N[currentLang].carrotEat, '#FF8800');
 
         } else if (obs.type === 'rock') {
             // 🪨 돌멩이: 스핀 + 밀려남 + 걸림
@@ -1126,12 +1294,12 @@ class GameScene extends Phaser.Scene {
             horse.stumbleFrames = 90;
             horse.x             = Math.max(120, horse.x - 65);
             this.cameras.main.shake(260, 0.006);
-            this._spawnPopupText(horse.x, horse.y, '🪨 쿵!', '#FF4444');
+            this._spawnPopupText(horse.x, horse.y, I18N[currentLang].rockHit, '#FF4444');
 
         } else if (obs.type === 'puddle') {
             // 💧 웅덩이: 걸림
             this._triggerStumble(horse);
-            this._spawnPopupText(horse.x, horse.y, '💧 첨벙!', '#4488FF');
+            this._spawnPopupText(horse.x, horse.y, I18N[currentLang].puddleHit, '#4488FF');
         }
     }
 
@@ -1394,7 +1562,7 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: icon, scaleX: 1, scaleY: 1, duration: 520, ease: 'Back.easeOut' });
 
         // 결과 라벨
-        const lbl = isWinner ? '🎉  우승!  🎉' : '💣  당첨(벌칙)!  💣';
+        const lbl = isWinner ? I18N[currentLang].resultWin : I18N[currentLang].resultLose;
         const mainLbl = this.add.text(cx, cy - 44, lbl, {
             fontFamily: '"Orbitron",Arial', fontSize: '31px',
             color: accentStr, stroke: '#000', strokeThickness: 5,
@@ -1417,10 +1585,10 @@ class GameScene extends Phaser.Scene {
 
         // 버튼
         const btnY = cy + 112;
-        this._makeBtn(cx - 148, btnY, '🔄 같은 참가자로 재시작', 0x4ECDC4, 0x30a898, () => {
+        this._makeBtn(cx - 148, btnY, I18N[currentLang].btnRestart, 0x4ECDC4, 0x30a898, () => {
             this.scene.restart({ names: this.names, mode: this.mode });
         });
-        this._makeBtn(cx + 118, btnY, '✏️ 새로 설정', 0xFFD700, 0xFFA500, () => {
+        this._makeBtn(cx + 118, btnY, I18N[currentLang].btnNewSetup, 0xFFD700, 0xFFA500, () => {
             this.scene.start('SetupScene');
         });
     }
@@ -1454,7 +1622,7 @@ class GameScene extends Phaser.Scene {
             // 닉네임·아이콘 모두 말 고유 색상 유지 (아이템에 따라 색 바꾸지 않음)
             const horseColorCss = '#' + ((h.color & 0xFFFFFF).toString(16).padStart(6, '0')).toUpperCase();
             const col = h.finished ? '#FFD700' : horseColorCss;
-            this.lbTexts[i].setText(`${i + 1}위  ${nm}${sfx}`).setColor(col);
+            this.lbTexts[i].setText(`${I18N[currentLang].rankPrefix}${i + 1}${I18N[currentLang].rankSuffix}  ${nm}${sfx}`).setColor(col);
         }
     }
 
@@ -1495,11 +1663,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const fsToggle   = document.getElementById('fsToggle');
     const fullscreenWrap = document.getElementById('horserace-fullscreen-wrap');
     const mobileFsExitBar = document.getElementById('hr-mobile-fs-exit');
+    let hrMobileFsBlocked = false;
+
+    // ── i18n: html lang 동적 설정 + HTML DOM 텍스트 교체 ──────
+    document.documentElement.setAttribute('lang', currentLang);
+    const _L = I18N[currentLang];
+    const _setHTML = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+    const _setTxt  = (id, txt)  => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+    _setTxt('hr-desc-h2-1',    _L.domDescH2_1);
+    _setTxt('hr-desc-h2-2',    _L.domDescH2_2);
+    _setHTML('hr-desc-step-1', _L.domDescStep1);
+    _setHTML('hr-desc-step-2', _L.domDescStep2);
+    _setHTML('hr-desc-step-3', _L.domDescStep3);
+    _setHTML('hr-desc-step-4', _L.domDescStep4);
+    _setHTML('hr-desc-feat-1', _L.domDescFeat1);
+    _setHTML('hr-desc-feat-2', _L.domDescFeat2);
+    _setHTML('hr-desc-feat-3', _L.domDescFeat3);
+    _setTxt('hrFsExitBtn',       _L.domFsExitBtn);
+    _setTxt('hrMobileFsExitBtn', _L.domMobileFsBtn);
+    const _volLabel = document.querySelector('label[for="volumeControl"]');
+    if (_volLabel) _volLabel.textContent = _L.domVolumeLabel;
+    const _backBtn = document.querySelector('.back-btn');
+    if (_backBtn) _backBtn.textContent = _L.domHomeBtn;
+    if (fsToggle) {
+        fsToggle.textContent = _L.domFsToggle;
+        fsToggle.setAttribute('title', _L.domFsToggleTip);
+    }
+    if (bgmToggle) bgmToggle.textContent = _L.bgmOn;
+    // ─────────────────────────────────────────────────────────
     const isMobileDevice = () => {
         if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
     };
-    if (fullscreenWrap && isMobileDevice()) {
+    const _isMobile = isMobileDevice();
+    if (fullscreenWrap && _isMobile) {
         fullscreenWrap.classList.add('hr-mobile-device');
         // 모바일: 레이아웃 확정 후 입력 좌표계 동기화 (버튼 터치 히트 보정)
         const syncMobileInput = () => {
@@ -1510,6 +1707,74 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         setTimeout(syncMobileInput, 100);
         setTimeout(syncMobileInput, 400);
+    }
+
+    // ── 모바일: 전체화면 비권장 안내 모달 + 버튼 비활성화 ─────
+    if (_isMobile) {
+        hrMobileFsBlocked = true;
+        if (fsToggle) fsToggle.style.display = 'none';
+        const overlay = document.createElement('div');
+        overlay.id = 'hr-mobile-fs-block';
+        overlay.style.position = 'fixed';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.right = '0';
+        overlay.style.bottom = '0';
+        overlay.style.zIndex = '99999';
+        overlay.style.background = 'rgba(0,0,0,0.78)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.padding = '16px';
+        overlay.style.boxSizing = 'border-box';
+        const box = document.createElement('div');
+        box.style.maxWidth = '420px';
+        box.style.width = '100%';
+        box.style.background = 'rgba(10,10,30,0.96)';
+        box.style.border = '1px solid rgba(255,215,0,0.6)';
+        box.style.borderRadius = '10px';
+        box.style.padding = '18px 20px 16px';
+        box.style.color = '#dddddd';
+        box.style.fontFamily = '\"Pretendard\", system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+        box.style.fontSize = '13px';
+        box.style.lineHeight = '1.6';
+        const titleEl = document.createElement('div');
+        titleEl.textContent = _L.mobileFsBlockTitle;
+        titleEl.style.fontSize = '14px';
+        titleEl.style.fontWeight = '700';
+        titleEl.style.color = '#FFD700';
+        titleEl.style.marginBottom = '8px';
+        const msgEl = document.createElement('div');
+        msgEl.textContent = _L.mobileFsBlockMessage;
+        msgEl.style.whiteSpace = 'pre-line';
+        msgEl.style.marginBottom = '14px';
+        const btnWrap = document.createElement('div');
+        btnWrap.style.display = 'flex';
+        btnWrap.style.justifyContent = 'flex-end';
+        const okBtn = document.createElement('button');
+        okBtn.type = 'button';
+        okBtn.textContent = _L.mobileFsBlockOk;
+        okBtn.style.minWidth = '84px';
+        okBtn.style.padding = '8px 14px';
+        okBtn.style.borderRadius = '6px';
+        okBtn.style.border = '1px solid rgba(255,215,0,0.8)';
+        okBtn.style.background = 'rgba(255,215,0,0.15)';
+        okBtn.style.color = '#FFD700';
+        okBtn.style.fontSize = '13px';
+        okBtn.style.fontWeight = '600';
+        okBtn.style.cursor = 'pointer';
+        okBtn.style.webkitTapHighlightColor = 'transparent';
+        okBtn.addEventListener('click', () => {
+            if (overlay && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        });
+        btnWrap.appendChild(okBtn);
+        box.appendChild(titleEl);
+        box.appendChild(msgEl);
+        box.appendChild(btnWrap);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
     }
 
     // 모바일: 사용자 상호작용 시 AudioContext 잠금 해제 후 BGM 재생 시도 (자동재생 차단 대응)
@@ -1531,7 +1796,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bgmToggle) {
         function updateBgmUI() {
             const on = horseRaceGame.registry.get('bgmOn', true);
-            bgmToggle.textContent = on ? '🔊 BGM 켜짐' : '🔇 BGM 꺼짐';
+            bgmToggle.textContent = on ? I18N[currentLang].bgmOn : I18N[currentLang].bgmOff;
         }
         updateBgmUI();
 
@@ -1539,7 +1804,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (audioJustUnlocked) return; // 첫 클릭은 잠금 해제만, 토글 무시
             const on = !horseRaceGame.registry.get('bgmOn', true);
             horseRaceGame.registry.set('bgmOn', on);
-            bgmToggle.textContent = on ? '🔊 BGM 켜짐' : '🔇 BGM 꺼짐';
+            bgmToggle.textContent = on ? I18N[currentLang].bgmOn : I18N[currentLang].bgmOff;
             if (horseRaceGame.sound) horseRaceGame.sound.mute = !on;
             const s = horseRaceGame.bgmSound;
             if (s) {
@@ -1583,8 +1848,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateFullscreenButton = () => {
         const fs = isFullscreen();
         if (fsToggle) {
-            fsToggle.textContent = fs ? '⛶ 전체화면 종료' : '⛶ 전체화면';
-            fsToggle.setAttribute('title', fs ? '전체화면 나가기' : '전체화면 전환');
+            fsToggle.textContent = fs ? I18N[currentLang].domFsToggleExit : I18N[currentLang].domFsToggle;
+            fsToggle.setAttribute('title', fs ? I18N[currentLang].domFsExitTip : I18N[currentLang].domFsToggleTip);
         }
         if (fullscreenWrap) {
             if (fs) fullscreenWrap.classList.add('hr-fullscreen-active');
@@ -1759,6 +2024,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (fsToggle) {
         fsToggle.addEventListener('click', () => {
+            // 모바일에서는 전체화면 진입 자체를 막는다 (DOMContentLoaded 상단에서 버튼도 숨김)
+            if (typeof isMobileDevice === 'function' && isMobileDevice()) {
+                return;
+            }
             if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
                 gameContainer.classList.remove('fullscreen-fallback');
                 updateFullscreenButton();
