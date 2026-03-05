@@ -65,8 +65,8 @@ const I18N = {
         domDescFeat2:    '<strong>역전 요소</strong> – 꼴찌 부스터, 막판 스퍼트, 1~3위만 걸리는 선두 억까',
         domDescFeat3:    '말마다 고유 색상으로 순위 한눈에 구분, 최대 30명 참가',
         mobileFsBlockTitle:   '모바일 전체화면 안내',
-        mobileFsBlockMessage: '모바일 기기에서는 전체화면 모드에서\\n일부 기기에서 터치 또는 화면 레이아웃 문제가 발생할 수 있습니다.\\n\\n화면이 조금 작더라도 기본 보기(전체화면 아님)를 권장합니다.',
-        mobileFsBlockOk:       '알겠어요',
+        mobileFsBlockMessage: '모바일 기기에서는 전체화면 모드에서\n일부 기기에서 터치 또는 화면 레이아웃 문제가 발생할 수 있습니다.\n\n화면이 조금 작더라도 기본 보기(전체화면 아님)를 권장합니다.\n\n※ 효과음을 위해 BGM을 켜고 플레이하는 것을 추천합니다!',
+        mobileFsBlockOk:      '알겠어요',
     },
     en: {
         title:           '🏇 Let\'s Race!',
@@ -116,8 +116,8 @@ const I18N = {
         domDescFeat2:    '<strong>Comeback mechanics</strong> — last-place boost, final spurt, leader stumble penalty',
         domDescFeat3:    'Each horse has a unique color for easy rank tracking, up to 30 players',
         mobileFsBlockTitle:   'Fullscreen on Mobile',
-        mobileFsBlockMessage: 'On some mobile devices, fullscreen mode may cause touch or layout issues.\\n\\nWe recommend using the normal view (non-fullscreen) even if the screen is a bit smaller.',
-        mobileFsBlockOk:       'OK',
+        mobileFsBlockMessage: 'On some mobile devices, fullscreen mode may cause touch or layout issues.\n\nWe recommend using the normal view (non-fullscreen) even if the screen is a bit smaller.\n\n※ For the best experience, please turn BGM on when you play!',
+        mobileFsBlockOk:      'OK',
     },
     ja: {
         title:           '🏇 馬を走らせよう！',
@@ -167,8 +167,8 @@ const I18N = {
         domDescFeat2:    '<strong>逆転要素あり</strong> — 最下位ブースター・ラストスパート・先頭馬への横やり',
         domDescFeat3:    '馬ごとに固有カラーで順位が一目でわかる、最大30名参加可能',
         mobileFsBlockTitle:   'モバイル全画面について',
-        mobileFsBlockMessage: '一部のモバイル端末では、全画面モードでタッチやレイアウトの不具合が発生する場合があります。\\n\\n画面が少し小さくても、通常表示（非全画面）でのご利用をおすすめします。',
-        mobileFsBlockOk:       'OK',
+        mobileFsBlockMessage: '一部のモバイル端末では、全画面モードでタッチやレイアウトの不具合が発生する場合があります。\n\n画面が少し小さくても、通常表示（非全画面）でのご利用をおすすめします。\n\n※ 効果音を楽しむため、BGMをオンにして遊ぶことをおすすめします！',
+        mobileFsBlockOk:      'OK',
     },
 };
 
