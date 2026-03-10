@@ -316,23 +316,38 @@ class SetupScene extends Phaser.Scene {
             shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true },
         }).setOrigin(0.5);
 
-        this.add.text(cx, titleY + 58, I18N[currentLang].subtitle, {
+        // 실제 화면 너비 기준 (PC/모바일 분기)
+        const displayW      = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
+        const isMobileLayout = displayW < 640;
+        const isSmallMobile  = isMobileLayout && displayW >= 386;  // 일반 스마트폰
+        const isTinyMobile   = isMobileLayout && displayW < 386;   // 초소형 화면
+
+        // 모바일: 부제목을 약간 아래로 내려 title 과의 간격 확보
+        this.add.text(cx, isMobileLayout ? titleY + 75 : titleY + 58, I18N[currentLang].subtitle, {
             fontFamily: '"Pretendard",Arial', fontSize: '18px', color: '#EEEEEE', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
 
         // 이름 입력: PC는 그대로, 모바일에서 더 아래로. 실제 화면 너비 기준(표시 크기 사용)
-        const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-        const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
+        const layoutOffset = isTinyMobile ? 180 : (isSmallMobile ? 120 : 0);
         const domY = titleY + 158 + layoutOffset;
-        this._modeLabelY = titleY + 228 + layoutOffset;
-        this._startBtnY = this._modeLabelY + 130;
+        // 모바일: textarea CSS 높이(절반)를 기준으로 modeLabel · startBtn 위치 계산
+        const taCssHalfH = isSmallMobile ? 150 : (isTinyMobile ? 80 : 59);
+        this._modeLabelY = isMobileLayout
+            ? domY + taCssHalfH + 32
+            : titleY + 228 + layoutOffset;
+        this._startBtnY = this._modeLabelY + (isMobileLayout ? 110 : 130);
         const _ph = I18N[currentLang].placeholder.replace(/\n/g, '&#10;');
+        // 모바일: 캔버스 스케일(~0.375)로 인해 실제 렌더 크기가 작아지므로 height·font-size 보정
+        const ta_h  = isSmallMobile ? '300px' : (isTinyMobile ? '160px' : '118px');
+        const ta_mh = isMobileLayout ? 'none'  : '24vh';
+        const ta_fs = isSmallMobile ? '32px'   : (isTinyMobile ? '28px' : '15px');
+        const ta_lh = isMobileLayout ? '1.55'  : '1.65';
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="${_ph}"
-            style="width:80vw;max-width:500px;min-width:180px;height:118px;max-height:24vh;
+            style="width:80vw;max-width:500px;min-width:180px;height:${ta_h};max-height:${ta_mh};
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
-                   font-size:15px;line-height:1.65;padding:14px 18px;
+                   font-size:${ta_fs};line-height:${ta_lh};padding:14px 18px;
                    font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
                    box-sizing:border-box;opacity:1;visibility:visible;display:block;"
             onfocus="this.style.borderColor='#FFD700'"
@@ -561,7 +576,8 @@ class SetupScene extends Phaser.Scene {
             const cx = this.scale.width / 2;
             const titleY = 52 + 28;
             const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
+            // 모바일 offset: isSmallMobile(386~640) → 120, isTinyMobile(<386) → 180
+            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 120 : 0);
             const domY = titleY + 158 + layoutOffset;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
@@ -585,6 +601,18 @@ class SetupScene extends Phaser.Scene {
         container.style.height = gh + 'px';
         container.style.transformOrigin = '0 0';
         container.style.transform = 'scale(' + sx + ',' + sy + ')';
+
+        // 모바일: 스케일 적용 후 Phaser DOMElement 크기를 실제 offsetSize 로 재동기화
+        // → origin(0.5,0.5) 오프셋이 올바른 CSS 높이 기준으로 재계산됨
+        if (this.domInput && node.offsetWidth > 0 && node.offsetHeight > 0) {
+            const ow = node.offsetWidth;
+            const oh = node.offsetHeight;
+            if (ow !== this.domInput.width || oh !== this.domInput.height) {
+                this.domInput.width  = ow;
+                this.domInput.height = oh;
+                this.domInput.setPosition(gw / 2, this._setupDomLayoutY);
+            }
+        }
     }
 
     shutdown() {
