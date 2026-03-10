@@ -329,10 +329,8 @@ class SetupScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // 이름 입력: PC는 그대로, 모바일에서 더 아래로. 실제 화면 너비 기준(표시 크기 사용)
-        const layoutOffset   = isTinyMobile ? 180 : (isSmallMobile ? 120 : 0);
-        // 모바일에서는 부제목과 더 여유 있게 떨어지도록 추가 오프셋
-        const extraDomOffset = isMobileLayout ? 40 : 0;
-        const domY = titleY + 158 + layoutOffset + extraDomOffset;
+        const layoutOffset = isTinyMobile ? 180 : (isSmallMobile ? 120 : 0);
+        const domY = titleY + 158 + layoutOffset;
         // 모바일: textarea CSS 높이(절반)를 기준으로 modeLabel · startBtn 위치 계산
         const taCssHalfH = isSmallMobile ? 150 : (isTinyMobile ? 80 : 59);
         this._modeLabelY = isMobileLayout
@@ -345,11 +343,13 @@ class SetupScene extends Phaser.Scene {
         const ta_mh = isMobileLayout ? 'none'  : '24vh';
         const ta_fs = isSmallMobile ? '32px'   : (isTinyMobile ? '28px' : '15px');
         const ta_lh = isMobileLayout ? '1.55'  : '1.65';
+        // 모바일에서만 텍스트 인풋을 살짝 더 아래로 내려 보이도록 margin-top 추가 (버튼 Y좌표에는 영향 없음)
+        const ta_mt = isMobileLayout ? '24px' : '0';
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="${_ph}"
             style="width:80vw;max-width:500px;min-width:180px;height:${ta_h};max-height:${ta_mh};
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
-                   font-size:${ta_fs};line-height:${ta_lh};padding:14px 18px;
+                   font-size:${ta_fs};line-height:${ta_lh};padding:14px 18px;margin-top:${ta_mt};
                    font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
                    box-sizing:border-box;opacity:1;visibility:visible;display:block;"
             onfocus="this.style.borderColor='#FFD700'"
@@ -579,9 +579,8 @@ class SetupScene extends Phaser.Scene {
             const titleY = 52 + 28;
             const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
             // 모바일 offset: isSmallMobile(386~640) → 120, isTinyMobile(<386) → 180
-            const layoutOffset   = displayW < 386 ? 180 : (displayW < 640 ? 120 : 0);
-            const extraDomOffset = displayW < 640 ? 40 : 0;
-            const domY = titleY + 158 + layoutOffset + extraDomOffset;
+            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 120 : 0);
+            const domY = titleY + 158 + layoutOffset;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
             this._syncDomContainerScale();
