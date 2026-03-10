@@ -329,8 +329,10 @@ class SetupScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // 이름 입력: PC는 그대로, 모바일에서 더 아래로. 실제 화면 너비 기준(표시 크기 사용)
-        const layoutOffset = isTinyMobile ? 180 : (isSmallMobile ? 120 : 0);
-        const domY = titleY + 158 + layoutOffset;
+        const layoutOffset   = isTinyMobile ? 180 : (isSmallMobile ? 120 : 0);
+        // 모바일에서는 부제목과 더 여유 있게 떨어지도록 추가 오프셋
+        const extraDomOffset = isMobileLayout ? 40 : 0;
+        const domY = titleY + 158 + layoutOffset + extraDomOffset;
         // 모바일: textarea CSS 높이(절반)를 기준으로 modeLabel · startBtn 위치 계산
         const taCssHalfH = isSmallMobile ? 150 : (isTinyMobile ? 80 : 59);
         this._modeLabelY = isMobileLayout
@@ -577,8 +579,9 @@ class SetupScene extends Phaser.Scene {
             const titleY = 52 + 28;
             const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
             // 모바일 offset: isSmallMobile(386~640) → 120, isTinyMobile(<386) → 180
-            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 120 : 0);
-            const domY = titleY + 158 + layoutOffset;
+            const layoutOffset   = displayW < 386 ? 180 : (displayW < 640 ? 120 : 0);
+            const extraDomOffset = displayW < 640 ? 40 : 0;
+            const domY = titleY + 158 + layoutOffset + extraDomOffset;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
             this._syncDomContainerScale();
