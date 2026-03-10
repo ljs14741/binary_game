@@ -316,40 +316,23 @@ class SetupScene extends Phaser.Scene {
             shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true },
         }).setOrigin(0.5);
 
-        // 실제 화면 너비 기준 (PC/모바일 분기)
-        const displayW      = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-        const isMobileLayout = displayW < 640;
-        const isSmallMobile  = isMobileLayout && displayW >= 386;  // 일반 스마트폰
-        const isTinyMobile   = isMobileLayout && displayW < 386;   // 초소형 화면
-
-        // 모바일: 부제목을 약간 아래로 내려 title 과의 간격 확보
-        this.add.text(cx, isMobileLayout ? titleY + 75 : titleY + 58, I18N[currentLang].subtitle, {
+        this.add.text(cx, titleY + 58, I18N[currentLang].subtitle, {
             fontFamily: '"Pretendard",Arial', fontSize: '18px', color: '#EEEEEE', fontStyle: 'bold',
             shadow: textShadow,
         }).setOrigin(0.5);
 
         // 이름 입력: PC는 그대로, 모바일에서 더 아래로. 실제 화면 너비 기준(표시 크기 사용)
-        const layoutOffset = isTinyMobile ? 180 : (isSmallMobile ? 120 : 0);
+        const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
+        const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
         const domY = titleY + 158 + layoutOffset;
-        // 모바일: textarea CSS 높이(절반)를 기준으로 modeLabel · startBtn 위치 계산
-        const taCssHalfH = isSmallMobile ? 150 : (isTinyMobile ? 80 : 59);
-        this._modeLabelY = isMobileLayout
-            ? domY + taCssHalfH + 32
-            : titleY + 228 + layoutOffset;
-        this._startBtnY = this._modeLabelY + (isMobileLayout ? 110 : 130);
+        this._modeLabelY = titleY + 228 + layoutOffset;
+        this._startBtnY = this._modeLabelY + 130;
         const _ph = I18N[currentLang].placeholder.replace(/\n/g, '&#10;');
-        // 모바일: 캔버스 스케일(~0.375)로 인해 실제 렌더 크기가 작아지므로 height·font-size 보정
-        const ta_h  = isSmallMobile ? '300px' : (isTinyMobile ? '160px' : '118px');
-        const ta_mh = isMobileLayout ? 'none'  : '24vh';
-        const ta_fs = isSmallMobile ? '32px'   : (isTinyMobile ? '28px' : '15px');
-        const ta_lh = isMobileLayout ? '1.55'  : '1.65';
-        // 모바일에서만 텍스트 인풋을 살짝 더 아래로 내려 보이도록 margin-top 추가 (버튼 Y좌표에는 영향 없음)
-        const ta_mt = isMobileLayout ? '24px' : '0';
         const taHtml = `<textarea id="hrNamesInput"
             placeholder="${_ph}"
-            style="width:80vw;max-width:500px;min-width:180px;height:${ta_h};max-height:${ta_mh};
+            style="width:80vw;max-width:500px;min-width:180px;height:118px;max-height:24vh;
                    background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
-                   font-size:${ta_fs};line-height:${ta_lh};padding:14px 18px;margin-top:${ta_mt};
+                   font-size:15px;line-height:1.65;padding:14px 18px;
                    font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
                    box-sizing:border-box;opacity:1;visibility:visible;display:block;"
             onfocus="this.style.borderColor='#FFD700'"
@@ -568,8 +551,64 @@ class SetupScene extends Phaser.Scene {
         this.countText.setText(`${n}${I18N[currentLang].countSuffix}${sfx}`).setColor(col);
     }
     _showMsg(msg) {
+        // 기존 하단 빨간 안내 문구는 PC에서도 계속 사용
         this.msgText.setText(msg).setColor('#FF6B6B');
         this.time.delayedCall(3000, () => this.msgText.setText(''));
+
+        // 모바일·PC 공통: 화면 중앙에 짧게 뜨는 모달 형태 경고
+        if (this._errModal && this._errModal.active) {
+            this._errModal.destroy();
+            this._errModal = null;
+        }
+
+        const W = this.scale.width;
+        const H = this.scale.height;
+        const modal = this.add.container(0, 0);
+
+        const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.65);
+        dim.setInteractive({ useHandCursor: true });
+
+        const panelW = Math.min(520, W - 60);
+        const panelH = 170;
+        const panel = this.add.rectangle(W / 2, H / 2, panelW, panelH, 0x1a0b2a, 0.96);
+        panel.setStrokeStyle(2, 0xFF6666, 1);
+
+        const textStyle = {
+            fontFamily: '"Pretendard",Arial',
+            fontSize: '22px',
+            color: '#ff8888',
+            align: 'center',
+            wordWrap: { width: panelW - 40, useAdvancedWrap: true }
+        };
+        const label = this.add.text(W / 2, H / 2 - 18, msg, textStyle).setOrigin(0.5);
+
+        const btnW = 120;
+        const btnH = 40;
+        const btnY = H / 2 + panelH / 2 - 32;
+        const btnBg = this.add.rectangle(W / 2, btnY, btnW, btnH, 0xFF6666, 1);
+        btnBg.setStrokeStyle(1.5, 0xffffff, 0.9);
+        const btnLabel = this.add.text(W / 2, btnY, '확인', {
+            fontFamily: '"Pretendard",Arial',
+            fontSize: '18px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+        btnBg.setInteractive({ useHandCursor: true });
+
+        const closeModal = () => {
+            if (modal && modal.active) {
+                modal.destroy();
+                this._errModal = null;
+            }
+        };
+        dim.on('pointerdown', closeModal);
+        btnBg.on('pointerdown', closeModal);
+
+        modal.add([dim, panel, label, btnBg, btnLabel]);
+        modal.setDepth(100);
+        this._errModal = modal;
+
+        // 자동으로도 사라지도록 3초 타이머
+        this.time.delayedCall(3000, closeModal);
     }
 
     // 리사이즈 시 textarea DOM 위치 재계산(정중앙 유지)
@@ -578,8 +617,7 @@ class SetupScene extends Phaser.Scene {
             const cx = this.scale.width / 2;
             const titleY = 52 + 28;
             const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-            // 모바일 offset: isSmallMobile(386~640) → 120, isTinyMobile(<386) → 180
-            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 120 : 0);
+            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
             const domY = titleY + 158 + layoutOffset;
             this.domInput.setPosition(cx, domY);
             this._setupDomLayoutY = domY;
@@ -603,18 +641,6 @@ class SetupScene extends Phaser.Scene {
         container.style.height = gh + 'px';
         container.style.transformOrigin = '0 0';
         container.style.transform = 'scale(' + sx + ',' + sy + ')';
-
-        // 모바일: 스케일 적용 후 Phaser DOMElement 크기를 실제 offsetSize 로 재동기화
-        // → origin(0.5,0.5) 오프셋이 올바른 CSS 높이 기준으로 재계산됨
-        if (this.domInput && node.offsetWidth > 0 && node.offsetHeight > 0) {
-            const ow = node.offsetWidth;
-            const oh = node.offsetHeight;
-            if (ow !== this.domInput.width || oh !== this.domInput.height) {
-                this.domInput.width  = ow;
-                this.domInput.height = oh;
-                this.domInput.setPosition(gw / 2, this._setupDomLayoutY);
-            }
-        }
     }
 
     shutdown() {
