@@ -751,7 +751,7 @@ class GameScene extends Phaser.Scene {
             const color = tierDef.tier === TIER_EPIC ? TIER_COLOR_EPIC
                 : tierDef.tier === TIER_RARE ? TIER_COLOR_RARE
                     : (isSmallRace ? palette[i] : palette[i % palette.length]);
-            const baseSpeed = Phaser.Math.FloatBetween(3.7, 5.3) + tierDef.speedBonus;
+            const baseSpeed = Phaser.Math.FloatBetween(5.2, 6.8) + tierDef.speedBonus;
 
             this.horses.push({
                 idx:               i,
