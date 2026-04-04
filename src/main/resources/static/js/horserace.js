@@ -824,6 +824,18 @@ class GameScene extends Phaser.Scene {
         this.finalLapOverlay = this.add.rectangle(cw / 2, ch / 2, cw + 200, ch + 200, 0xFF0000, 0)
             .setScrollFactor(0).setDepth(88).setVisible(false);
 
+        // 슬로우모션 연출용 오버레이 & 텍스트 (꼴찌 뽑기: 마지막 말이 결승선 직전일 때)
+        this.slowMoOverlay = this.add.rectangle(cw / 2, ch / 2, cw + 200, ch + 200, 0x000033, 0)
+            .setScrollFactor(0).setDepth(89).setVisible(false);
+        this.slowMoText = this.add.text(cw / 2, ch * 0.28, '🐢  S · L · O · W', {
+            fontFamily: '"Orbitron","Pretendard",Arial',
+            fontSize: '40px',
+            color: '#00EEFF',
+            stroke: '#003355',
+            strokeThickness: 7,
+            shadow: { offsetX: 0, offsetY: 0, color: '#0088FF', blur: 22, fill: true },
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(96).setAlpha(0).setVisible(false);
+
         // 전체화면 시 씬 내부 '닫기' 버튼 (모바일에서 HTML 버튼이 보이지 않을 때 대비)
         this._createFullscreenExitButton();
 
@@ -958,8 +970,9 @@ class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(LBX, LBY, LBW, LBH, 10);
         bg.lineStyle(1.5, 0xFFD700, 0.65);
         bg.strokeRoundedRect(LBX, LBY, LBW, LBH, 10);
+        this.lbBg = bg;
 
-        this.add.text(LBX + LBW / 2, LBY + 12, I18N[currentLang].leaderboard, {
+        this.lbTitle = this.add.text(LBX + LBW / 2, LBY + 12, I18N[currentLang].leaderboard, {
             fontSize: '11px', fontFamily: '"Pretendard",Arial',
             color: '#FFD700', fontStyle: 'bold',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
@@ -982,6 +995,7 @@ class GameScene extends Phaser.Scene {
         this.lbX = LBX;
         this.lbY = LBY;
         this.lbW = LBW;
+        this.lbH = LBH;
     }
 
     // ── Minimap (하단, 상대 좌표) ─────────────────────────────
@@ -1075,7 +1089,7 @@ class GameScene extends Phaser.Scene {
     // ── Main Update ───────────────────────────────────────────
     update(time, delta) {
         if (!this.raceStarted || this.raceFinished) return;
-        const dt = Math.min(delta / 16.667, 3.0);
+        let dt = Math.min(delta / 16.667, 3.0);
 
         this._updateParallax(this.cameras.main.scrollX);
 
@@ -1088,6 +1102,29 @@ class GameScene extends Phaser.Scene {
         // 마지막 스퍼트: 선두가 결승 1000px 전이면 한 번만 팝업 + 붉은 점멸 + 막판 부스터 구간 시작
         if (!this.raceFinished && !this.finalLapTriggered && sortedByX[0] && !sortedByX[0].finished && sortedByX[0].x >= FINISH_X - 1000) {
             this._triggerFinalLap(time);
+        }
+
+        // ── 슬로우모션: 꼴찌 뽑기 모드에서 1등 말이 결승선에 근접할 때 발동 ──────
+        // 마지막 1마리만 남으면 꼴찌가 확정된 상태이므로 슬로우 해제
+        if (this.mode === 'loser' && activeCount > 1) {
+            const leadHorse = sortedByX[0];
+            if (leadHorse) {
+                const distToFinish = Math.max(0, FINISH_X - leadHorse.x);
+                const SLOW_START = 800;   // 값을 줄일수록 1등이 결승선에 더 가까워졌을 때 슬로우 시작
+                if (distToFinish <= SLOW_START) {
+                    const t = distToFinish / SLOW_START;    // 1.0(멀) → 0.0(결승 바로 앞)
+                    dt *= Phaser.Math.Linear(0.32, 1.0, t); // 첫 인자↑ = 덜 느림 (예: 0.25~0.45)
+                    const intensity = 1.0 - t;              // 0.0 → 1.0
+                    this.slowMoOverlay.setVisible(true).setAlpha(intensity * 0.28);
+                    this.slowMoText.setVisible(true).setAlpha(intensity * 0.90);
+                } else {
+                    this.slowMoOverlay.setVisible(false);
+                    this.slowMoText.setVisible(false);
+                }
+            }
+        } else {
+            if (this.slowMoOverlay.visible) this.slowMoOverlay.setVisible(false);
+            if (this.slowMoText.visible)    this.slowMoText.setVisible(false);
         }
 
         // 말 업데이트 & 그리기
@@ -1110,8 +1147,8 @@ class GameScene extends Phaser.Scene {
         // 카메라
         this._updateCamera(sortedByX);
 
-        // UI
-        this._updateLeaderboard(sortedByX);
+        // UI (순위는 완주 순·현재 위치 반영)
+        this._updateLeaderboard(this._getRankDisplayOrder());
         this._updateMinimap();
     }
 
@@ -1548,6 +1585,10 @@ class GameScene extends Phaser.Scene {
         this.raceFinished = true;
         const viewW = this.cameras.main.width;
 
+        // 슬로우모션 UI 즉시 숨김
+        if (this.slowMoOverlay) this.slowMoOverlay.setVisible(false);
+        if (this.slowMoText)    this.slowMoText.setVisible(false);
+
         // 나머지 말들 슬로우모션
         for (const h of this.horses) { if (!h.finished) h.baseSpeed *= 0.22; }
 
@@ -1600,6 +1641,9 @@ class GameScene extends Phaser.Scene {
         const isWinner   = this.mode === 'winner';
         const accentHex  = isWinner ? 0xFFD700 : 0xFF4444;
         const accentStr  = isWinner ? '#FFD700' : '#FF4444';
+
+        this._elevateLeaderboardForResult();
+        this._updateLeaderboard(this._getRankDisplayOrder());
 
         // 어두운 오버레이
         this.add.rectangle(cx, cy, viewW, viewH, 0x000000, 0.70)
@@ -1663,6 +1707,39 @@ class GameScene extends Phaser.Scene {
             .on('pointerover',  () => draw(colHover))
             .on('pointerout',   () => draw(colNormal))
             .on('pointerdown',  onClick);
+    }
+
+    // 완주자는 도착 순서, 주행 중은 x 기준 (결승선 동일 x에서도 순위가 맞음)
+    _getRankDisplayOrder() {
+        return [...this.horses].sort((a, b) => {
+            if (a.finished && b.finished) return a.finishOrder - b.finishOrder;
+            if (a.finished && !b.finished) return -1;
+            if (!a.finished && b.finished) return 1;
+            return b.x - a.x;
+        });
+    }
+
+    _redrawLeaderboardBg(alpha) {
+        if (!this.lbBg) return;
+        const { lbX: x, lbY: y, lbW: w, lbH: h } = this;
+        this.lbBg.clear();
+        this.lbBg.fillStyle(0x05050e, alpha);
+        this.lbBg.fillRoundedRect(x, y, w, h, 10);
+        this.lbBg.lineStyle(1.5, 0xFFD700, 0.65);
+        this.lbBg.strokeRoundedRect(x, y, w, h, 10);
+    }
+
+    // 결과 패널·딤 위에 순위표가 보이도록 (컨페티 depth 200보다 위)
+    _elevateLeaderboardForResult() {
+        const d = 220;
+        if (this.lbBg) {
+            this.lbBg.setDepth(d);
+            this._redrawLeaderboardBg(0.82);
+        }
+        if (this.lbTitle) this.lbTitle.setDepth(d + 1);
+        if (this.lbTexts) {
+            for (const t of this.lbTexts) t.setDepth(d + 1);
+        }
     }
 
     // ── UI Update: 참가자 전원 순위표 ───────────────────────────
