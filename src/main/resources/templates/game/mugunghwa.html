@@ -108,6 +108,7 @@
 
         #game-container {
             flex-shrink: 0;
+            position: relative;
             display: flex;
             justify-content: center;
             align-items: stretch;
@@ -124,6 +125,39 @@
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
+
+        /* ── 참가자 이름 입력 오버레이 (Phaser DOM 불필요, 순수 HTML) ── */
+        #mg-setup-overlay {
+            display: none;
+            position: absolute;
+            top: 21%;        /* 타이틀+부제 아래, 모드버튼 위 */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            width: 58%;
+            height: 18%;     /* 컨테이너 높이 기준 % → 화면 크기에 자동 적응 */
+            pointer-events: none;
+        }
+        #mg-setup-overlay.active { display: block; }
+        #mgNamesInput {
+            width: 100%;
+            height: 100%;
+            min-height: 56px;
+            background: #0f0818;
+            border: 2px solid #4a2040;
+            border-radius: 12px;
+            color: #ffd8ec;
+            font-size: 17px;
+            line-height: 1.7;
+            padding: 12px 18px;
+            font-family: 'Pretendard', Arial, sans-serif;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+            pointer-events: auto;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #mgNamesInput:focus { border-color: #E84393; }
 
         #mugunghwa-fullscreen-wrap:fullscreen .game-bgm,
         #mugunghwa-fullscreen-wrap:-webkit-full-screen .game-bgm,
@@ -255,18 +289,6 @@
             overflow: visible !important;
             max-height: none !important;
         }
-        #game-container > div:not(:has(canvas)) {
-            z-index: 10;
-            pointer-events: none !important;
-        }
-        #game-container > div:not(:has(canvas)) * {
-            pointer-events: auto !important;
-        }
-        #mgNamesInput {
-            opacity: 1 !important;
-            visibility: visible !important;
-            min-height: 72px !important;
-        }
 
         #game-container.fullscreen-fallback {
             position: fixed !important;
@@ -351,19 +373,22 @@
                 border-radius: 8px;
                 min-height: 0 !important;
             }
-            #game-container #mgNamesInput {
-                width: 92% !important;
-                max-width: none !important;
-                min-width: 0 !important;
-                display: block !important;
-                margin-left: auto !important;
-                margin-right: auto !important;
-                box-sizing: border-box;
-                font-size: 20px !important;
-                line-height: 1.7 !important;
-                min-height: 130px !important;
-                padding: 16px 18px !important;
+            /* 모바일: layoutOffset=90 이므로 모드버튼이 55% 근처에 위치
+               textarea는 22~50% 범위에 배치 */
+            #mg-setup-overlay {
+                top: 22%;
+                width: 84%;
+                height: 28%;
             }
+            #mgNamesInput {
+                font-size: 18px;
+                padding: 10px 14px;
+            }
+        }
+        @media (max-width: 385px) {
+            /* layoutOffset=180 → 모드버튼이 더 아래로 내려가므로 높이 여유 있음 */
+            #mg-setup-overlay { top: 24%; width: 88%; height: 28%; }
+            #mgNamesInput { font-size: 17px; }
         }
 
         .mg-description h2 {
@@ -406,7 +431,14 @@
                 <button id="fsToggle" title="전체화면 전환">⛶ 전체화면</button>
             </div>
 
-            <div id="game-container"></div>
+            <div id="game-container">
+                <div id="mg-setup-overlay">
+                    <textarea id="mgNamesInput"
+                        placeholder="홍길동&#10;이순신&#10;강감찬"
+                        autocomplete="off" autocorrect="off"
+                        autocapitalize="none" spellcheck="false"></textarea>
+                </div>
+            </div>
         </div>
 
         <div class="mg-description">

@@ -321,27 +321,17 @@ class SetupScene extends Phaser.Scene {
             shadow: textShadow,
         }).setOrigin(0.5);
 
-        // 이름 입력: PC는 그대로, 모바일에서 더 아래로. 실제 화면 너비 기준(표시 크기 사용)
-        const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-        const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
-        const domY = titleY + 158 + layoutOffset;
+        // CSS 미디어 쿼리와 동일한 기준(viewport 너비)으로 layoutOffset 계산
+        const vw = window.innerWidth || W;
+        const layoutOffset = vw < 386 ? 180 : (vw <= 640 ? 90 : 0);
         this._modeLabelY = titleY + 228 + layoutOffset;
         this._startBtnY = this._modeLabelY + 130;
-        const _ph = I18N[currentLang].placeholder.replace(/\n/g, '&#10;');
-        const taHtml = `<textarea id="hrNamesInput"
-            placeholder="${_ph}"
-            style="width:80vw;max-width:500px;min-width:180px;height:118px;max-height:24vh;
-                   background:#0a0a1e;border:2px solid #2e2e5a;border-radius:12px;color:#d8d8ff;
-                   font-size:15px;line-height:1.65;padding:14px 18px;
-                   font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
-                   box-sizing:border-box;opacity:1;visibility:visible;display:block;"
-            onfocus="this.style.borderColor='#FFD700'"
-            onblur="this.style.borderColor='#2e2e5a'"></textarea>`;
-        this.domInput = this.add.dom(cx, domY).createFromHTML(taHtml);
-        this.domInput.setOrigin(0.5, 0.5);
-        this.domInput.setDepth(5);
-        this._setupDomLayoutY = domY;
-        this._syncDomContainerScale();
+
+        // 순수 HTML 오버레이 방식 – Phaser DOM 미사용 (모바일 호환성)
+        const overlay = document.getElementById('hr-setup-overlay');
+        if (overlay) overlay.classList.add('active');
+        const phEl = document.getElementById('hrNamesInput');
+        if (phEl) phEl.placeholder = I18N[currentLang].placeholder;
 
         // "몇명 입력됨" → 내기·추첨 문구 바로 위, 글자 크기 키움
         const FOOT_H = 36;
@@ -352,7 +342,8 @@ class SetupScene extends Phaser.Scene {
 
         const taEl = document.getElementById('hrNamesInput');
         if (taEl) {
-            taEl.addEventListener('input', () => this._updateCount(taEl.value));
+            this._taInputHandler = () => this._updateCount(taEl.value);
+            taEl.addEventListener('input', this._taInputHandler);
             const last = this.registry.get('lastNames');
             if (last && last.length) { taEl.value = last.join('\n'); this._updateCount(taEl.value); }
         }
@@ -413,9 +404,6 @@ class SetupScene extends Phaser.Scene {
             shadow: textShadow,
         }).setOrigin(0.5);
 
-        // 창 리사이즈 시 textarea DOM 위치 재계산(정중앙 유지)
-        this._resizeHandler = () => this._onResize();
-        this.scale.on('resize', this._resizeHandler, this);
 
         // BGM: Phaser Sound Manager 사용 (모바일/iOS에서 볼륨 슬라이더 정상 동작)
         if (!this.game.bgmSound) {
@@ -611,41 +599,13 @@ class SetupScene extends Phaser.Scene {
         this.time.delayedCall(3000, closeModal);
     }
 
-    // 리사이즈 시 textarea DOM 위치 재계산(정중앙 유지)
-    _onResize() {
-        if (this.domInput && this.scene.isActive()) {
-            const cx = this.scale.width / 2;
-            const titleY = 52 + 28;
-            const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || this.scale.width;
-            const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
-            const domY = titleY + 158 + layoutOffset;
-            this.domInput.setPosition(cx, domY);
-            this._setupDomLayoutY = domY;
-            this._syncDomContainerScale();
-        }
-    }
-
-    // 모바일 등에서 캔버스가 스케일될 때 DOM 오버레이도 같은 비율로 스케일 (좌표 오차 방지)
-    _syncDomContainerScale() {
-        const node = this.domInput && this.domInput.node;
-        if (!node || !node.parentElement) return;
-        const container = node.parentElement;
-        const gw = (this.scale.gameSize && this.scale.gameSize.width) || this.scale.width || HR_W;
-        const gh = (this.scale.gameSize && this.scale.gameSize.height) || this.scale.height || HR_H;
-        const dw = (this.scale.displaySize && this.scale.displaySize.width) || this.scale.width;
-        const dh = (this.scale.displaySize && this.scale.displaySize.height) || this.scale.height;
-        if (!dw || !dh) return;
-        const sx = Number((dw / gw).toFixed(6));
-        const sy = Number((dh / gh).toFixed(6));
-        container.style.width = gw + 'px';
-        container.style.height = gh + 'px';
-        container.style.transformOrigin = '0 0';
-        container.style.transform = 'scale(' + sx + ',' + sy + ')';
-    }
-
     shutdown() {
-        if (this._resizeHandler) {
-            this.scale.off('resize', this._resizeHandler, this);
+        const overlay = document.getElementById('hr-setup-overlay');
+        if (overlay) overlay.classList.remove('active');
+        const taEl = document.getElementById('hrNamesInput');
+        if (taEl && this._taInputHandler) {
+            taEl.removeEventListener('input', this._taInputHandler);
+            this._taInputHandler = null;
         }
         if (this._onFsEnter) this.scale.off('enterfullscreen', this._onFsEnter);
         if (this._onFsLeave) this.scale.off('leavefullscreen', this._onFsLeave);
@@ -1777,7 +1737,6 @@ const horseRaceConfig = {
     height:          HR_H,
     parent:          'game-container',
     backgroundColor: '#060614',
-    dom:             { createContainer: true },
     scale: {
         mode:       Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -2046,25 +2005,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fixFullscreenDomOverlay();
     };
-    const fixFullscreenDomOverlay = () => {
-        if (!isFullscreen()) return;
-        const scene = horseRaceGame.scene.getScene('SetupScene');
-        if (!scene || !scene.scene.isActive() || !scene.domInput || !scene.domInput.node) return;
-        const container = scene.domInput.node.parentElement;
-        if (!container) return;
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const scale = Math.min(vw / HR_W, vh / HR_H);
-        const offsetX = (vw - HR_W * scale) / 2;
-        const offsetY = (vh - HR_H * scale) / 2;
-        container.style.position = 'absolute';
-        container.style.left = offsetX + 'px';
-        container.style.top = offsetY + 'px';
-        container.style.width = HR_W + 'px';
-        container.style.height = HR_H + 'px';
-        container.style.transformOrigin = '0 0';
-        container.style.transform = 'scale(' + scale + ')';
-    };
+    const fixFullscreenDomOverlay = () => { /* HTML 오버레이 방식: CSS가 자동 처리 */ };
     const refreshScaleOnFullscreen = () => {
         if (!gameContainer || !horseRaceGame.scale) return;
         const doRefresh = () => {
@@ -2128,18 +2069,6 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.style.maxHeight = '';
             canvas.style.objectFit = '';
             canvas.style.objectPosition = '';
-        }
-        const setupScene = horseRaceGame.scene.getScene('SetupScene');
-        if (setupScene && setupScene.domInput && setupScene.domInput.node && setupScene.domInput.node.parentElement) {
-            const c = setupScene.domInput.node.parentElement;
-            c.style.position = '';
-            c.style.left = '';
-            c.style.top = '';
-            c.style.width = '';
-            c.style.height = '';
-            c.style.transformOrigin = '';
-            c.style.transform = '';
-            if (setupScene._syncDomContainerScale) setupScene._syncDomContainerScale();
         }
     };
     horseRaceGame.scale.on('leavefullscreen', () => {

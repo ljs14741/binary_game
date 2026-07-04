@@ -366,24 +366,19 @@ class SetupScene extends Phaser.Scene {
             shadow,
         }).setOrigin(0.5);
 
-        const displayW = (this.scale.displaySize && this.scale.displaySize.width) || window.innerWidth || W;
-        const layoutOffset = displayW < 386 ? 180 : (displayW < 640 ? 90 : 0);
+        // CSS 미디어 쿼리와 동일한 기준(viewport 너비)으로 layoutOffset 계산
+        const vw = window.innerWidth || W;
+        const layoutOffset = vw < 386 ? 180 : (vw <= 640 ? 90 : 0);
         const domY = titleY + 158 + layoutOffset;
         this._modeLabelY = titleY + 228 + layoutOffset;
         this._startBtnY  = this._modeLabelY + 130;
 
-        const _ph = L().placeholder.replace(/\n/g, '&#10;');
-        const taHtml = `<textarea id="mgNamesInput"
-            placeholder="${_ph}"
-            style="width:80vw;max-width:500px;min-width:180px;height:118px;max-height:24vh;
-                   background:#0f0818;border:2px solid #4a2040;border-radius:12px;color:#ffd8ec;
-                   font-size:15px;line-height:1.65;padding:14px 18px;
-                   font-family:'Pretendard',Arial,sans-serif;resize:none;outline:none;
-                   box-sizing:border-box;opacity:1;visibility:visible;display:block;"
-            onfocus="this.style.borderColor='#E84393'"
-            onblur="this.style.borderColor='#4a2040'"></textarea>`;
-        this.domInput = this.add.dom(cx, domY).createFromHTML(taHtml);
-        this.domInput.setOrigin(0.5, 0.5).setDepth(5);
+        // 순수 HTML 오버레이 방식 – Phaser DOM 미사용 (모바일 호환성)
+        const overlay = document.getElementById('mg-setup-overlay');
+        if (overlay) overlay.classList.add('active');
+        // locale에 맞춰 placeholder 동기화
+        const phEl = document.getElementById('mgNamesInput');
+        if (phEl) phEl.placeholder = L().placeholder;
 
         const FOOT_H = 36;
         this.countText = this.add.text(cx, H - FOOT_H - 22, `0${L().countSuffix}`, {
@@ -392,7 +387,8 @@ class SetupScene extends Phaser.Scene {
 
         const taEl = document.getElementById('mgNamesInput');
         if (taEl) {
-            taEl.addEventListener('input', () => this._updateCount(taEl.value));
+            this._taInputHandler = () => this._updateCount(taEl.value);
+            taEl.addEventListener('input', this._taInputHandler);
             const last = this.registry.get('lastNames');
             if (last && last.length) { taEl.value = last.join('\n'); this._updateCount(taEl.value); }
         }
@@ -440,6 +436,16 @@ class SetupScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         initBgm(this);
+    }
+
+    shutdown() {
+        const overlay = document.getElementById('mg-setup-overlay');
+        if (overlay) overlay.classList.remove('active');
+        const taEl = document.getElementById('mgNamesInput');
+        if (taEl && this._taInputHandler) {
+            taEl.removeEventListener('input', this._taInputHandler);
+            this._taInputHandler = null;
+        }
     }
 
     _parseNames(raw) {
@@ -1600,7 +1606,14 @@ class GameScene extends Phaser.Scene {
 
         if (type === 'winner') {
             // ── winner 모드: 전체 순위 표시 패널 ──────────────
-            const pW = 600, pH = Math.min(520, H - 100);
+            const allSorted = this._getFinalRanking();
+            const n         = allSorted.length;
+            const listCols  = n <= 10 ? 1 : n <= 20 ? 2 : 3;
+            const rowsPerCol = Math.ceil(n / listCols);
+            const headerH   = 96;
+            const btnH      = 68;
+            const pW        = listCols === 1 ? 620 : listCols === 2 ? 820 : 960;
+            const pH        = Math.min(H - 36, listCols === 1 ? 540 : 660);
             const px = W / 2, py = H / 2;
             const g  = this.add.graphics().setDepth(41);
 
@@ -1611,50 +1624,63 @@ class GameScene extends Phaser.Scene {
             g.fillStyle(0xd4a017, 1);
             g.fillRoundedRect(px - pW / 2, py - pH / 2, pW, 8, { tl: 20, tr: 20, bl: 0, br: 0 });
 
-            // 우승자 섹션 (상단 110px)
-            this.add.text(px, py - pH / 2 + 44, '🏆 최종 순위', {
+            // 우승자 섹션 (컴팩트 헤더)
+            this.add.text(px, py - pH / 2 + 38, '🏆 최종 순위', {
                 fontFamily: '"Orbitron","Pretendard",Arial',
                 fontSize: '15px', color: '#c8920a',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(42);
 
-            this.add.text(px, py - pH / 2 + 82, resultPlayer.name, {
+            this.add.text(px, py - pH / 2 + 72, resultPlayer.name, {
                 fontFamily: '"Pretendard",Arial',
-                fontSize: '36px', color: '#FFD700',
+                fontSize: '32px', color: '#FFD700',
                 stroke: '#000', strokeThickness: 5,
                 fontStyle: 'bold',
             }).setOrigin(0.5).setDepth(42);
 
             // 구분선
+            const divY = py - pH / 2 + headerH - 4;
             g.lineStyle(1, 0xd4a017, 0.35);
-            g.lineBetween(px - pW / 2 + 28, py - pH / 2 + 115, px + pW / 2 - 28, py - pH / 2 + 115);
+            g.lineBetween(px - pW / 2 + 28, divY, px + pW / 2 - 28, divY);
 
-            // 전체 순위 리스트
-            const allSorted = this._getFinalRanking();
-            const listY0  = py - pH / 2 + 122;
-            const btnH    = 68;
-            const availH  = pH - 122 - btnH - 6;
-            const rowH    = Math.max(11, Math.min(24, Math.floor(availH / Math.max(allSorted.length, 1))));
-            const fz      = Math.max(9, Math.min(15, rowH - 3));
-            const dotR    = Math.min(4, rowH * 0.28);
-            const lx      = px - pW / 2 + 20;
+            // 전체 순위 리스트 (인원 많을 때 다열 배치)
+            const listY0  = py - pH / 2 + headerH + 4;
+            const availH  = pH - headerH - btnH - 12;
+            const rowH    = Math.max(20, Math.min(32, Math.floor(availH / Math.max(rowsPerCol, 1))));
+            const fz      = Math.max(13, Math.min(17, rowH - 6));
+            const dotR    = Math.min(5, rowH * 0.22);
+            const padX    = 22;
+            const colGap  = 20;
+            const colW    = (pW - padX * 2 - (listCols - 1) * colGap) / listCols;
+            const maxNm   = listCols === 1 ? 12 : listCols === 2 ? 9 : 7;
+
+            // 열 구분선
+            if (listCols > 1) {
+                g.lineStyle(1, 0xd4a017, 0.18);
+                for (let c = 1; c < listCols; c++) {
+                    const sepX = px - pW / 2 + padX + c * colW + (c - 0.5) * colGap;
+                    g.lineBetween(sepX, listY0 - 2, sepX, py + pH / 2 - btnH - 8);
+                }
+            }
 
             allSorted.forEach((pl, i) => {
-                const ry    = listY0 + i * rowH + rowH / 2;
-                const isEl  = !pl.alive;
-                const rank  = pl.rank ?? (i + 1);  // rank가 없으면 index fallback
-                const col   = rank === 1 ? '#FFD700'
+                const colIdx = Math.floor(i / rowsPerCol);
+                const rowIdx = i % rowsPerCol;
+                const lx     = px - pW / 2 + padX + colIdx * (colW + colGap);
+                const ry     = listY0 + rowIdx * rowH + rowH / 2;
+                const isEl   = !pl.alive;
+                const rank   = pl.rank ?? (i + 1);
+                const col    = rank === 1 ? '#FFD700'
                     : rank === 2 ? '#cccccc'
                     : rank === 3 ? '#cd7f32'
                     : hexColor(pl.color);
-                const short = pl.name.length > 10 ? pl.name.slice(0, 9) + '…' : pl.name;
+                const short  = pl.name.length > maxNm ? pl.name.slice(0, maxNm - 1) + '…' : pl.name;
 
-                // ── 3열 레이아웃: [dot] [❌] [N위] [이름] ────────
-                const colIcon = lx + 18;  // ❌ 전용 고정 폭 컬럼
-                const colRank = lx + 36;  // N위
-                const colName = lx + 76;  // 닉네임
+                const colIcon = lx + 20;
+                const colRank = lx + 40;
+                const colName = lx + 82;
 
-                this.add.circle(lx + 8, ry, dotR, pl.color, 1).setDepth(42);
+                this.add.circle(lx + 9, ry, dotR, pl.color, 1).setDepth(42);
                 if (isEl) {
                     this.add.text(colIcon, ry, '❌', {
                         fontFamily: '"Pretendard",Arial', fontSize: `${fz}px`,
@@ -1662,6 +1688,7 @@ class GameScene extends Phaser.Scene {
                 }
                 this.add.text(colRank, ry, `${rank}위`, {
                     fontFamily: '"Pretendard",Arial', fontSize: `${fz}px`, color: col,
+                    fontStyle: rank <= 3 ? 'bold' : 'normal',
                 }).setOrigin(0, 0.5).setDepth(42);
                 this.add.text(colName, ry, short, {
                     fontFamily: '"Pretendard",Arial', fontSize: `${fz}px`, color: col,
@@ -1906,7 +1933,6 @@ const mugunghwaConfig = {
     height:          MG_H,
     parent:          'game-container',
     backgroundColor: '#0e1e0a',
-    dom:             { createContainer: true },
     scale: {
         mode:       Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
