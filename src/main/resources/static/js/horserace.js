@@ -1968,6 +1968,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mobileFsExitBar.style.display = 'none';
             }
         }
+        fixFullscreenDomOverlay();
     };
 
     if (fullscreenWrap && horseRaceGame.scale) {
@@ -1990,7 +1991,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainer.style.display = 'flex';
         gameContainer.style.alignItems = 'center';
         gameContainer.style.justifyContent = 'center';
-        const wrapper = gameContainer.querySelector(':scope > div');
+        const wrapper = gameContainer.querySelector(':scope > div:not(#hr-setup-overlay)');
         if (wrapper) {
             wrapper.style.position = 'absolute';
             wrapper.style.top = '0';
@@ -2014,7 +2015,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fixFullscreenDomOverlay();
     };
-    const fixFullscreenDomOverlay = () => { /* HTML 오버레이 방식: CSS가 자동 처리 */ };
+    const fixFullscreenDomOverlay = () => {
+        const overlay = document.getElementById('hr-setup-overlay');
+        if (!overlay) return;
+        const active = isFullscreen() || (fullscreenWrap && fullscreenWrap.classList.contains('hr-fullscreen-active'));
+        if (active) {
+            const scW = window.innerWidth, scH = window.innerHeight;
+            const scale = Math.min(scW / HR_W, scH / HR_H);
+            const contentW = HR_W * scale;
+            const contentH = HR_H * scale;
+            const offsetX = (scW - contentW) / 2;
+            const offsetY = (scH - contentH) / 2;
+            overlay.style.position  = 'absolute';
+            overlay.style.width     = (HR_W * 0.58 * scale) + 'px';
+            overlay.style.height    = (HR_H * 0.18 * scale) + 'px';
+            overlay.style.top       = (offsetY + HR_H * 0.21 * scale) + 'px';
+            overlay.style.left      = (offsetX + contentW / 2) + 'px';
+            overlay.style.transform = 'translateX(-50%)';
+        } else {
+            overlay.style.position  = '';
+            overlay.style.width     = '';
+            overlay.style.height    = '';
+            overlay.style.top       = '';
+            overlay.style.left      = '';
+            overlay.style.transform = '';
+        }
+    };
     const refreshScaleOnFullscreen = () => {
         if (!gameContainer || !horseRaceGame.scale) return;
         const doRefresh = () => {
@@ -2057,7 +2083,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainer.style.display = '';
         gameContainer.style.alignItems = '';
         gameContainer.style.justifyContent = '';
-        const wrapper = gameContainer.querySelector(':scope > div');
+        const wrapper = gameContainer.querySelector(':scope > div:not(#hr-setup-overlay)');
         if (wrapper) {
             wrapper.style.position = '';
             wrapper.style.top = '';
@@ -2079,6 +2105,7 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.style.objectFit = '';
             canvas.style.objectPosition = '';
         }
+        fixFullscreenDomOverlay();
     };
     horseRaceGame.scale.on('leavefullscreen', () => {
         clearFullscreenStyles();

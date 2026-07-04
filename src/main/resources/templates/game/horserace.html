@@ -257,10 +257,12 @@
             height: 100vh !important;
             max-width: 100vw !important;
             max-height: 100vh !important;
+            margin: 0 !important;
             object-fit: contain !important;
             object-position: center center !important;
             pointer-events: auto !important;
         }
+        /* 전체화면: 오버레이 위치·크기는 horserace.js의 fixFullscreenDomOverlay()가 inline style로 처리 */
         /* Phaser 래퍼: 부모 전체를 채워서 캔버스가 중앙·최대 크기로 나오게 */
         #horserace-fullscreen-wrap:fullscreen #game-container > div,
         #horserace-fullscreen-wrap:-webkit-full-screen #game-container > div,

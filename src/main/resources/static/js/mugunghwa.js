@@ -1022,7 +1022,7 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(22);
 
         const ROW_H  = Math.max(9, Math.floor((LBH - HDR_H) / this.numPlayers));
-        const fsize  = Phaser.Math.Clamp(ROW_H - 1, 7, 13);
+        const fsize  = Phaser.Math.Clamp(ROW_H, 7, 18);
         const maxNm  = this.numPlayers <= 8 ? 7 : this.numPlayers <= 15 ? 5 : 4;
 
         this._lbRows = [];
@@ -1618,7 +1618,7 @@ class GameScene extends Phaser.Scene {
             const n         = allSorted.length;
             const listCols  = n <= 10 ? 1 : n <= 20 ? 2 : 3;
             const rowsPerCol = Math.ceil(n / listCols);
-            const headerH   = 96;
+            const headerH   = 114;
             const btnH      = 68;
             const pW        = listCols === 1 ? 620 : listCols === 2 ? 820 : 960;
             const pH        = Math.min(H - 36, listCols === 1 ? 540 : 660);
@@ -1635,13 +1635,13 @@ class GameScene extends Phaser.Scene {
             // 우승자 섹션 (컴팩트 헤더)
             this.add.text(px, py - pH / 2 + 38, '🏆 최종 순위', {
                 fontFamily: '"Orbitron","Pretendard",Arial',
-                fontSize: '15px', color: '#c8920a',
+                fontSize: '18px', color: '#c8920a',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(42);
 
-            this.add.text(px, py - pH / 2 + 72, resultPlayer.name, {
+            this.add.text(px, py - pH / 2 + 80, resultPlayer.name, {
                 fontFamily: '"Pretendard",Arial',
-                fontSize: '40px', color: '#FFD700',
+                fontSize: '52px', color: '#FFD700',
                 stroke: '#000', strokeThickness: 5,
                 fontStyle: 'bold',
             }).setOrigin(0.5).setDepth(42);
@@ -1654,8 +1654,8 @@ class GameScene extends Phaser.Scene {
             // 전체 순위 리스트 (인원 많을 때 다열 배치)
             const listY0  = py - pH / 2 + headerH + 4;
             const availH  = pH - headerH - btnH - 12;
-            const rowH    = Math.max(20, Math.min(32, Math.floor(availH / Math.max(rowsPerCol, 1))));
-            const fz      = Math.max(13, Math.min(17, rowH - 6));
+            const rowH    = Math.max(20, Math.min(48, Math.floor(availH / Math.max(rowsPerCol, 1))));
+            const fz      = Math.max(14, Math.min(24, rowH - 5));
             const dotR    = Math.min(5, rowH * 0.22);
             const padX    = 22;
             const colGap  = 20;
@@ -1686,7 +1686,7 @@ class GameScene extends Phaser.Scene {
 
                 const colIcon = lx + 20;
                 const colRank = lx + 54;
-                const colName = lx + 96;
+                const colName = lx + 118;
 
                 this.add.circle(lx + 9, ry, dotR, pl.color, 1).setDepth(42);
                 if (isEl) {
@@ -2039,42 +2039,213 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function isMobile() { return matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; }
-    function isFS()     { return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); }
-    function reqFS(el)  { const f = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen; return f ? f.call(el) : Promise.reject(); }
-    function exitFS()   { const f = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen; return f ? f.call(document) : Promise.reject(); }
+    function isFS() { return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); }
+    function exitFullscreen() {
+        const doc = document;
+        if (doc.exitFullscreen) doc.exitFullscreen();
+        else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+        else if (doc.msExitFullscreen) doc.msExitFullscreen();
+    }
+
+    const gameContainer = document.getElementById('game-container');
+
+    if (fullWrap && mugunghwaGame.scale) {
+        mugunghwaGame.scale.fullscreenTarget = fullWrap;
+    }
+
+    const resizeMgOverlay = () => {
+        const overlay = document.getElementById('mg-setup-overlay');
+        if (!overlay) return;
+        const active = isFS() || (fullWrap && fullWrap.classList.contains('mg-fullscreen-active'));
+        if (active) {
+            const scW = window.innerWidth, scH = window.innerHeight;
+            const scale = Math.min(scW / MG_W, scH / MG_H);
+            const contentW = MG_W * scale;
+            const contentH = MG_H * scale;
+            const offsetX = (scW - contentW) / 2;
+            const offsetY = (scH - contentH) / 2;
+            overlay.style.position = 'absolute';
+            overlay.style.width  = (MG_W * 0.58 * scale) + 'px';
+            overlay.style.height = (MG_H * 0.18 * scale) + 'px';
+            overlay.style.top    = (offsetY + MG_H * 0.21 * scale) + 'px';
+            overlay.style.left   = (offsetX + contentW / 2) + 'px';
+            overlay.style.transform = 'translateX(-50%)';
+        } else {
+            overlay.style.position  = '';
+            overlay.style.width     = '';
+            overlay.style.height    = '';
+            overlay.style.top       = '';
+            overlay.style.left      = '';
+            overlay.style.transform = '';
+        }
+    };
+
+    const forceFullscreenFill = () => {
+        if (!gameContainer || !isFS()) return;
+        // game-container를 전체화면 크기로 확장 (CSS :fullscreen 룰과 동일한 효과를 inline으로 보장)
+        gameContainer.style.position = 'absolute';
+        gameContainer.style.top = '0';
+        gameContainer.style.left = '0';
+        gameContainer.style.right = '0';
+        gameContainer.style.bottom = '0';
+        gameContainer.style.width = '100%';
+        gameContainer.style.height = '100%';
+        gameContainer.style.maxWidth = 'none';
+        gameContainer.style.aspectRatio = 'unset';
+        // #mg-setup-overlay를 제외하고 Phaser 래퍼 div를 선택
+        const wrapper = gameContainer.querySelector(':scope > div:not(#mg-setup-overlay)');
+        if (wrapper) {
+            wrapper.style.position = 'absolute';
+            wrapper.style.top = '0';
+            wrapper.style.left = '0';
+            wrapper.style.right = '0';
+            wrapper.style.bottom = '0';
+            wrapper.style.width = '100%';
+            wrapper.style.height = '100%';
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = 'center';
+        }
+        // canvas margin 리셋 – Phaser CENTER_BOTH의 inline marginLeft를 JS에서도 제거
+        const canvas = gameContainer.querySelector('canvas');
+        if (canvas) {
+            canvas.style.width = '100vw';
+            canvas.style.height = '100vh';
+            canvas.style.maxWidth = '100vw';
+            canvas.style.maxHeight = '100vh';
+            canvas.style.margin = '0';
+            canvas.style.objectFit = 'contain';
+            canvas.style.objectPosition = 'center center';
+        }
+        resizeMgOverlay();
+    };
+
+    const clearFullscreenStyles = () => {
+        if (!gameContainer) return;
+        gameContainer.classList.remove('fullscreen-fallback');
+        gameContainer.style.width = '';
+        gameContainer.style.height = '';
+        gameContainer.style.position = '';
+        gameContainer.style.top = '';
+        gameContainer.style.left = '';
+        gameContainer.style.right = '';
+        gameContainer.style.bottom = '';
+        gameContainer.style.maxWidth = '';
+        gameContainer.style.aspectRatio = '';
+        const wrapper = gameContainer.querySelector(':scope > div:not(#mg-setup-overlay)');
+        if (wrapper) {
+            wrapper.style.position = '';
+            wrapper.style.top = '';
+            wrapper.style.left = '';
+            wrapper.style.right = '';
+            wrapper.style.bottom = '';
+            wrapper.style.width = '';
+            wrapper.style.height = '';
+            wrapper.style.display = '';
+            wrapper.style.alignItems = '';
+            wrapper.style.justifyContent = '';
+        }
+        const canvas = gameContainer.querySelector('canvas');
+        if (canvas) {
+            canvas.style.width = '';
+            canvas.style.height = '';
+            canvas.style.maxWidth = '';
+            canvas.style.maxHeight = '';
+            canvas.style.margin = '';
+            canvas.style.objectFit = '';
+            canvas.style.objectPosition = '';
+        }
+        resizeMgOverlay();
+    };
+
+    const refreshScaleOnFullscreen = () => {
+        if (!gameContainer || !mugunghwaGame.scale) return;
+        const doRefresh = () => {
+            forceFullscreenFill();
+            if (mugunghwaGame.scale) mugunghwaGame.scale.refresh();
+            forceFullscreenFill();
+            resizeMgOverlay();
+        };
+        requestAnimationFrame(() => {
+            doRefresh();
+            requestAnimationFrame(() => doRefresh());
+            setTimeout(doRefresh, 50);
+            setTimeout(doRefresh, 150);
+            setTimeout(doRefresh, 400);
+        });
+    };
 
     function updateFsUI() {
         const active = isFS() || fullWrap.classList.contains('mg-fullscreen-active');
         if (fsToggle) fsToggle.textContent = active ? '⛶ 전체화면 종료' : '⛶ 전체화면';
         if (mobileFsBar && isMobile()) mobileFsBar.style.display = active ? 'flex' : 'none';
-        if (mugunghwaGame && mugunghwaGame.scale) mugunghwaGame.scale.refresh();
+        resizeMgOverlay();
     }
 
-    async function enterFS() {
-        try {
-            await reqFS(fullWrap);
-        } catch (e) {
-            fullWrap.classList.add('mg-fullscreen-active');
-            document.documentElement.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
+    mugunghwaGame.scale.on('enterfullscreen', () => {
+        updateFsUI();
+        refreshScaleOnFullscreen();
+    });
+    mugunghwaGame.scale.on('fullscreenfailed', () => {
+        if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
+        if (fullWrap) fullWrap.classList.add('mg-fullscreen-active');
+        updateFsUI();
+    });
+    mugunghwaGame.scale.on('fullscreenunsupported', () => {
+        if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
+        if (fullWrap) fullWrap.classList.add('mg-fullscreen-active');
+        updateFsUI();
+    });
+    mugunghwaGame.scale.on('leavefullscreen', () => {
+        clearFullscreenStyles();
+        updateFsUI();
+    });
+
+    const onFullscreenChange = () => {
+        updateFsUI();
+        if (!isFS()) {
+            clearFullscreenStyles();
+        } else {
+            refreshScaleOnFullscreen();
         }
-        updateFsUI();
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+
+    if (fsToggle) {
+        fsToggle.addEventListener('click', () => {
+            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
+                gameContainer.classList.remove('fullscreen-fallback');
+                updateFsUI();
+            } else if (isFS()) {
+                exitFullscreen();
+            } else {
+                mugunghwaGame.scale.toggleFullscreen();
+            }
+        });
     }
-
-    async function leaveFS() {
-        if (isFS()) { try { await exitFS(); } catch (e) { /* ignore */ } }
-        fullWrap.classList.remove('mg-fullscreen-active');
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-        updateFsUI();
+    if (fsExitBtn) {
+        fsExitBtn.addEventListener('click', () => {
+            if (isFS()) exitFullscreen();
+            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
+                gameContainer.classList.remove('fullscreen-fallback');
+                updateFsUI();
+            }
+        });
     }
+    if (mobileFsBtn) mobileFsBtn.addEventListener('click', () => {
+        if (isFS()) exitFullscreen();
+        if (fullWrap) fullWrap.classList.remove('mg-fullscreen-active');
+        updateFsUI();
+    });
 
-    if (fsToggle)   fsToggle.addEventListener('click',   () => (isFS() || fullWrap.classList.contains('mg-fullscreen-active')) ? leaveFS() : enterFS());
-    if (fsExitBtn)  fsExitBtn.addEventListener('click',  leaveFS);
-    if (mobileFsBtn) mobileFsBtn.addEventListener('click', leaveFS);
-
-    ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange']
-        .forEach(ev => document.addEventListener(ev, updateFsUI));
+    window.addEventListener('resize', () => {
+        if (!mugunghwaGame.scale) return;
+        if (typeof mugunghwaGame.scale.updateBounds === 'function') mugunghwaGame.scale.updateBounds();
+        mugunghwaGame.scale.refresh();
+    });
 
     updateFsUI();
 });

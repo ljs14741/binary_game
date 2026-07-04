@@ -260,10 +260,12 @@
             height: 100vh !important;
             max-width: 100vw !important;
             max-height: 100vh !important;
+            margin: 0 !important;
             object-fit: contain !important;
             object-position: center center !important;
             pointer-events: auto !important;
         }
+        /* 전체화면: 오버레이 위치·크기는 mugunghwa.js의 resizeMgOverlay()가 inline style로 처리 */
         #mugunghwa-fullscreen-wrap:fullscreen #game-container > div,
         #mugunghwa-fullscreen-wrap:-webkit-full-screen #game-container > div,
         #mugunghwa-fullscreen-wrap:-moz-full-screen #game-container > div,
