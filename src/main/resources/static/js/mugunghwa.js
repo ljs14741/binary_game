@@ -376,9 +376,18 @@ class SetupScene extends Phaser.Scene {
         // 순수 HTML 오버레이 방식 – Phaser DOM 미사용 (모바일 호환성)
         const overlay = document.getElementById('mg-setup-overlay');
         if (overlay) overlay.classList.add('active');
-        // locale에 맞춰 placeholder 동기화
         const phEl = document.getElementById('mgNamesInput');
         if (phEl) phEl.placeholder = L().placeholder;
+
+        // Phaser 이벤트로 shutdown 훅 등록 (씬 전환 시 오버레이 확실히 숨김)
+        this.events.once('shutdown', () => {
+            if (overlay) overlay.classList.remove('active');
+            const ta = document.getElementById('mgNamesInput');
+            if (ta && this._taInputHandler) {
+                ta.removeEventListener('input', this._taInputHandler);
+                this._taInputHandler = null;
+            }
+        });
 
         const FOOT_H = 36;
         this.countText = this.add.text(cx, H - FOOT_H - 22, `0${L().countSuffix}`, {
@@ -421,6 +430,9 @@ class SetupScene extends Phaser.Scene {
                 const names = this._parseNames(ta ? ta.value : '');
                 if (names.length < 2)  return this._showMsg(L().msgMin);
                 if (names.length > 30) return this._showMsg(L().msgMax);
+                // 게임 시작 즉시 오버레이 숨기기 (씬 전환 전에 반드시 처리)
+                const ov = document.getElementById('mg-setup-overlay');
+                if (ov) ov.classList.remove('active');
                 this.registry.set('lastNames', names);
                 this.registry.set('gameMode', this.gameMode);
                 this.scene.start('GameScene', { names, mode: this.gameMode });
@@ -439,13 +451,9 @@ class SetupScene extends Phaser.Scene {
     }
 
     shutdown() {
+        // events.once('shutdown') 훅이 주 경로, 여기는 안전망
         const overlay = document.getElementById('mg-setup-overlay');
         if (overlay) overlay.classList.remove('active');
-        const taEl = document.getElementById('mgNamesInput');
-        if (taEl && this._taInputHandler) {
-            taEl.removeEventListener('input', this._taInputHandler);
-            this._taInputHandler = null;
-        }
     }
 
     _parseNames(raw) {

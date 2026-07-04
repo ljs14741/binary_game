@@ -333,6 +333,16 @@ class SetupScene extends Phaser.Scene {
         const phEl = document.getElementById('hrNamesInput');
         if (phEl) phEl.placeholder = I18N[currentLang].placeholder;
 
+        // Phaser 이벤트로 shutdown 훅 등록 (씬 전환 시 오버레이 확실히 숨김)
+        this.events.once('shutdown', () => {
+            if (overlay) overlay.classList.remove('active');
+            const ta = document.getElementById('hrNamesInput');
+            if (ta && this._taInputHandler) {
+                ta.removeEventListener('input', this._taInputHandler);
+                this._taInputHandler = null;
+            }
+        });
+
         // "몇명 입력됨" → 내기·추첨 문구 바로 위, 글자 크기 키움
         const FOOT_H = 36;
         this.countText = this.add.text(cx, H - FOOT_H - 22, `0${I18N[currentLang].countSuffix}`, {
@@ -386,6 +396,9 @@ class SetupScene extends Phaser.Scene {
                 const names = this._parseNames(ta ? ta.value : '');
                 if (names.length < 2)  return this._showMsg(I18N[currentLang].msgMin);
                 if (names.length > 30) return this._showMsg(I18N[currentLang].msgMax);
+                // 게임 시작 즉시 오버레이 숨기기 (씬 전환 전에 반드시 처리)
+                const ov = document.getElementById('hr-setup-overlay');
+                if (ov) ov.classList.remove('active');
                 this.registry.set('lastNames', names);
                 this.registry.set('gameMode', this.gameMode);
                 this.scene.start('GameScene', { names, mode: this.gameMode });
@@ -600,13 +613,9 @@ class SetupScene extends Phaser.Scene {
     }
 
     shutdown() {
+        // events.once('shutdown') 훅이 주 경로, 여기는 안전망
         const overlay = document.getElementById('hr-setup-overlay');
         if (overlay) overlay.classList.remove('active');
-        const taEl = document.getElementById('hrNamesInput');
-        if (taEl && this._taInputHandler) {
-            taEl.removeEventListener('input', this._taInputHandler);
-            this._taInputHandler = null;
-        }
         if (this._onFsEnter) this.scale.off('enterfullscreen', this._onFsEnter);
         if (this._onFsLeave) this.scale.off('leavefullscreen', this._onFsLeave);
     }
