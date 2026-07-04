@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <title>무궁화 꽃이 피었습니다 – 커피내기·점심내기·벌칙뽑기·사다리타기 대체 무료게임 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+    <!-- SEO -->
+    <meta name="description" content="무궁화 꽃이 피었습니다! 커피내기·점심내기·회식뽑기·벌칙뽑기에 딱 맞는 무료 랜덤게임. 사다리타기·룰렛·말달리자 대신 빨간불·초록불 서바이벌로 1등·꼴찌 공정 뽑기. 라운드마다 속도 랜덤·성격 랜덤·최대 30명 지원.">
+    <meta name="keywords" content="무궁화 꽃이 피었습니다, 출발금지, 무궁화게임, 커피내기, 점심내기, 회식뽑기, 내기게임, 내기뽑기, 벌칙뽑기, 당번뽑기, 랜덤뽑기, 사다리타기 대체, 룰렛 대체, 말달리자 대체, 오징어게임 달리기, 빨간불 초록불, 서바이벌 뽑기, 무료뽑기게임, 꼴찌뽑기, 1등뽑기, 공정뽑기, 팀내기, 모임뽑기, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <!-- Open Graph -->
+    <meta property="og:type"        content="website">
+    <meta property="og:title"       content="무궁화 꽃이 피었습니다 – 커피내기·벌칙뽑기·사다리타기 대체 무료게임 | Binary World">
+    <meta property="og:description" content="커피내기·점심내기·벌칙뽑기를 무궁화 꽃이 피었습니다로! 사다리타기·룰렛 대신 빨간불·초록불 서바이벌. 라운드마다 속도 랜덤, 성격 랜덤, 최대 30명 무료.">
+    <meta property="og:image"       content="https://game.binaryworld.kr/img/mugunghwa.png">
+    <meta property="og:url"         content="https://game.binaryworld.kr/mugunghwa">
+
+    <!-- Twitter -->
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="무궁화 꽃이 피었습니다 – 커피내기·벌칙뽑기·사다리타기 대체 무료게임 | Binary World">
+    <meta name="twitter:description" content="커피내기·점심내기·벌칙뽑기에 딱! 사다리타기·룰렛 대신 빨간불·초록불 서바이벌 뽑기. 라운드마다 속도 랜덤, 최대 30명 무료.">
+    <meta name="twitter:image"       content="https://game.binaryworld.kr/img/mugunghwa.png">
+
+    <!-- 파비콘 -->
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="57x57"   href="/img/favicon/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60"   href="/img/favicon/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72"   href="/img/favicon/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76"   href="/img/favicon/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/img/favicon/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/img/favicon/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/img/favicon/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/img/favicon/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32"   href="/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96"   href="/img/favicon/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16"   href="/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/img/favicon/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="canonical"  href="https://game.binaryworld.kr/mugunghwa">
+    <link rel="alternate"  hreflang="x-default" href="https://game.binaryworld.kr/mugunghwa">
+    <link rel="alternate"  hreflang="ko" href="https://game.binaryworld.kr/mugunghwa?lang=ko">
+    <link rel="alternate"  hreflang="en" href="https://game.binaryworld.kr/mugunghwa?lang=en">
+    <link rel="alternate"  hreflang="ja" href="https://game.binaryworld.kr/mugunghwa?lang=ja">
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "무궁화 꽃이 피었습니다",
+      "alternateName": [
+        "무궁화게임", "출발금지", "빨간불 초록불", "오징어게임 달리기",
+        "커피내기게임", "점심내기뽑기", "벌칙뽑기", "당번뽑기", "꼴찌뽑기",
+        "사다리타기 대체", "룰렛 대체", "말달리자 대체", "랜덤뽑기", "내기게임"
+      ],
+      "url": "https://game.binaryworld.kr/mugunghwa",
+      "description": "무궁화 꽃이 피었습니다! 커피내기·점심내기·벌칙뽑기에 딱. 사다리타기·룰렛·말달리자 대신 빨간불·초록불 서바이벌로 공정하게 1등·꼴찌 뽑기. 라운드마다 속도 랜덤, 성격 랜덤, 최대 30명 무료.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": "무궁화 꽃이 피었습니다, 커피내기, 점심내기, 벌칙뽑기, 사다리타기, 룰렛, 말달리자, 랜덤뽑기, 내기게임",
+      "inLanguage": ["ko", "en", "ja"]
+    }
+    </script>
+
+    <!-- 폰트 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+
+    <!-- 공통 CSS -->
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+
+    <style>
+        html { overflow: hidden; }
+        body { overflow-y: auto; overflow-x: hidden; min-height: 100vh; }
+
+        #mugunghwa-fullscreen-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto 8px auto;
+            position: relative;
+        }
+        #mugunghwa-fullscreen-wrap .game-bgm {
+            flex-shrink: 0;
+            width: 100%;
+            margin: 0 0 16px 0;
+            box-sizing: border-box;
+        }
+
+        #game-container {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0;
+            padding: 0;
+            background: #0a0612;
+            border-radius: 10px;
+            overflow: visible;
+            box-shadow: 0 0 40px rgba(232, 67, 147, 0.15);
+            min-height: 400px;
+            aspect-ratio: 1000 / 720;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #mugunghwa-fullscreen-wrap:fullscreen .game-bgm,
+        #mugunghwa-fullscreen-wrap:-webkit-full-screen .game-bgm,
+        #mugunghwa-fullscreen-wrap:-moz-full-screen .game-bgm,
+        #mugunghwa-fullscreen-wrap:-ms-fullscreen .game-bgm,
+        #mugunghwa-fullscreen-wrap.mg-fullscreen-active .game-bgm {
+            display: none !important;
+        }
+        #mugunghwa-fullscreen-wrap:fullscreen,
+        #mugunghwa-fullscreen-wrap:-webkit-full-screen,
+        #mugunghwa-fullscreen-wrap:-moz-full-screen,
+        #mugunghwa-fullscreen-wrap:-ms-fullscreen,
+        #mugunghwa-fullscreen-wrap.mg-fullscreen-active {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box !important;
+            background: #0a0612 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        .mg-fs-exit-btn {
+            display: none;
+            position: absolute;
+            top: max(10px, env(safe-area-inset-top));
+            right: max(10px, env(safe-area-inset-right));
+            z-index: 9999;
+            min-width: 44px;
+            min-height: 44px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.75);
+            color: #fff;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        #mugunghwa-fullscreen-wrap:fullscreen .mg-fs-exit-btn,
+        #mugunghwa-fullscreen-wrap:-webkit-full-screen .mg-fs-exit-btn,
+        #mugunghwa-fullscreen-wrap:-moz-full-screen .mg-fs-exit-btn,
+        #mugunghwa-fullscreen-wrap:-ms-fullscreen .mg-fs-exit-btn,
+        #mugunghwa-fullscreen-wrap.mg-fullscreen-active .mg-fs-exit-btn {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #mugunghwa-fullscreen-wrap:fullscreen #game-container,
+        #mugunghwa-fullscreen-wrap:-webkit-full-screen #game-container,
+        #mugunghwa-fullscreen-wrap:-moz-full-screen #game-container,
+        #mugunghwa-fullscreen-wrap:-ms-fullscreen #game-container,
+        #mugunghwa-fullscreen-wrap.mg-fullscreen-active #game-container {
+            flex: 1 1 auto;
+            min-height: 0;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            aspect-ratio: unset !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            background: #0a0612 !important;
+            pointer-events: auto !important;
+            z-index: 1;
+        }
+
+        #game-container canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100%;
+            object-fit: contain;
+        }
+        #mugunghwa-fullscreen-wrap:fullscreen #game-container canvas,
+        #mugunghwa-fullscreen-wrap:-webkit-full-screen #game-container canvas,
+        #mugunghwa-fullscreen-wrap:-moz-full-screen #game-container canvas,
+        #mugunghwa-fullscreen-wrap:-ms-fullscreen #game-container canvas,
+        #mugunghwa-fullscreen-wrap.mg-fullscreen-active #game-container canvas {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            object-fit: contain !important;
+            object-position: center center !important;
+            pointer-events: auto !important;
+        }
+        #mugunghwa-fullscreen-wrap:fullscreen #game-container > div,
+        #mugunghwa-fullscreen-wrap:-webkit-full-screen #game-container > div,
+        #mugunghwa-fullscreen-wrap:-moz-full-screen #game-container > div,
+        #mugunghwa-fullscreen-wrap:-ms-fullscreen #game-container > div,
+        #mugunghwa-fullscreen-wrap.mg-fullscreen-active #game-container > div {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        #game-container > div:has(canvas) {
+            pointer-events: auto !important;
+            z-index: 1;
+            transform: none !important;
+        }
+        #game-container > div {
+            overflow: visible !important;
+            max-height: none !important;
+        }
+        #game-container > div:not(:has(canvas)) {
+            z-index: 10;
+            pointer-events: none !important;
+        }
+        #game-container > div:not(:has(canvas)) * {
+            pointer-events: auto !important;
+        }
+        #mgNamesInput {
+            opacity: 1 !important;
+            visibility: visible !important;
+            min-height: 72px !important;
+        }
+
+        #game-container.fullscreen-fallback {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            min-height: 100vh !important;
+            z-index: 9999 !important;
+            border-radius: 0 !important;
+        }
+
+        .mg-mobile-fs-exit {
+            display: none;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 16px;
+            padding-bottom: max(14px, env(safe-area-inset-bottom));
+            background: rgba(10, 6, 18, 0.95);
+            border-top: 1px solid rgba(232, 67, 147, 0.4);
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mg-mobile-fs-exit button {
+            padding: 12px 24px;
+            border: 1px solid rgba(232, 67, 147, 0.5);
+            border-radius: 8px;
+            background: rgba(232, 67, 147, 0.2);
+            color: #FF69B4;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            min-height: 44px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .game-bgm {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: rgba(10, 6, 18, 0.95);
+            border-radius: 8px;
+            touch-action: manipulation;
+        }
+        .game-bgm button {
+            min-height: 44px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .game-bgm button:hover { background: rgba(255,255,255,0.14); }
+        .game-bgm label { font-size: 13px; color: #888; }
+        .game-bgm input[type=range] {
+            width: 90px;
+            min-height: 44px;
+            accent-color: #E84393;
+            touch-action: none;
+            pointer-events: auto;
+        }
+
+        @media (max-width: 640px) {
+            #mugunghwa-fullscreen-wrap {
+                padding: 0 8px;
+                max-width: 100%;
+            }
+            #mugunghwa-fullscreen-wrap #game-container {
+                max-width: 100%;
+                border-radius: 8px;
+                min-height: 0 !important;
+            }
+            #game-container #mgNamesInput {
+                width: 92% !important;
+                max-width: none !important;
+                min-width: 0 !important;
+                display: block !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                box-sizing: border-box;
+                font-size: 20px !important;
+                line-height: 1.7 !important;
+                min-height: 130px !important;
+                padding: 16px 18px !important;
+            }
+        }
+
+        .mg-description h2 {
+            font-size: 17px;
+            color: #E84393;
+            margin: 22px 0 8px;
+        }
+        .mg-description p, .mg-description li {
+            font-size: 14px;
+            color: #aaaaaa;
+            line-height: 1.7;
+        }
+        .mg-description strong { color: #dddddd; }
+    </style>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+<th:block th:include="common/header"></th:block>
+
+<div class="main-content">
+    <div class="container">
+
+        <div class="nav-back">
+            <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+        </div>
+
+        <h1 class="game-title">🌸 무궁화 꽃이 피었습니다 – 커피내기·점심내기·벌칙뽑기·사다리타기 대체 무료게임</h1>
+
+        <div id="mugunghwa-fullscreen-wrap">
+            <button type="button" id="mgFsExitBtn" class="mg-fs-exit-btn" aria-label="전체화면 나가기">✕ 나가기</button>
+            <div id="mg-mobile-fs-exit" class="mg-mobile-fs-exit" aria-hidden="true">
+                <button type="button" id="mgMobileFsExitBtn" aria-label="전체화면 종료">✕ 전체화면 종료</button>
+            </div>
+            <div class="game-bgm">
+                <button id="bgmToggle">🔊 BGM 켜짐</button>
+                <label for="volumeControl">볼륨:</label>
+                <input type="range" id="volumeControl" min="0" max="100" value="50">
+                <button id="fsToggle" title="전체화면 전환">⛶ 전체화면</button>
+            </div>
+
+            <div id="game-container"></div>
+        </div>
+
+        <div class="mg-description">
+            <h2 id="mg-desc-h2-1">방법</h2>
+            <ol>
+                <li id="mg-desc-step-1">참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명) — 커피내기·점심내기·벌칙뽑기 대상자 이름 입력</li>
+                <li id="mg-desc-step-2"><strong>🏆 1등 우승 뽑기</strong>(내기 면제) / <strong>💣 꼴찌 벌칙 뽑기</strong>(당번·벌칙 대상) 중 선택 후 게임 시작!</li>
+                <li id="mg-desc-step-3">🟢 <strong>초록불(달려!)</strong> 에 전력 질주 — 🔴 <strong>얼음을 외치면 즉시 멈춰!</strong> 움직이면 탈락</li>
+                <li id="mg-desc-step-4">결승선 1등 도착(우승) 또는 첫 번째 탈락자(벌칙)가 당첨 · 벌칙 대상으로 결정!</li>
+            </ol>
+
+            <h2 id="mg-desc-h2-2">특징</h2>
+            <ul>
+                <li id="mg-desc-feat-1"><strong>커피내기·점심내기·회식뽑기·당번뽑기</strong> 등 각종 내기·추첨에 최적 — 사다리타기·룰렛·말달리자 완벽 대체</li>
+                <li id="mg-desc-feat-2"><strong>라운드마다 속도 랜덤</strong> — 매 라운드 참가자 전원의 속도가 크게 바뀌어 결과 예측 불가, 매번 다른 결과</li>
+                <li id="mg-desc-feat-3"><strong>성격 랜덤 배정</strong> — 🔥 돌진형·🚶 보통형·🐢 신중형마다 반응속도가 달라 항상 공정한 랜덤. 최대 30명 무료</li>
+            </ul>
+
+            <p style="margin-top:14px; font-size:13px; color:#888;">
+                <strong>이런 상황에 딱!</strong> — 점심 메뉴 내기 / 커피 내기 / 청소 당번 / 회의 발표 순서 / 팀 회식 벌칙 / 술자리 게임 / 모임 이벤트 뽑기
+            </p>
+        </div>
+
+    </div>
+
+    <div class="guestbook">
+        <h2>📖 방명록</h2>
+
+        <form class="guestbook-form">
+            <input type="text" placeholder="닉네임" class="guestbook-nickname" required>
+            <input type="password" placeholder="비밀번호" class="guestbook-password" required>
+            <textarea placeholder="방문한 소감을 남겨주세요 😊" class="guestbook-message" required></textarea>
+            <button type="submit" class="guestbook-submit">등록</button>
+        </form>
+
+        <ul class="guestbook-list"></ul>
+
+        <div class="guestbook-pagination">
+            <button id="prevPage">이전</button>
+            <span id="pageInfo">1</span>
+            <button id="nextPage">다음</button>
+        </div>
+    </div>
+</div>
+
+<th:block th:include="common/footer"></th:block>
+
+<script th:src="@{/js/phaser.min.js}"></script>
+<script th:src="@{/js/mugunghwa.js}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggleBtn = document.querySelector('.nav-toggle');
+        const nav = document.querySelector('.nav-links');
+        if (toggleBtn && nav) {
+            toggleBtn.addEventListener('click', () => {
+                toggleBtn.classList.toggle('active');
+                nav.classList.toggle('open');
+            });
+        }
+
+        let currentPage = 0;
+        const pageSize = 5;
+        const form = document.querySelector('.guestbook-form');
+        const list = document.querySelector('.guestbook-list');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+
+        function loadGuestbookPage(page = 0) {
+            if (!list) return;
+            fetch(`/api/guestbook/paged?page=${page}&size=${pageSize}`)
+                .then(res => res.json())
+                .then(data => {
+                    list.innerHTML = '';
+                    data.content.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'guestbook-item';
+                        li.innerHTML = `
+                            <div class="guestbook-header">
+                              <strong class="guestbook-name">${item.nickname}</strong>
+                              <span class="guestbook-date">${item.createdAt?.substring(0, 10)}</span>
+                            </div>
+                            <p class="guestbook-content">${item.content}</p>
+                            <button class="guestbook-delete" data-id="${item.id}">삭제</button>
+                        `;
+                        list.appendChild(li);
+                    });
+                    currentPage = data.number;
+                    const pageInfo = document.getElementById('pageInfo');
+                    if (pageInfo) pageInfo.textContent = `${currentPage + 1}`;
+                    if (prevBtn) prevBtn.disabled = data.first;
+                    if (nextBtn) nextBtn.disabled = data.last;
+                })
+                .catch(err => console.error('방명록 로드 실패:', err));
+        }
+
+        if (form) {
+            form.addEventListener('submit', e => {
+                e.preventDefault();
+                const nickname = form.querySelector('.guestbook-nickname').value.trim();
+                const password = form.querySelector('.guestbook-password').value.trim();
+                const content = form.querySelector('.guestbook-message').value.trim();
+                if (!nickname || !password || !content) {
+                    alert('모든 필드를 입력해주세요.');
+                    return;
+                }
+                fetch('/api/guestbook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname, password, content })
+                }).then(res => {
+                    if (res.ok) {
+                        form.reset();
+                        loadGuestbookPage(0);
+                    } else {
+                        alert('등록에 실패했습니다.');
+                    }
+                });
+            });
+        }
+
+        if (list) {
+            list.addEventListener('click', e => {
+                if (e.target.classList.contains('guestbook-delete')) {
+                    const id = e.target.dataset.id;
+                    const pw = prompt('비밀번호를 입력하세요');
+                    if (!pw) return;
+                    fetch(`/api/guestbook/${id}?password=${encodeURIComponent(pw)}`, {
+                        method: 'DELETE'
+                    }).then(res => {
+                        if (res.ok) loadGuestbookPage(currentPage);
+                        else alert('비밀번호가 틀렸습니다.');
+                    });
+                }
+            });
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 0) loadGuestbookPage(currentPage - 1);
+            });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => loadGuestbookPage(currentPage + 1));
+        }
+
+        loadGuestbookPage(0);
+    });
+</script>
+
+</body>
+</html>
