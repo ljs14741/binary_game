@@ -33,8 +33,8 @@ const ELIM_MOVE_PROG = 0.006;
 
 // ── 게임 규칙 ──────────────────────────────────────────────
 const DUR_TURNING   = 150;   // 돌아보기 경고 시간 (ms) – 즉각 반응
-const DUR_RED_MIN   = 1400;
-const DUR_RED_MAX   = 3400;
+const DUR_RED_MIN   = 700;
+const DUR_RED_MAX   = 1800;
 const CHAR_DELAY_MIN = 90;
 const CHAR_DELAY_MAX = 230;
 const REACT_MIN     = 30;    // 반응 딜레이 ms (최소)
@@ -1127,11 +1127,13 @@ class GameScene extends Phaser.Scene {
 
         // 매 라운드 완전 재랜덤 속도 → 역전 가능
         // ① 이번 라운드 전체 공통 속도 보정 (느린/빠른 라운드 느낌)
-        const roundBump   = 1 + (this.roundNum - 1) * 0.04;
+        const roundBump   = 1 + (this.roundNum - 1) * 0.07;
         const roundFactor = Phaser.Math.FloatBetween(0.72, 1.28); // 라운드 전체 ±28% 변동
-        // ② 마지막 1명 남았을 때 빠른 진행을 위한 배수
+        // ② 후반 생존자 수에 따른 가속 배수
         const aliveUnfinished = this.players.filter(p => p.alive && !p.finished);
-        const lastManBoost = aliveUnfinished.length === 1 ? 2.8 : 1.0;
+        const lastManBoost = aliveUnfinished.length === 1 ? 2.8
+                           : aliveUnfinished.length <= 3 ? 1.6
+                           : 1.0;
 
         this.players.forEach(p => {
             if (!p.alive || p.finished) return;
@@ -1154,9 +1156,7 @@ class GameScene extends Phaser.Scene {
 
     _updateGreenCycleLabel() {
         if (!this.stateLabel || this.phase !== 'GREEN') return;
-        this.stateLabel.setText(
-            `${L().stateGreen}  (${this.greenCycleIndex + 1}/${this.greenCyclesTotal})`
-        ).setColor(hexColor(MG_C.green)).setFontSize('20px');
+        this.stateLabel.setText(L().stateGreen).setColor(hexColor(MG_C.green)).setFontSize('20px');
     }
 
     _onDollPhraseComplete() {
@@ -1325,14 +1325,14 @@ class GameScene extends Phaser.Scene {
         }
 
         if (toElim.length > 0) {
-            const elimStep = 520;
+            const elimStep = 300;
             toElim.forEach((p, i) => {
-                this.time.delayedCall(500 + i * elimStep, () => {
+                this.time.delayedCall(350 + i * elimStep, () => {
                     if (p.alive && !this.gameOver) this._eliminatePlayer(p);
                 });
             });
             // 모든 사살 완료 후 CHECK 단계로
-            const totalWait = 500 + toElim.length * elimStep + 900;
+            const totalWait = 350 + toElim.length * elimStep + 600;
             this.time.delayedCall(totalWait, () => {
                 if (!this.gameOver) this._startCheckPhase();
             });
@@ -1372,7 +1372,7 @@ class GameScene extends Phaser.Scene {
         const allElimThisRound = [...this._roundEliminated];
         allElimThisRound.sort((a, b) => a.progress - b.progress);
 
-        const waitTime = allElimThisRound.length > 0 ? 600 : 700;
+        const waitTime = allElimThisRound.length > 0 ? 300 : 350;
 
         if (allElimThisRound.length > 0 && this.stateLabel && this.stateLabel.active) {
             this.stateLabel.setText(L().roundElim(allElimThisRound.length)).setColor(hexColor(MG_C.red));
@@ -1641,7 +1641,7 @@ class GameScene extends Phaser.Scene {
 
             this.add.text(px, py - pH / 2 + 72, resultPlayer.name, {
                 fontFamily: '"Pretendard",Arial',
-                fontSize: '32px', color: '#FFD700',
+                fontSize: '40px', color: '#FFD700',
                 stroke: '#000', strokeThickness: 5,
                 fontStyle: 'bold',
             }).setOrigin(0.5).setDepth(42);
@@ -1685,8 +1685,8 @@ class GameScene extends Phaser.Scene {
                 const short  = pl.name.length > maxNm ? pl.name.slice(0, maxNm - 1) + '…' : pl.name;
 
                 const colIcon = lx + 20;
-                const colRank = lx + 40;
-                const colName = lx + 82;
+                const colRank = lx + 54;
+                const colName = lx + 96;
 
                 this.add.circle(lx + 9, ry, dotR, pl.color, 1).setDepth(42);
                 if (isEl) {
