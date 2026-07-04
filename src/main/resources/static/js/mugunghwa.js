@@ -184,7 +184,7 @@ const I18N = {
         domDescStep3:'🟢 Green light: run! 🔴 "Freeze!" — any movement = eliminated',
         domDescStep4:'First to the finish (winner) or first eliminated (loser) is decided!',
         domDescFeat1:'Perfect for picks: <strong>bets, duty, coffee</strong> (instead of ladder/roulette)',
-        domDescFeat2:'<strong>Speed changes every round</strong> – everyone's speed randomizes each round, making results unpredictable',
+        domDescFeat2:'<strong>Speed changes every round</strong> – everyone\'s speed randomizes each round, making results unpredictable',
         domDescFeat3:'<strong>Random personalities</strong> – bold/normal/cautious each react differently, up to 30 players',
     },
     ja: {
@@ -284,7 +284,7 @@ function initBgm(scene) {
     let vol = scene.registry.get('bgmVolume');
     if (vol === undefined) {
         const volEl = document.getElementById('volumeControl');
-        vol = volEl ? Number(volEl.value) / 100 : 0.5;
+        vol = volEl ? Number(volEl.value) / 100 : 0.3;
         scene.registry.set('bgmVolume', vol);
     }
     scene.game.bgmSound.volume = vol;

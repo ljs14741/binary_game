@@ -424,14 +424,14 @@ class SetupScene extends Phaser.Scene {
         let vol = this.registry.get('bgmVolume');
         if (vol === undefined) {
             const volEl = document.getElementById('volumeControl');
-            vol = volEl ? Number(volEl.value) / 100 : 0.5;
+            vol = volEl ? Number(volEl.value) / 100 : 0.3;
             this.registry.set('bgmVolume', vol);
         }
         this.game.bgmSound.volume = vol;
         // BGM/효과음 통합: 레지스트리 값에 맞춰 mute 동기화 (SetupScene 진입 시점에 한 번)
-        const bgmOn = this.registry.get('bgmOn', true);
+        const bgmOn = this.registry.get('bgmOn') !== false; // undefined 또는 true이면 켜짐
         this.sound.mute = !bgmOn;
-        if (bgmOn) { try { this.game.bgmSound.play(); } catch (e) {} }
+        if (bgmOn) { try { if (!this.game.bgmSound.isPlaying) this.game.bgmSound.play(); } catch (e) {} }
 
         // 전체화면 시 씬 내부 '닫기' 버튼 (모바일에서 HTML 버튼이 보이지 않을 때 대비)
         this._createFullscreenExitButton();
@@ -1823,6 +1823,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fsToggle.setAttribute('title', _L.domFsToggleTip);
     }
     if (bgmToggle) bgmToggle.textContent = _L.bgmOn;
+    // bgmOn 레지스트리 명시적 초기화 (미설정 시 true로 켜진 상태로 시작)
+    if (horseRaceGame.registry.get('bgmOn') === undefined) {
+        horseRaceGame.registry.set('bgmOn', true);
+    }
     // ─────────────────────────────────────────────────────────
     const isMobileDevice = () => {
         if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
