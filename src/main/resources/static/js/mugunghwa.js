@@ -138,6 +138,9 @@ const I18N = {
         domDescFeat1:'벌칙·당번·커피 내기 등 <strong>뽑기·추첨용</strong> (사다리·룰렛·말달리자 대신)',
         domDescFeat2:'<strong>라운드마다 속도 랜덤</strong> – 매 라운드 참가자 전원의 속도가 크게 바뀌어 결과 예측 불가',
         domDescFeat3:'<strong>성격 랜덤</strong> – 돌진형·보통형·신중형마다 반응 다름, 최대 30명',
+        mobileFsBlockTitle:   '모바일 전체화면 안내',
+        mobileFsBlockMessage: '모바일 기기에서는 전체화면 모드에서\n일부 기기에서 터치 또는 화면 레이아웃 문제가 발생할 수 있습니다.\n\n화면이 조금 작더라도 기본 보기(전체화면 아님)를 권장합니다.\n\n※ 효과음을 위해 BGM을 켜고 플레이하는 것을 추천합니다!',
+        mobileFsBlockOk:      '알겠어요',
     },
     en: {
         title:       '🌸 Red Light, Green Light',
@@ -186,6 +189,9 @@ const I18N = {
         domDescFeat1:'Perfect for picks: <strong>bets, duty, coffee</strong> (instead of ladder/roulette)',
         domDescFeat2:'<strong>Speed changes every round</strong> – everyone\'s speed randomizes each round, making results unpredictable',
         domDescFeat3:'<strong>Random personalities</strong> – bold/normal/cautious each react differently, up to 30 players',
+        mobileFsBlockTitle:   'Fullscreen on Mobile',
+        mobileFsBlockMessage: 'On some mobile devices, fullscreen mode may cause touch or layout issues.\n\nWe recommend using the normal view (non-fullscreen) even if the screen is a bit smaller.\n\n※ For the best experience, please turn BGM on when you play!',
+        mobileFsBlockOk:      'OK',
     },
     ja: {
         title:       '🌸 ダルマさんがころんだ',
@@ -234,6 +240,9 @@ const I18N = {
         domDescFeat1:'罰ゲーム·担当·コーヒー決めに最適 (はしご·ルーレット代わり)',
         domDescFeat2:'<strong>ラウンドごとにスピード変化</strong> – 毎ラウンド全員の速度が大きく変わり結果予測不可',
         domDescFeat3:'<strong>ランダム性格</strong> – 猪突型·普通·慎重型で反応が違う、最大30名',
+        mobileFsBlockTitle:   'モバイル全画面について',
+        mobileFsBlockMessage: '一部のモバイル端末では、全画面モードでタッチやレイアウトの不具合が発生する場合があります。\n\n画面が少し小さくても、通常表示（非全画面）でのご利用をおすすめします。\n\n※ 効果音を楽しむため、BGMをオンにして遊ぶことをおすすめします！',
+        mobileFsBlockOk:      'OK',
     },
 };
 
@@ -2038,7 +2047,11 @@ document.addEventListener('DOMContentLoaded', () => {
         volumeCtrl.addEventListener('touchend', applyVolume);
     }
 
-    function isMobile() { return matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; }
+    function isMobile() {
+        if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
+    }
     function isFS() { return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); }
     function exitFullscreen() {
         const doc = document;
@@ -2048,6 +2061,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const gameContainer = document.getElementById('game-container');
+
+    // 모바일: 전체화면 비권장 안내 모달 + 버튼 숨김
+    if (isMobile()) {
+        if (fsToggle) fsToggle.style.display = 'none';
+        const _L = L();
+        const mgMobileOverlay = document.createElement('div');
+        mgMobileOverlay.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        const mgMobileBox = document.createElement('div');
+        mgMobileBox.style.cssText = 'max-width:420px;width:100%;background:rgba(10,10,30,0.96);border:1px solid rgba(255,215,0,0.6);border-radius:10px;padding:18px 20px 16px;color:#dddddd;font-family:"Pretendard",system-ui,sans-serif;font-size:13px;line-height:1.6;';
+        const mgMobileTitle = document.createElement('div');
+        mgMobileTitle.textContent = _L.mobileFsBlockTitle;
+        mgMobileTitle.style.cssText = 'font-size:14px;font-weight:700;color:#FFD700;margin-bottom:8px;';
+        const mgMobileMsg = document.createElement('div');
+        mgMobileMsg.textContent = _L.mobileFsBlockMessage;
+        mgMobileMsg.style.cssText = 'white-space:pre-line;margin-bottom:14px;';
+        const mgMobileBtnWrap = document.createElement('div');
+        mgMobileBtnWrap.style.cssText = 'display:flex;justify-content:flex-end;';
+        const mgMobileOkBtn = document.createElement('button');
+        mgMobileOkBtn.type = 'button';
+        mgMobileOkBtn.textContent = _L.mobileFsBlockOk;
+        mgMobileOkBtn.style.cssText = 'min-width:84px;padding:8px 14px;border-radius:6px;border:1px solid rgba(255,215,0,0.8);background:rgba(255,215,0,0.15);color:#FFD700;font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;';
+        mgMobileOkBtn.addEventListener('click', () => {
+            if (mgMobileOverlay.parentNode) mgMobileOverlay.parentNode.removeChild(mgMobileOverlay);
+        });
+        mgMobileBtnWrap.appendChild(mgMobileOkBtn);
+        mgMobileBox.appendChild(mgMobileTitle);
+        mgMobileBox.appendChild(mgMobileMsg);
+        mgMobileBox.appendChild(mgMobileBtnWrap);
+        mgMobileOverlay.appendChild(mgMobileBox);
+        document.body.appendChild(mgMobileOverlay);
+    }
 
     if (fullWrap && mugunghwaGame.scale) {
         mugunghwaGame.scale.fullscreenTarget = fullWrap;
