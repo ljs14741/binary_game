@@ -1,127 +1,89 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy | Binary World</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy | Binary World</title>
 
-    <!-- SEO -->
-    <meta name="description" content="Binary World의 개인정보처리방침 안내 페이지입니다. 본 사이트는 회원가입 없이 자유롭게 이용 가능하며, 쿠키 및 광고 관련 내용을 안내합니다.">
-    <meta name="keywords" content="Privacy Policy, 개인정보처리방침, Binary World, 구글 애드센스, 쿠키 사용">
-    <meta name="robots" content="index, follow">
-    <meta name="author" content="Binary World">
+  <meta name="description" content="Binary World의 개인정보처리방침 안내 페이지입니다. 본 사이트는 회원가입 없이 자유롭게 이용 가능하며, 쿠키 및 광고 관련 내용을 안내합니다.">
+  <meta name="keywords" content="Privacy Policy, 개인정보처리방침, Binary World, 구글 애드센스, 쿠키 사용">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Binary World">
 
-    <!-- Open Graph -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Privacy Policy | Binary World">
-    <meta property="og:description" content="Binary World 개인정보처리방침 안내 페이지. 쿠키 및 광고 관련 내용 확인.">
-    <meta property="og:image" content="https://binaryworld.kr/img/radish.png">
-    <meta property="og:url" content="https://binaryworld.kr/privacy-policy">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Privacy Policy | Binary World">
+  <meta property="og:description" content="Binary World 개인정보처리방침 안내 페이지. 쿠키 및 광고 관련 내용 확인.">
+  <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
+  <meta property="og:url" content="https://game.binaryworld.kr/privacy-policy">
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Privacy Policy | Binary World">
-    <meta name="twitter:description" content="Binary World 개인정보처리방침 안내 페이지. 쿠키 및 광고 관련 내용 확인.">
-    <meta name="twitter:image" content="https://binaryworld.kr/img/radish.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Privacy Policy | Binary World">
+  <meta name="twitter:description" content="Binary World 개인정보처리방침 안내 페이지. 쿠키 및 광고 관련 내용 확인.">
+  <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
 
-    <!-- 기본 파비콘 -->
-    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+  <meta name="theme-color" content="#0b0d10">
 
-    <!-- 다양한 디바이스 아이콘 -->
-    <link rel="apple-touch-icon" sizes="57x57" href="/img/favicon/apple-icon-57x57.png">
-    <link rel="apple-touch-icon" sizes="60x60" href="/img/favicon/apple-icon-60x60.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="/img/favicon/apple-icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon/apple-icon-76x76.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="/img/favicon/apple-icon-114x114.png">
-    <link rel="apple-touch-icon" sizes="120x120" href="/img/favicon/apple-icon-120x120.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="/img/favicon/apple-icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/img/favicon/apple-icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon/android-icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16x16.png">
+  <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+  <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+  <link rel="stylesheet" href="https://binaryworld.kr/common/legal.css">
+  <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
-    <!-- manifest와 윈도우용 타일 설정 -->
-    <link rel="manifest" href="/img/favicon/manifest.json">
-    <meta name="msapplication-TileColor" content="#ffffff">
-    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-    <meta name="theme-color" content="#ffffff">
-
-    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
-    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
-    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
-            crossorigin="anonymous"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+          crossorigin="anonymous"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-0TSFJBQ41N');
+  </script>
 </head>
-<body>
+<body class="bw-legal-page" data-theme="dark">
 <header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 
-<div class="main-content">
-    <main class="page-content">
-        <div class="container">
-            <h1>Privacy Policy</h1>
-            <p>Binary World는 회원가입 기능이 없으며, 사용자의 개인정보를 직접적으로 수집하지 않습니다.</p>
-            <p>본 사이트는 Google AdSense 광고 및 사이트 트래픽 분석을 위해 쿠키를 사용할 수 있습니다. 쿠키는 사용자 맞춤 광고 제공 및 사이트 이용 분석에 사용되며, 사용자는 브라우저 설정을 통해 쿠키 사용을 거부할 수 있습니다.</p>
-            <p>이 개인정보처리방침은 2025년 7월 2일부터 적용됩니다.</p>
-        </div>
-    </main>
-</div>
+<main class="bw-legal-main">
+  <section class="bw-legal-hero">
+    <p class="bw-legal-eyebrow">Privacy</p>
+    <h1>개인정보처리방침</h1>
+    <p class="bw-legal-lead">
+      Binary World는 회원가입 없이 이용할 수 있는 개인 웹 프로젝트 모음입니다.
+      수집하는 정보와 쿠키 사용에 대해 아래와 같이 안내합니다.
+    </p>
+  </section>
+
+  <section class="bw-legal-panel">
+    <article class="bw-legal-card">
+      <h2>개인정보 수집</h2>
+      <p>
+        Binary World는 회원가입 기능이 없으며, 사용자의 개인정보를 직접적으로 수집하지 않습니다.
+      </p>
+    </article>
+
+    <article class="bw-legal-card">
+      <h2>쿠키 및 광고</h2>
+      <p>
+        본 사이트는 Google AdSense 광고 및 사이트 트래픽 분석을 위해 쿠키를 사용할 수 있습니다.
+        쿠키는 사용자 맞춤 광고 제공과 사이트 이용 분석에 사용되며,
+        사용자는 브라우저 설정을 통해 쿠키 사용을 거부할 수 있습니다.
+      </p>
+    </article>
+
+    <article class="bw-legal-card">
+      <h2>적용 일자</h2>
+      <p>이 개인정보처리방침은 2025년 7월 2일부터 적용됩니다.</p>
+      <div class="bw-legal-meta">
+        <a class="bw-legal-link" href="/contact">문의하기</a>
+      </div>
+    </article>
+  </section>
+</main>
 
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
-<div class="side-ad left-ad">
-    <ins class="kakao_ad_area"
-         style="display:none;"
-         data-ad-unit="DAN-ePAs1c7mONqnY32w"
-         data-ad-width="160"
-         data-ad-height="600"></ins>
-</div>
-
-<div class="side-ad right-ad">
-    <ins class="kakao_ad_area"
-         style="display:none;"
-         data-ad-unit="DAN-qpEsz6jYmwJE0cE7"
-         data-ad-width="160"
-         data-ad-height="600"></ins>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // 1. 햄버거 메뉴 토글
-        const toggleBtn = document.querySelector('.nav-toggle');
-        const nav = document.querySelector('.nav-links');
-
-        if (toggleBtn && nav) {
-            toggleBtn.addEventListener('click', () => {
-                toggleBtn.classList.toggle('active');
-                nav.classList.toggle('open');
-            });
-        }
-
-        // 2. 테마 토글
-        const themeToggle = document.getElementById('themeToggle');
-        const themeLink = document.getElementById('theme-style');
-        const currentTheme = localStorage.getItem('theme') || 'dark';
-
-        applyTheme(currentTheme);
-
-        if (themeToggle && themeLink) {
-            themeToggle.addEventListener('click', () => {
-                const isDark = themeLink.getAttribute('href').includes('dark');
-                const nextTheme = isDark ? 'light' : 'dark';
-                applyTheme(nextTheme);
-            });
-        }
-
-        function applyTheme(theme) {
-            themeLink.setAttribute('href', `/css/main-${theme}.css`);
-            localStorage.setItem('theme', theme);
-        }
-    });
-</script>
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/legal.js" defer></script>
 </body>
 </html>

@@ -1,127 +1,86 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About | Binary World</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About | Binary World</title>
 
-    <!-- SEO -->
-    <meta name="description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
-    <meta name="keywords" content="About, 소개, 개발자, Binary World, 개인 프로젝트">
-    <meta name="robots" content="index, follow">
-    <meta name="author" content="Binary World">
+  <meta name="description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
+  <meta name="keywords" content="About, 소개, 개발자, Binary World, 개인 프로젝트">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Binary World">
 
-    <!-- Open Graph -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="About | Binary World">
-    <meta property="og:description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
-    <meta property="og:image" content="https://binaryworld.kr/img/radish.png">
-    <meta property="og:url" content="https://binaryworld.kr/about">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="About | Binary World">
+  <meta property="og:description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
+  <meta property="og:image" content="https://game.binaryworld.kr/img/radish.png">
+  <meta property="og:url" content="https://game.binaryworld.kr/about">
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="About | Binary World">
-    <meta name="twitter:description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
-    <meta name="twitter:image" content="https://binaryworld.kr/img/radish.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="About | Binary World">
+  <meta name="twitter:description" content="Binary World 개발자 소개 및 사이트 운영 목적 안내 페이지입니다.">
+  <meta name="twitter:image" content="https://game.binaryworld.kr/img/radish.png">
 
-    <!-- 기본 파비콘 -->
-    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+  <meta name="theme-color" content="#0b0d10">
 
-    <!-- 다양한 디바이스 아이콘 -->
-    <link rel="apple-touch-icon" sizes="57x57" href="/img/favicon/apple-icon-57x57.png">
-    <link rel="apple-touch-icon" sizes="60x60" href="/img/favicon/apple-icon-60x60.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="/img/favicon/apple-icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon/apple-icon-76x76.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="/img/favicon/apple-icon-114x114.png">
-    <link rel="apple-touch-icon" sizes="120x120" href="/img/favicon/apple-icon-120x120.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="/img/favicon/apple-icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/img/favicon/apple-icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon/android-icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16x16.png">
+  <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+  <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+  <link rel="stylesheet" href="https://binaryworld.kr/common/legal.css">
+  <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
-    <!-- manifest와 윈도우용 타일 설정 -->
-    <link rel="manifest" href="/img/favicon/manifest.json">
-    <meta name="msapplication-TileColor" content="#ffffff">
-    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-    <meta name="theme-color" content="#ffffff">
-
-    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
-    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
-    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
-            crossorigin="anonymous"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+          crossorigin="anonymous"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-0TSFJBQ41N');
+  </script>
 </head>
-<body>
+<body class="bw-legal-page" data-theme="dark">
 <header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 
-<div class="main-content">
-    <main class="page-content">
-        <div class="container">
-            <h1>About</h1>
-            <p>Binary World는 1인 개발자가 운영하는 개인 웹 프로젝트 공간으로, 미니게임, 익명 투표, 랜덤 음식 추천, 상식 테스트, AI 외모 평가, 인생 망한 사람들 모임, 죽음 예측 테스트, 로또추첨기 등 다양한 웹 서비스를 제공하고 있습니다.</p>
-            <p>개발자: 이진수 (Binary)</p>
-            <p>盡人事待天命</p>
-        </div>
-    </main>
-</div>
+<main class="bw-legal-main">
+  <section class="bw-legal-hero">
+    <p class="bw-legal-eyebrow">About</p>
+    <h1>작고 빠른 실험들이<br>모이는 곳</h1>
+    <p class="bw-legal-lead">
+      Binary World는 1인 개발자가 운영하는 개인 웹 프로젝트 공간입니다.
+      미니게임, 익명 투표, 음식 추천, 상식 테스트, AI 외모 평가처럼
+      바로 써보고 바로 공유할 수 있는 서비스를 만듭니다.
+    </p>
+  </section>
+
+  <section class="bw-legal-panel">
+    <article class="bw-legal-card">
+      <h2>무엇을 하나요</h2>
+      <p>
+        복잡한 회원가입 없이, 방문한 순간부터 즐길 수 있는 가벼운 웹 도구와
+        미니 콘텐츠를 만듭니다. 각 서비스는 독립 서브도메인으로 운영되며
+        공통 헤더와 푸터로 자연스럽게 연결됩니다.
+      </p>
+    </article>
+
+    <article class="bw-legal-card">
+      <h2>운영자</h2>
+      <p>개발자: 이진수 (Binary)</p>
+      <p>盡人事待天命</p>
+      <div class="bw-legal-meta">
+        <span class="bw-legal-chip">1인 개발</span>
+        <span class="bw-legal-chip">독립 서브도메인</span>
+        <span class="bw-legal-chip">Signal Glass UI</span>
+      </div>
+    </article>
+  </section>
+</main>
 
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
-<div class="side-ad left-ad">
-    <ins class="kakao_ad_area"
-         style="display:none;"
-         data-ad-unit="DAN-ePAs1c7mONqnY32w"
-         data-ad-width="160"
-         data-ad-height="600"></ins>
-</div>
-
-<div class="side-ad right-ad">
-    <ins class="kakao_ad_area"
-         style="display:none;"
-         data-ad-unit="DAN-qpEsz6jYmwJE0cE7"
-         data-ad-width="160"
-         data-ad-height="600"></ins>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // 1. 햄버거 메뉴 토글
-        const toggleBtn = document.querySelector('.nav-toggle');
-        const nav = document.querySelector('.nav-links');
-
-        if (toggleBtn && nav) {
-            toggleBtn.addEventListener('click', () => {
-                toggleBtn.classList.toggle('active');
-                nav.classList.toggle('open');
-            });
-        }
-
-        // 2. 테마 토글
-        const themeToggle = document.getElementById('themeToggle');
-        const themeLink = document.getElementById('theme-style');
-        const currentTheme = localStorage.getItem('theme') || 'dark';
-
-        applyTheme(currentTheme);
-
-        if (themeToggle && themeLink) {
-            themeToggle.addEventListener('click', () => {
-                const isDark = themeLink.getAttribute('href').includes('dark');
-                const nextTheme = isDark ? 'light' : 'dark';
-                applyTheme(nextTheme);
-            });
-        }
-
-        function applyTheme(theme) {
-            themeLink.setAttribute('href', `/css/main-${theme}.css`);
-            localStorage.setItem('theme', theme);
-        }
-    });
-</script>
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/legal.js" defer></script>
 </body>
 </html>
