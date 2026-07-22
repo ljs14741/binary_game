@@ -73,6 +73,7 @@
 
     <!-- 공통 CSS -->
     <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
     <!-- 게임 캔버스 & BGM 컨트롤 스타일 -->
@@ -507,7 +508,7 @@
     </div>
 </div><!-- /.main-content -->
 
-<th:block th:include="common/footer"></th:block>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
 <!-- Phaser 3 & 게임 스크립트 -->
 <script th:src="@{/js/phaser.min.js}"></script>
@@ -653,5 +654,6 @@
 </script>
 
 <script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
 </body>
 </html>
