@@ -48,13 +48,14 @@
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
 </head>
 <body>
-<th:block th:include="common/header"></th:block>
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 
 <div class="main-content">
     <main class="page-content">
@@ -119,5 +120,6 @@
         }
     });
 </script>
+<script src="https://binaryworld.kr/common/header.js" defer></script>
 </body>
 </html>

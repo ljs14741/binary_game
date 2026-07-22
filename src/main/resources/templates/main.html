@@ -47,6 +47,7 @@
 
     <!-- ✅ Fonts & CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
@@ -70,7 +71,7 @@
 </head>
 <body>
 
-<th:block th:include="common/header"></th:block>
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 <div class="page-title">
     <h1>무궁화꽃이피었습니다·핀볼룰렛·말달리자 커피내기·벌칙뽑기 무료 뽑기 게임 | Binary World</h1>
     <p>무궁화·핀볼룰렛·말달리자로 커피내기·점심내기·벌칙뽑기! 사다리타기·룰렛 대신 무료 웹게임을 지금 바로 즐기세요.</p>
@@ -289,5 +290,6 @@
         loadGuestbookPage();
     });
 </script>
+<script src="https://binaryworld.kr/common/header.js" defer></script>
 </body>
 </html>

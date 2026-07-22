@@ -69,6 +69,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
     <link rel="stylesheet" th:href="@{/css/pinball.css}">
 
@@ -78,7 +79,7 @@
             crossorigin="anonymous"></script>
 </head>
 <body>
-<th:block th:include="common/header"></th:block>
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 
 <div class="main-content">
     <div class="container">
@@ -439,5 +440,6 @@
     setupKakaoShareButton();
 
 </script>
+<script src="https://binaryworld.kr/common/header.js" defer></script>
 </body>
 </html>
