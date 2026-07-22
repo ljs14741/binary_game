@@ -67,8 +67,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
@@ -80,23 +79,23 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
 </head>
-<body>
+<body class="bw-game-body">
 <header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 
 <div class="main-content">
     <div class="container">
 
         <div class="nav-back">
-            <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+            <a href="/" class="back-btn">← 게임 목록</a>
         </div>
 
-        <h1 class="game-title">🎲 핀볼룰렛 - 핀볼 랜덤 숫자 뽑기 사다리 룰렛</h1>
+        <h1 class="game-title">핀볼룰렛</h1>
 
         <div class="game-bgm">
-            <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
+            <button id="bgmToggle">BGM 켜기/끄기</button>
             <label for="volumeControl">BGM 볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="100">
-            <button id="fsToggle" title="전체화면 전환">⛶ 전체화면</button>
+            <button id="fsToggle" title="전체화면 전환">전체화면</button>
         </div>
 
         <div id="game-container"></div>
@@ -123,7 +122,6 @@
                 <li>모바일·PC 모두 부드럽게 동작, BGM·전체화면·볼륨 조절 지원</li>
                 <li>닉네임 자동 저장, 중복 방지, 실시간 순위판·미니맵</li>
             </ul>
-ㅡ
             <h2>안내</h2>
             <p>
                 매번 실행할 때마다 결과가 달라질 수 있어요. 특정 사람이 유리해지지 않도록 기본 동작을 설계했습니다.
@@ -231,7 +229,7 @@
     function updateBtn(){
         const b = document.getElementById('fsToggle'); if(!b) return;
         const on = isFS() || gc.classList.contains('fake-fullscreen');
-        b.textContent = on ? '🗗 일반 화면' : '⛶ 전체화면';
+        b.textContent = on ? '🗗 일반 화면' : '전체화면';
     }
 
     // 모바일에서만 닫기 버튼 DOM 생성(표시는 CSS가 전체화면 때만)

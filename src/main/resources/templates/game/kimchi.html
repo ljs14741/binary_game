@@ -50,7 +50,9 @@
     <meta name="_csrf" th:content="${_csrf.token}" />
 
     <link rel="canonical" href="https://game.binaryworld.kr/kimchi">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
@@ -61,7 +63,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
 </head>
-<body>
+<body class="bw-game-body">
 <header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 
 
@@ -69,13 +71,13 @@
     <div class="container">
 
         <div class="nav-back">
-            <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+            <a href="/" class="back-btn">← 게임 목록</a>
         </div>
 
-        <h1 class="game-title">🛡️ 김치 디펜스 - 김치 랜덤 타워 디펜스</h1>
+        <h1 class="game-title">김치 디펜스</h1>
 
         <div class="game-bgm">
-            <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
+            <button id="bgmToggle">BGM 켜기/끄기</button>
             <label for="volumeControl">BGM 볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="100">
             <label for="sfxVolumeControl">효과음 볼륨:</label>
@@ -98,7 +100,7 @@
                 적은 라운드마다 점점 강해지며, 마지막 보스를 처치하면 게임을 클리어합니다.<br>
                 타워를 전략적으로 설치하고 업그레이드하며 최종 라운드를 돌파해보세요!
             </p>
-            <h3>🎯 타워 등급 및 출현 확률</h3>
+            <h3>타워 등급 및 출현 확률</h3>
             <ul>
                 <li>태초 ⭐⭐⭐⭐⭐⭐ : 0.5%</li>
                 <li>전설 ⭐⭐⭐⭐⭐ : 1.5%</li>

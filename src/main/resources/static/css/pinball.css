@@ -1,13 +1,14 @@
 #game-container {
     width: 1000px;
     height: 720px;
-    background: #181818;
-    border-radius: 12px;
+    background: #10141a;
+    border-radius: 1.1rem;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 20px rgba(144, 202, 249, 0.2);
+    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.38);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     position: relative;
     overflow: hidden;
 }
@@ -20,36 +21,34 @@
 
 #name-overlay{
     position:absolute; inset:0;
-    z-index:3;                  /* 캔버스 위 */
-    pointer-events:none;        /* 기본은 막고… */
+    z-index:3;
+    pointer-events:none;
 }
 #name-overlay .cell{
-    position:absolute;          /* 각 칸은 좌표로 찍기 */
+    position:absolute;
     transform:translate(-50%,-50%);
-    pointer-events:auto;        /* 인풋은 클릭 가능 */
+    pointer-events:auto;
 }
 #name-overlay input{
     width:120px; height:36px;
     font-size:16px; line-height:36px;
-    background:#333; color:#fff;
-    border:1px solid #ffcc00; border-radius:6px;
+    background:#14181e; color:#f3f1ec;
+    border:1px solid rgba(45, 212, 191, 0.45); border-radius:8px;
     text-align:center; outline:none;
+    font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
 }
 
-
-
-/* 전체화면 */
 #game-container .fs-exit{
     position:absolute;
     top:max(10px, env(safe-area-inset-top));
     right:max(10px, env(safe-area-inset-right));
     z-index:10001;
     display:none;
-    padding:8px 10px;
-    border-radius:10px;
-    border:1px solid #00c3ff;
-    background:rgba(0,0,0,.6);
-    color:#fff; font-weight:700;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(45, 212, 191, 0.45);
+    background:rgba(11,13,16,.75);
+    color:#2dd4bf; font-weight:700;
     -webkit-tap-highlight-color:transparent;
 }
 @media (pointer: coarse){
@@ -60,15 +59,15 @@
 
 #game-container.fake-fullscreen {
     position: fixed !important;
-    inset: 0 !important;               /* top/right/bottom/left = 0 */
+    inset: 0 !important;
     width: 100vw !important;
-    height: 100dvh !important;         /* iOS 주소창 변동 대응 */
+    height: 100dvh !important;
     aspect-ratio: auto !important;
     z-index: 9999 !important;
-    background: #000;                  /* 화면 경계 안 보이게 */
+    background: #0b0d10;
+    border-radius: 0 !important;
 }
 
-/* 캔버스도 꽉 채우기 */
 #game-container.fake-fullscreen canvas {
     position: absolute !important;
     inset: 0 !important;
@@ -76,18 +75,15 @@
     height: 100% !important;
 }
 
-/* 전체화면(진짜/가짜)에서만 닫기 버튼 보이기 - 벤더 프리픽스 모두 */
 #game-container.fake-fullscreen .fs-exit,
 #game-container:fullscreen .fs-exit,
 #game-container:-webkit-full-screen .fs-exit {
     display: inline-block !important;
 }
 
-/* 전체화면 끝 */
-
 @media (max-width: 1000px) {
     #game-container {
-        display: block;        /* main-dark.css의 flex 덮어쓰기 */
+        display: block;
         position: relative;
         width: 100%;
         height: auto;
@@ -100,18 +96,17 @@
         width: 100%;
         height: 100%;
         display: block;
-        z-index: 0;              /* 바닥 */
+        z-index: 0;
     }
 
-    /* Phaser DOM 컨테이너(= rexInputText의 부모) */
     #game-container > .dom-container,
     #game-container > div.dom-container {
         position: absolute !important;
         inset: 0 !important;
         width: 100% !important;
         height: 100% !important;
-        z-index: 2 !important;               /* 캔버스 위 */
-        transform: none !important;          /* Phaser가 쓰는 matrix 무력화 */
+        z-index: 2 !important;
+        transform: none !important;
         -webkit-transform: none !important;
         pointer-events: auto !important;
     }

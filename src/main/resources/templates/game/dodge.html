@@ -63,7 +63,9 @@
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
     }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
@@ -74,20 +76,20 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
 </head>
-<body>
+<body class="bw-game-body">
 <header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 
 <div class="main-content">
     <div class="container">
 
         <div class="nav-back">
-            <a href="/" class="back-btn">🏠 홈으로 돌아가기</a>
+            <a href="/" class="back-btn">← 게임 목록</a>
         </div>
 
         <section class="leaderboards">
             <!-- 명예의 전당 Top10 -->
             <div class="board-card">
-                <h3>🏆 명예의 전당 Top 10</h3>
+                <h3>명예의 전당 Top 10</h3>
                 <div class="board-table-wrap">
                     <table class="board-table" id="hallTable" th:if="${hallOfFame != null}">
                         <thead>
@@ -116,7 +118,7 @@
 
             <!-- 월간 Top30 -->
             <div class="board-card">
-                <h3 th:text="'📅 ' + (${currentMonth} != null ? ${currentMonth} : '이번 달') + ' Top 30'">📅 이번 달 Top 30</h3>
+                <h3 th:text="(${currentMonth} != null ? ${currentMonth} : '이번 달') + ' Top 30'">이번 달 Top 30</h3>
                 <div class="board-table-wrap">
                     <table class="board-table" id="monthTable" th:if="${monthly != null}">
                         <thead>
@@ -143,19 +145,19 @@
             </div>
         </section>
 
-        <h1 class="game-title">🎯 총알피하기 - 총알 피하기 게임</h1>
+        <h1 class="game-title">총알피하기</h1>
 
         <div class="game-bgm">
-            <button id="bgmToggle">🎵 BGM 끄기/켜기</button>
+            <button id="bgmToggle">BGM 켜기/끄기</button>
             <label for="volumeControl">BGM 볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="100">
         </div>
 
-        <div class="nickname-bar" style="margin:12px 0 20px; display:flex; gap:8px; justify-content:center; align-items:center;">
+        <div class="nickname-bar">
             <label for="nicknameInput">닉네임</label>
-            <input id="nicknameInput" type="text" maxlength="10" placeholder="닉네임(최대 10자)" style="padding:6px 10px;">
-            <button id="nicknameSave" type="button" style="padding:6px 12px;">저장</button>
-            <span id="nickStatus" style="opacity:.8;">미설정 ⚠️</span>
+            <input id="nicknameInput" type="text" maxlength="10" placeholder="닉네임(최대 10자)">
+            <button id="nicknameSave" type="button">저장</button>
+            <span id="nickStatus">미설정</span>
         </div>
 
         <div id="game-container"></div>
