@@ -74,6 +74,7 @@
     <!-- 공통 CSS -->
     <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
     <!-- 게임 캔버스 & BGM 컨트롤 스타일 -->
@@ -487,25 +488,7 @@
 
     </div><!-- /.container -->
 
-    <div class="guestbook">
-        <h2>📖 방명록</h2>
-
-        <form class="guestbook-form">
-            <input type="text" placeholder="닉네임" class="guestbook-nickname" required>
-            <input type="password" placeholder="비밀번호" class="guestbook-password" required>
-            <textarea placeholder="방문한 소감을 남겨주세요 😊" class="guestbook-message" required></textarea>
-            <button type="submit" class="guestbook-submit">등록</button>
-        </form>
-
-        <ul class="guestbook-list">
-        </ul>
-
-        <div class="guestbook-pagination">
-            <button id="prevPage">이전</button>
-            <span id="pageInfo">1</span>
-            <button id="nextPage">다음</button>
-        </div>
-    </div>
+    <div id="bw-guestbook" aria-label="방명록"></div>
 </div><!-- /.main-content -->
 
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
@@ -515,145 +498,13 @@
 <script th:src="@{/js/horserace.js}"></script>
 
 <script>
-    // 페이지 로드 완료 후 실행
     document.addEventListener('DOMContentLoaded', function () {
-
-        // ==========================================
-        // 1. 햄버거 메뉴 토글 기능
-        // ==========================================
-        const toggleBtn = document.querySelector('.nav-toggle');
-        const nav = document.querySelector('.nav-links');
-
-        if (toggleBtn && nav) {
-            toggleBtn.addEventListener('click', () => {
-                toggleBtn.classList.toggle('active');
-                nav.classList.toggle('open');
-            });
-        }
-
-        // ==========================================
-        // 2. 방명록 기능 (페이징 & 이벤트 바인딩)
-        // ==========================================
-        let currentPage = 0;
-        let pageSize = 5;
-
-        const form = document.querySelector('.guestbook-form');
-        const list = document.querySelector('.guestbook-list');
-        const prevBtn = document.getElementById('prevPage');
-        const nextBtn = document.getElementById('nextPage');
-
-        // [함수] 페이징 처리된 방명록 목록 불러오기
-        function loadGuestbookPage(page = 0) {
-            if (!list) return;
-
-            fetch(`/api/guestbook/paged?page=${page}&size=${pageSize}`)
-                .then(res => res.json())
-                .then(data => {
-                    list.innerHTML = '';
-                    data.content.forEach(item => {
-                        const li = document.createElement('li');
-                        li.className = 'guestbook-item';
-                        li.innerHTML = `
-                            <div class="guestbook-header">
-                              <strong class="guestbook-name">${item.nickname}</strong>
-                              <span class="guestbook-date">${item.createdAt?.substring(0, 10)}</span>
-                            </div>
-                            <p class="guestbook-content">${item.content}</p>
-                            <button class="guestbook-delete" data-id="${item.id}">삭제</button>
-                        `;
-                        list.appendChild(li);
-                    });
-
-                    currentPage = data.number;
-
-                    // 페이징 UI 업데이트
-                    const pageInfo = document.getElementById('pageInfo');
-                    if (pageInfo) pageInfo.textContent = `${currentPage + 1}`;
-                    if (prevBtn) prevBtn.disabled = data.first;
-                    if (nextBtn) nextBtn.disabled = data.last;
-                })
-                .catch(err => console.error('방명록 로드 실패:', err));
-        }
-
-        // 방명록 등록 이벤트
-        if (form) {
-            form.addEventListener('submit', e => {
-                e.preventDefault();
-                let nickname = form.querySelector('.guestbook-nickname').value.trim();
-                let password = form.querySelector('.guestbook-password').value.trim();
-                let content = form.querySelector('.guestbook-message').value.trim();
-
-                if (!nickname || !password || !content) {
-                    alert('모든 필드를 입력해주세요.');
-                    return;
-                }
-                if (nickname.length > 10) {
-                    alert('닉네임은 10자 이하로 입력해주세요.');
-                    return;
-                }
-                if (password.length > 20) {
-                    alert('비밀번호는 20자 이하로 입력해주세요.');
-                    return;
-                }
-                if (content.length > 1000) {
-                    alert('내용이 너무 깁니다. 1000자 이하로 작성해주세요.');
-                    return;
-                }
-
-                fetch('/api/guestbook', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nickname, password, content })
-                }).then(res => {
-                    if (res.ok) {
-                        form.reset();
-                        loadGuestbookPage(0); // 첫 페이지 새로고침
-                    } else {
-                        alert('등록에 실패했습니다.');
-                    }
-                });
-            });
-        }
-
-        // 방명록 삭제 이벤트 (부모 리스트에 위임)
-        if (list) {
-            list.addEventListener('click', e => {
-                if (e.target.classList.contains('guestbook-delete')) {
-                    let id = e.target.dataset.id;
-                    let pw = prompt('비밀번호를 입력하세요');
-                    if (!pw) return;
-
-                    fetch(`/api/guestbook/${id}?password=${encodeURIComponent(pw)}`, {
-                        method: 'DELETE'
-                    }).then(res => {
-                        if (res.ok) {
-                            loadGuestbookPage(currentPage); // 현재 페이지 유지
-                        } else {
-                            alert('비밀번호가 틀렸습니다.');
-                        }
-                    });
-                }
-            });
-        }
-
-        // 페이지 이동 버튼 이벤트 바인딩
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                if (currentPage > 0) loadGuestbookPage(currentPage - 1);
-            });
-        }
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                loadGuestbookPage(currentPage + 1);
-            });
-        }
-
-        // 초기 화면 로딩 시 첫 페이지 호출
-        loadGuestbookPage(0);
+        // 공통 GNB/방명록 스크립트가 메뉴와 방명록을 담당합니다.
     });
 </script>
 
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
 </body>
 </html>

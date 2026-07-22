@@ -53,6 +53,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
 
     <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
@@ -109,25 +110,7 @@
         </div>
     </div>
 
-    <div class="guestbook">
-        <h2>📖 방명록</h2>
-
-        <form class="guestbook-form">
-            <input type="text" placeholder="닉네임" class="guestbook-nickname" required>
-            <input type="password" placeholder="비밀번호" class="guestbook-password" required>
-            <textarea placeholder="방문한 소감을 남겨주세요 😊" class="guestbook-message" required></textarea>
-            <button type="submit" class="guestbook-submit">등록</button>
-        </form>
-
-        <ul class="guestbook-list">
-        </ul>
-
-        <div class="guestbook-pagination">
-            <button id="prevPage">이전</button>
-            <span id="pageInfo">1</span>
-            <button id="nextPage">다음</button>
-        </div>
-    </div>
+    <div id="bw-guestbook" aria-label="방명록"></div>
 </div>
 
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
@@ -187,135 +170,7 @@
     });
 
     // 방명록 //
-    let currentPage = 0;
-    let pageSize = 5;
-
-    let form = document.querySelector('.guestbook-form');
-    let list = document.querySelector('.guestbook-list');
-
-    // 1. 방명록 불러오기
-    function loadGuestbook() {
-        fetch('/api/guestbook')
-            .then(res => res.json())
-            .then(data => {
-                list.innerHTML = '';
-                data.forEach(item => {
-                    let li = document.createElement('li');
-                    li.className = 'guestbook-item';
-                    li.innerHTML = `
-            <div class="guestbook-header">
-              <strong class="guestbook-name">${item.nickname}</strong>
-              <span class="guestbook-date">${item.createdAt?.substring(0, 10)}</span>
-            </div>
-            <p class="guestbook-content">${item.content}</p>
-            <button class="guestbook-delete" data-id="${item.id}">삭제</button>
-          `;
-                    list.appendChild(li);
-                });
-            })
-            .catch(err => {
-                console.error('불러오기 실패:', err);
-                alert('방명록을 불러오지 못했습니다.');
-            });
-    }
-
-    loadGuestbook(); // 초기 로딩
-
-    // 2. 등록 이벤트
-    form.addEventListener('submit', e => {
-        e.preventDefault();
-        let nickname = form.querySelector('.guestbook-nickname').value.trim();
-        let password = form.querySelector('.guestbook-password').value.trim();
-        let content = form.querySelector('.guestbook-message').value.trim();
-
-        if (!nickname || !password || !content) {
-            alert('모든 필드를 입력해주세요.');
-            return;
-        }
-        if (nickname.length > 10) {
-            alert('닉네임은 10자 이하로 입력해주세요.');
-            return;
-        }
-        if (password.length > 20) {
-            alert('비밀번호는 20자 이하로 입력해주세요.');
-            return;
-        }
-        if (content.length > 1000) {
-            alert('내용이 너무 깁니다. 1000자 이하로 작성해주세요.');
-            return;
-        }
-
-        fetch('/api/guestbook', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nickname, password, content })
-        }).then(res => {
-            if (res.ok) {
-                form.reset();
-                loadGuestbookPage(0);
-            } else {
-                alert('등록에 실패했습니다.');
-            }
-        });
-    });
-
-    // 3. 삭제 이벤트 (버튼 클릭 시)
-    list.addEventListener('click', e => {
-        if (e.target.classList.contains('guestbook-delete')) {
-            let id = e.target.dataset.id;
-            let pw = prompt('비밀번호를 입력하세요');
-            if (!pw) return;
-
-            fetch(`/api/guestbook/${id}?password=${encodeURIComponent(pw)}`, {
-                method: 'DELETE'
-            }).then(res => {
-                if (res.ok) {
-                    loadGuestbookPage(0);
-                } else {
-                    alert('비밀번호가 틀렸습니다.');
-                }
-            });
-        }
-    });
-
-    // 4. 페이징
-    function loadGuestbookPage(page = 0) {
-        fetch(`/api/guestbook/paged?page=${page}&size=${pageSize}`)
-            .then(res => res.json())
-            .then(data => {
-                list.innerHTML = '';
-                data.content.forEach(item => {
-                    const li = document.createElement('li');
-                    li.className = 'guestbook-item';
-                    li.innerHTML = `
-          <div class="guestbook-header">
-            <strong class="guestbook-name">${item.nickname}</strong>
-            <span class="guestbook-date">${item.createdAt?.substring(0, 10)}</span>
-          </div>
-          <p class="guestbook-content">${item.content}</p>
-          <button class="guestbook-delete" data-id="${item.id}">삭제</button>
-        `;
-                    list.appendChild(li);
-                });
-
-                currentPage = data.number;
-                document.getElementById('pageInfo').textContent = `${currentPage + 1}`;
-                document.getElementById('prevPage').disabled = data.first;
-                document.getElementById('nextPage').disabled = data.last;
-            });
-    }
-
-    // 페이지 이동 버튼
-    document.getElementById('prevPage').addEventListener('click', () => {
-        if (currentPage > 0) loadGuestbookPage(currentPage - 1);
-    });
-    document.getElementById('nextPage').addEventListener('click', () => {
-        loadGuestbookPage(currentPage + 1);
-    });
-
-    // 초기 로딩
-    loadGuestbookPage();
-    // 방명록 끝 //
+// 방명록 끝 //
 
     function shareTwitter() {
         var sendText = "김치 랜덤 디펜스 게임";
@@ -356,5 +211,6 @@
 </script>
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
 </body>
 </html>
