@@ -56,6 +56,11 @@ public class GameController {
         return "game/mugunghwa";
     }
 
+    @GetMapping("/wasabi")
+    public String wasabi(Model model, HttpSession session) {
+        return "game/wasabi";
+    }
+
     @GetMapping("/omokGame")
     public String omokGame(Model model, HttpSession session) {
 

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="@¬D ð">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#eef5ec"/>
+      <stop offset="100%" stop-color="#dfe9dc"/>
+    </linearGradient>
+    <linearGradient id="stage" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#335743"/>
+      <stop offset="100%" stop-color="#1d2f25"/>
+    </linearGradient>
+    <radialGradient id="plate" cx="32%" cy="28%" r="70%">
+      <stop offset="0%" stop-color="#f7f1e6"/>
+      <stop offset="60%" stop-color="#d7cfc0"/>
+      <stop offset="100%" stop-color="#a89880"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="70" y="70" width="660" height="400" rx="36" fill="url(#stage)"/>
+  <circle cx="400" cy="270" r="150" fill="url(#plate)" stroke="#b7aa96" stroke-width="8"/>
+  <ellipse cx="400" cy="300" rx="92" ry="48" fill="#fff8e8"/>
+  <path d="M318 248 C340 210, 460 210, 482 248 C470 268, 330 268, 318 248Z" fill="#ef7a55"/>
+  <rect x="372" y="268" width="56" height="44" rx="6" fill="#14241c"/>
+  <ellipse cx="400" cy="270" rx="46" ry="34" fill="#7cb518"/>
+  <ellipse cx="386" cy="258" rx="14" ry="10" fill="#d4f56a" opacity="0.75"/>
+  <text x="400" y="545" text-anchor="middle" font-family="Segoe UI, Avenir Next, sans-serif" font-size="40" font-weight="800" fill="#14201a">@¬D ð</text>
+</svg>

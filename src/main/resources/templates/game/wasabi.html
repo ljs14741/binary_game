@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 초밥 게임 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <meta name="description" content="와사비 룰렛! 초밥 접시 중 와사비를 피하세요. 커피내기·점심내기·벌칙뽑기에 딱 맞는 무료 미니게임. 와사비 집으면 벌칙 당첨.">
+    <meta name="keywords" content="와사비 룰렛, 와사비룰렛, 초밥 게임, 커피내기, 점심내기, 벌칙뽑기, 당번뽑기, 악어룰렛 대체, 랜덤뽑기, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 | Binary World">
+    <meta property="og:description" content="초밥 접시 중 와사비를 피하세요. 와사비 집으면 벌칙 당첨! 커피내기·점심내기용 무료 미니게임.">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/wasabi.jpg">
+    <meta property="og:url" content="https://game.binaryworld.kr/wasabi">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 | Binary World">
+    <meta name="twitter:description" content="초밥 접시 중 와사비를 피하세요. 와사비 집으면 벌칙 당첨! 커피내기·점심내기용 무료 미니게임.">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/wasabi.jpg">
+
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="theme-color" content="#e7efe6">
+    <link rel="canonical" href="https://game.binaryworld.kr/wasabi">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "와사비 룰렛",
+      "alternateName": ["와사비룰렛", "초밥 벌칙뽑기", "커피내기 게임", "점심내기 게임"],
+      "url": "https://game.binaryworld.kr/wasabi",
+      "description": "초밥 접시 중 와사비를 피하는 무료 미니게임. 커피내기·점심내기·벌칙뽑기에 적합. 와사비 집으면 벌칙 당첨.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": "와사비 룰렛, 커피내기, 점심내기, 벌칙뽑기, 초밥 게임"
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-light.css}">
+    <link rel="stylesheet" th:href="@{/css/wasabi.css}">
+
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+</head>
+<body class="bw-game-body bw-wasabi-page">
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
+
+<div class="bw-wasabi-shell">
+    <div class="bw-wasabi-nav">
+        <a href="/" class="bw-wasabi-back">← 게임 목록</a>
+    </div>
+
+    <header class="bw-wasabi-hero">
+        <h1>와사비 룰렛</h1>
+        <p class="bw-wasabi-lead">초밥 접시 중 와사비를 피하세요. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+    </header>
+
+    <div class="bw-wasabi-hud">
+        <p class="bw-wasabi-status" id="wasabi-status">
+            <span>남은 접시</span>
+            <span class="bw-wasabi-count">20</span>
+        </p>
+        <div class="bw-wasabi-actions">
+            <button type="button" class="bw-wasabi-btn bw-wasabi-btn-ghost" id="wasabi-bgm-toggle" aria-pressed="true">BGM 켜짐</button>
+        </div>
+    </div>
+
+    <section class="bw-wasabi-stage" aria-label="와사비 룰렛 보드">
+        <div class="bw-wasabi-board" id="wasabi-board"></div>
+        <div class="bw-wasabi-overlay" id="wasabi-result" role="status" aria-live="polite">
+            <div class="bw-wasabi-overlay-card">
+                <p class="bw-wasabi-overlay-title" id="wasabi-result-title"></p>
+                <span class="bw-wasabi-overlay-detail" id="wasabi-result-detail"></span>
+                <button type="button" class="bw-wasabi-btn" id="wasabi-restart">다시하기</button>
+            </div>
+        </div>
+    </section>
+
+    <div class="bw-wasabi-share">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
+    </div>
+
+    <section class="bw-wasabi-help">
+        <h2>게임 방법</h2>
+        <ol>
+            <li>접시 20개 중 <strong>와사비 1개</strong>가 숨겨져 있습니다.</li>
+            <li>접시를 하나씩 눌러 초밥을 집으세요.</li>
+            <li>와사비를 집으면 <strong>벌칙 당첨</strong>입니다.</li>
+            <li>누군가 한 명은 반드시 걸립니다. 마지막 접시를 고른 사람도 당첨입니다.</li>
+            <li>커피내기·점심내기·벌칙뽑기에 가볍게 쓰기 좋아요.</li>
+        </ol>
+    </section>
+</div>
+
+<div id="bw-guestbook" aria-label="방명록"></div>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
+
+<script th:src="@{/js/wasabi.js}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const themeToggle = document.getElementById("themeToggle");
+        const themeLink = document.getElementById("theme-style");
+        const currentTheme = localStorage.getItem("theme") || "light";
+
+        function applyTheme(theme) {
+            if (!themeLink) return;
+            themeLink.setAttribute("href", `/css/main-${theme}.css`);
+            localStorage.setItem("theme", theme);
+            document.body.setAttribute("data-theme", theme);
+        }
+
+        applyTheme(currentTheme);
+        if (themeToggle && themeLink) {
+            themeToggle.addEventListener("click", () => {
+                const isDark = themeLink.getAttribute("href").includes("dark");
+                applyTheme(isDark ? "light" : "dark");
+            });
+        }
+
+        if (typeof setupKakaoShareButton === "function") {
+            setupKakaoShareButton();
+        }
+    });
+</script>
+<script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
+</body>
+</html>

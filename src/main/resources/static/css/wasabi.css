@@ -1,0 +1,564 @@
+/*
+  Wasabi Roulette — HTML/CSS game (no Phaser)
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.bw-wasabi-page {
+  --ws-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ws-font-display: "Syne", "Avenir Next", "Segoe UI", sans-serif;
+  --ws-font-body: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+  --ws-bg: #e7efe6;
+  --ws-stage: #24382c;
+  --ws-text: #14201a;
+  --ws-muted: #4d5f55;
+  --ws-ink: #14201a;
+  --ws-wasabi: #7cb518;
+  --ws-wasabi-deep: #4f7a10;
+  --ws-salmon: #ef7a55;
+  --ws-tuna: #c44536;
+  --ws-egg: #f0c14a;
+  --ws-shrimp: #f2a28a;
+  --ws-rice: #fff8e8;
+  --ws-nori: #14241c;
+  --ws-plate: #d7cfc0;
+  --ws-plate-rim: #b7aa96;
+  --ws-ok: #1f6b3a;
+  --ws-shadow: 0 14px 32px rgba(20, 32, 26, 0.14);
+  --ws-signal: linear-gradient(90deg, #14201a 0%, #7cb518 55%, #ef7a55 100%);
+
+  min-height: 100dvh;
+  max-width: 100%;
+  margin: 0;
+  padding: 64px 0 0;
+  overflow-x: hidden;
+  color: var(--ws-text);
+  font-family: var(--ws-font-body);
+  background:
+    radial-gradient(900px 480px at 10% -8%, rgba(124, 181, 24, 0.16), transparent 55%),
+    radial-gradient(760px 420px at 92% 4%, rgba(239, 122, 85, 0.12), transparent 52%),
+    linear-gradient(180deg, #eef5ec 0%, #e7efe6 45%, #dfe9dc 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+body.bw-wasabi-page[data-theme="dark"] {
+  --ws-bg: #101612;
+  --ws-stage: #15221b;
+  --ws-text: #eef5ef;
+  --ws-muted: #9bb0a3;
+  --ws-ink: #eef5ef;
+  --ws-plate: #3a342c;
+  --ws-plate-rim: #5a5044;
+  --ws-rice: #f4ebd4;
+  --ws-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  background:
+    radial-gradient(900px 480px at 10% -8%, rgba(124, 181, 24, 0.16), transparent 55%),
+    radial-gradient(760px 420px at 92% 4%, rgba(239, 122, 85, 0.1), transparent 52%),
+    #101612;
+}
+
+.bw-wasabi-shell {
+  width: min(560px, calc(100% - 1rem));
+  margin: 0 auto;
+  padding: 0.65rem 0 1.75rem;
+}
+
+.bw-wasabi-nav {
+  margin-bottom: 0.4rem;
+}
+
+.bw-wasabi-back {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ws-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.bw-wasabi-back:hover {
+  color: var(--ws-text);
+}
+
+.bw-wasabi-hero {
+  text-align: center;
+  margin-bottom: 0.7rem;
+}
+
+.bw-wasabi-hero h1 {
+  margin: 0;
+  color: var(--ws-text);
+  font-family: var(--ws-font-display);
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.bw-wasabi-lead {
+  margin: 0.4rem auto 0;
+  max-width: 28rem;
+  color: var(--ws-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.bw-wasabi-hero::after {
+  content: "";
+  display: block;
+  width: min(8rem, 40%);
+  height: 2px;
+  margin: 0.7rem auto 0;
+  background: var(--ws-signal);
+  border-radius: 1px;
+}
+
+.bw-wasabi-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.bw-wasabi-status {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--ws-muted);
+  font-family: var(--ws-font-body);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.bw-wasabi-count {
+  color: var(--ws-text);
+  font-family: var(--ws-font-body);
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.bw-wasabi-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.bw-wasabi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.95rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--ws-ink);
+  color: #eef5ec;
+  font-family: var(--ws-font-body);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s var(--ws-ease), opacity 0.2s var(--ws-ease);
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-btn:not(.bw-wasabi-btn-ghost) {
+  color: #101612;
+}
+
+.bw-wasabi-btn:hover {
+  transform: translateY(-1px);
+}
+
+.bw-wasabi-btn.is-off {
+  opacity: 0.55;
+}
+
+.bw-wasabi-btn-ghost {
+  border: 1px solid rgba(20, 32, 26, 0.18);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ws-text);
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-btn-ghost {
+  border-color: rgba(238, 245, 239, 0.32);
+  background: rgba(238, 245, 239, 0.14);
+  color: #eef5ef;
+}
+
+.bw-wasabi-stage {
+  position: relative;
+  padding: 0.75rem;
+  border: 1px solid rgba(20, 32, 26, 0.12);
+  border-radius: 1.05rem;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124, 181, 24, 0.12), transparent 60%),
+    linear-gradient(180deg, #335743 0%, var(--ws-stage) 55%, #1d2f25 100%);
+  box-shadow: var(--ws-shadow);
+  overflow: hidden;
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-stage {
+  border-color: rgba(238, 245, 239, 0.1);
+}
+
+.bw-wasabi-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.bw-wasabi-plate {
+  aspect-ratio: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--ws-plate-rim);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, #f7f1e6 0%, var(--ws-plate) 58%, #a89880 100%);
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 255, 255, 0.2),
+    0 6px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.2s var(--ws-ease),
+    box-shadow 0.2s var(--ws-ease),
+    opacity 0.25s var(--ws-ease);
+}
+
+.bw-wasabi-plate:hover:not(:disabled):not(.is-opened) {
+  transform: translateY(-2px) scale(1.04);
+}
+
+.bw-wasabi-plate:active:not(:disabled):not(.is-opened) {
+  transform: scale(0.96);
+}
+
+.bw-wasabi-plate:disabled {
+  cursor: default;
+}
+
+.bw-wasabi-plate.is-opened {
+  transform: scale(0.96);
+}
+
+.bw-wasabi-plate.is-safe.is-opened {
+  opacity: 0.45;
+  filter: brightness(0.62) saturate(0.55);
+  box-shadow:
+    inset 0 4px 10px rgba(0, 0, 0, 0.35),
+    0 2px 0 rgba(0, 0, 0, 0.12);
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-plate.is-safe.is-opened {
+  opacity: 0.38;
+  filter: brightness(0.5) saturate(0.45);
+  box-shadow:
+    inset 0 5px 12px rgba(0, 0, 0, 0.55),
+    0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.bw-wasabi-plate.is-wasabi.is-opened {
+  opacity: 1;
+  border-color: #c6ef63;
+  box-shadow:
+    0 0 0 3px rgba(124, 181, 24, 0.35),
+    0 10px 20px rgba(124, 181, 24, 0.3);
+  animation: ws-wasabi-pulse 0.55s var(--ws-ease);
+}
+
+.bw-wasabi-nigiri {
+  position: relative;
+  width: 62%;
+  height: 46%;
+  display: block;
+}
+
+.bw-wasabi-rice {
+  position: absolute;
+  inset: 28% 4% 8%;
+  border-radius: 42% 42% 38% 38% / 55% 55% 45% 45%;
+  background:
+    linear-gradient(180deg, #fffdf6 0%, var(--ws-rice) 55%, #e8dcc0 100%);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.18),
+    inset 0 2px 3px rgba(255, 255, 255, 0.65);
+}
+
+.bw-wasabi-topping {
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  top: 0;
+  height: 48%;
+  border-radius: 48% 48% 42% 42% / 70% 70% 40% 40%;
+  background: linear-gradient(180deg, #ff9a78 0%, var(--ws-salmon) 48%, #c85a3d 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+.bw-wasabi-topping::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 28%;
+  height: 18%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.bw-wasabi-topping--tuna {
+  background: linear-gradient(180deg, #e0675a 0%, var(--ws-tuna) 50%, #8f2d24 100%);
+}
+
+.bw-wasabi-topping--egg {
+  background: linear-gradient(180deg, #ffe08a 0%, var(--ws-egg) 55%, #d4a018 100%);
+  border-radius: 0.35rem;
+  height: 42%;
+  top: 4%;
+}
+
+.bw-wasabi-topping--shrimp {
+  background: linear-gradient(180deg, #ffc2ad 0%, var(--ws-shrimp) 55%, #e07a5f 100%);
+}
+
+.bw-wasabi-nori {
+  position: absolute;
+  left: 34%;
+  right: 34%;
+  top: 34%;
+  bottom: 18%;
+  border-radius: 0.2rem;
+  background: linear-gradient(90deg, #0d1a14 0%, #24362c 50%, #0d1a14 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  z-index: 3;
+}
+
+.bw-wasabi-blob {
+  display: none;
+  position: absolute;
+  width: 48%;
+  height: 38%;
+  border-radius: 62% 38% 58% 42%;
+  background:
+    radial-gradient(circle at 32% 28%, #d4f56a 0%, var(--ws-wasabi) 48%, var(--ws-wasabi-deep) 100%);
+  box-shadow: 0 8px 16px rgba(79, 122, 16, 0.4);
+  z-index: 4;
+}
+
+.bw-wasabi-plate.is-wasabi.is-opened .bw-wasabi-nigiri {
+  display: none;
+}
+
+.bw-wasabi-plate.is-wasabi.is-opened .bw-wasabi-blob {
+  display: block;
+  animation: ws-blob-pop 0.45s var(--ws-ease);
+}
+
+/* Center overlay result */
+.bw-wasabi-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: none;
+  place-items: center;
+  padding: 0.85rem;
+  background: rgba(8, 14, 11, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.bw-wasabi-overlay.is-visible {
+  display: grid;
+  animation: ws-fade 0.25s var(--ws-ease);
+}
+
+.bw-wasabi-overlay-card {
+  width: min(280px, 100%);
+  padding: 1.15rem 1rem 1.05rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  text-align: center;
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay-card {
+  background: rgba(22, 30, 26, 0.96);
+  border: 1px solid rgba(238, 245, 239, 0.12);
+}
+
+.bw-wasabi-overlay.is-lose .bw-wasabi-overlay-card {
+  border: 2px solid rgba(124, 181, 24, 0.55);
+}
+
+.bw-wasabi-overlay.is-win .bw-wasabi-overlay-card {
+  border: 2px solid rgba(31, 107, 58, 0.45);
+}
+
+.bw-wasabi-overlay-title {
+  margin: 0;
+  color: var(--ws-text);
+  font-family: var(--ws-font-display);
+  font-size: clamp(1.35rem, 4vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.bw-wasabi-overlay.is-lose .bw-wasabi-overlay-title {
+  color: var(--ws-wasabi-deep);
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay.is-lose .bw-wasabi-overlay-title {
+  color: #c6ef63;
+}
+
+.bw-wasabi-overlay.is-win .bw-wasabi-overlay-title {
+  color: var(--ws-ok);
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay.is-win .bw-wasabi-overlay-title {
+  color: #7dcea0;
+}
+
+.bw-wasabi-overlay-detail {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--ws-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.bw-wasabi-overlay-card .bw-wasabi-btn {
+  width: 100%;
+  margin-top: 0.95rem;
+  background: var(--ws-ink);
+  color: #eef5ec;
+}
+
+body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay-card .bw-wasabi-btn {
+  background: #eef5ef;
+  color: #101612;
+}
+
+.bw-wasabi-help {
+  margin-top: 1.15rem;
+  color: var(--ws-muted);
+  font-size: 0.88rem;
+}
+
+.bw-wasabi-help h2 {
+  margin: 0 0 0.45rem;
+  color: var(--ws-text);
+  font-family: var(--ws-font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.bw-wasabi-help ol {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.bw-wasabi-help li {
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+}
+
+.bw-wasabi-share {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.95rem 0 0.25rem;
+}
+
+.bw-wasabi-share .link-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-size: cover;
+  opacity: 0.65;
+}
+
+.bw-wasabi-share .link-icon.twitter { background-image: url(../img/icon-twitter.png); }
+.bw-wasabi-share .link-icon.facebook { background-image: url(../img/icon-facebook.png); }
+.bw-wasabi-share .link-icon.kakao { background-image: url(../img/icon-kakao.png); }
+
+#bw-guestbook {
+  width: min(560px, calc(100% - 1rem));
+  margin: 1.5rem auto 0;
+  padding-bottom: 1.25rem;
+}
+
+@keyframes ws-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ws-blob-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ws-wasabi-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 520px) {
+  .bw-wasabi-shell {
+    width: min(100%, calc(100% - 0.75rem));
+  }
+
+  .bw-wasabi-board {
+    max-width: 340px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.32rem;
+  }
+
+  .bw-wasabi-hud {
+    gap: 0.4rem;
+  }
+
+  .bw-wasabi-actions {
+    margin-left: auto;
+  }
+
+  .bw-wasabi-nigiri {
+    width: 66%;
+    height: 48%;
+  }
+
+  .bw-wasabi-overlay-card {
+    width: min(260px, 100%);
+  }
+}
+
+/* Very narrow phones: still keep 5 cols but slightly denser */
+@media (max-width: 360px) {
+  .bw-wasabi-board {
+    max-width: 300px;
+    gap: 0.28rem;
+  }
+}
