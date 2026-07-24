@@ -45,7 +45,7 @@
   }
 
   function pickPenalty() {
-    return "응 너야~ ㅋ_ㅋ";
+    return "응 너야～ ㅋ_ㅋ";
   }
 
   function makeSfx(src) {
@@ -127,9 +127,9 @@
   function hintForRemaining() {
     const level = tensionLevel();
     if (remaining === 1) return "· 마지막 접시… 집으면 벌칙!";
-    if (level >= 3) return "· 심장이 뛴다…";
+    if (level >= 3) return "· 가즈아～";
     if (level >= 2) return "· 위험해진다";
-    if (level >= 1) return "· 슬슬 긴장";
+    if (level >= 1) return "· 긴장타이소～";
     return "· 와사비를 피하세요";
   }
 

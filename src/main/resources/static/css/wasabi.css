@@ -353,10 +353,10 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-stage {
   border-radius: 0.85rem;
   background: rgba(12, 18, 14, 0.82);
   color: #f4ffe8;
-  font-family: var(--ws-font-display);
+  font-family: var(--ws-font-body);
   font-size: clamp(1.05rem, 3.8vw, 1.35rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   text-align: center;
   line-height: 1.25;
   opacity: 0;
@@ -732,7 +732,9 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay-card {
 
 .bw-wasabi-overlay.is-lose .bw-wasabi-overlay-title {
   color: var(--ws-wasabi-deep);
+  font-family: var(--ws-font-body);
   font-size: clamp(1.35rem, 4.5vw, 1.75rem);
+  letter-spacing: -0.02em;
   animation: ws-title-punch 0.55s var(--ws-ease);
 }
 
