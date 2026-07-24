@@ -1,11 +1,5 @@
 (() => {
   const TOPPINGS = ["salmon", "tuna", "egg", "shrimp"];
-  const PENALTIES = [
-    "☕ 오늘 커피 당첨!",
-    "🍱 점심값 당첨!",
-    "💥 인중 딱밤 1대!",
-    "🥤 물 한 컵 원샷!",
-  ];
 
   const board = document.getElementById("wasabi-board");
   const stage = document.getElementById("wasabi-stage");
@@ -23,7 +17,7 @@
   const SFX_SAFE = "/assets/horseRace/jump.mp3";
   const SFX_WASABI = "/assets/horseRace/puddle.mp3";
 
-  const BGM_BASE_VOL = 0.14;
+  const BGM_BASE_VOL = 0.06;
   const SFX_VOL = 1;
 
   let plateCount = 20;
@@ -51,7 +45,7 @@
   }
 
   function pickPenalty() {
-    return PENALTIES[Math.floor(Math.random() * PENALTIES.length)];
+    return "응 너야~ ㅋ_ㅋ";
   }
 
   function makeSfx(src) {
@@ -62,8 +56,14 @@
 
   function playSfx(src) {
     try {
+      // HTMLAudio max volume is 1 — layer two plays for a stronger hit
       const sfx = makeSfx(src);
       sfx.play().catch(() => {});
+      const sfx2 = makeSfx(src);
+      sfx2.volume = SFX_VOL;
+      window.setTimeout(() => {
+        sfx2.play().catch(() => {});
+      }, 28);
     } catch (e) {
       /* ignore */
     }
