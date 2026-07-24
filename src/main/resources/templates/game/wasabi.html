@@ -68,6 +68,17 @@
         <p class="bw-wasabi-lead">초밥 접시 중 와사비를 피하세요. 커피내기·점심내기·벌칙뽑기에 딱!</p>
     </header>
 
+    <div class="bw-wasabi-setup" id="wasabi-setup">
+        <div class="bw-wasabi-field">
+            <span>접시 수</span>
+            <div class="bw-wasabi-seg" id="wasabi-plate-opts" role="group" aria-label="접시 수">
+                <button type="button" class="bw-wasabi-seg-btn" data-plates="10">10</button>
+                <button type="button" class="bw-wasabi-seg-btn is-active" data-plates="20">20</button>
+                <button type="button" class="bw-wasabi-seg-btn" data-plates="30">30</button>
+            </div>
+        </div>
+    </div>
+
     <div class="bw-wasabi-hud">
         <p class="bw-wasabi-status" id="wasabi-status">
             <span>남은 접시</span>
@@ -78,8 +89,9 @@
         </div>
     </div>
 
-    <section class="bw-wasabi-stage" aria-label="와사비 룰렛 보드">
-        <div class="bw-wasabi-board" id="wasabi-board"></div>
+    <section class="bw-wasabi-stage" id="wasabi-stage" data-tension="0" aria-label="와사비 룰렛 보드">
+        <div class="bw-wasabi-fx" id="wasabi-fx" aria-hidden="true"></div>
+        <div class="bw-wasabi-board" id="wasabi-board" data-cols="5"></div>
         <div class="bw-wasabi-overlay" id="wasabi-result" role="status" aria-live="polite">
             <div class="bw-wasabi-overlay-card">
                 <p class="bw-wasabi-overlay-title" id="wasabi-result-title"></p>
@@ -98,7 +110,7 @@
     <section class="bw-wasabi-help">
         <h2>게임 방법</h2>
         <ol>
-            <li>접시 20개 중 <strong>와사비 1개</strong>가 숨겨져 있습니다.</li>
+            <li>접시 중 <strong>와사비 1개</strong>가 숨겨져 있습니다.</li>
             <li>접시를 하나씩 눌러 초밥을 집으세요.</li>
             <li>와사비를 집으면 <strong>벌칙 당첨</strong>입니다.</li>
             <li>누군가 한 명은 반드시 걸립니다. 마지막 접시를 고른 사람도 당첨입니다.</li>

@@ -1,28 +1,55 @@
 (() => {
-  const PLATE_COUNT = 20;
   const TOPPINGS = ["salmon", "tuna", "egg", "shrimp"];
+  const PENALTIES = [
+    "☕ 오늘 커피 당첨!",
+    "🍱 점심값 1/N 제외!",
+    "💥 인중 딱밤 1대!",
+    "🥤 물 한 컵 원샷!",
+  ];
 
   const board = document.getElementById("wasabi-board");
+  const stage = document.getElementById("wasabi-stage");
+  const fxEl = document.getElementById("wasabi-fx");
   const statusEl = document.getElementById("wasabi-status");
   const resultEl = document.getElementById("wasabi-result");
   const restartBtn = document.getElementById("wasabi-restart");
   const bgmToggle = document.getElementById("wasabi-bgm-toggle");
   const themeLink = document.getElementById("theme-style");
+  const plateOpts = document.getElementById("wasabi-plate-opts");
+  const setupEl = document.getElementById("wasabi-setup");
 
   const BGM_SRC = "/assets/mugunghwa/bgm.mp3";
   const SFX_SAFE = "/assets/horseRace/jump.mp3";
   const SFX_WASABI = "/assets/horseRace/puddle.mp3";
 
+  const BGM_BASE_VOL = 0.26;
+  const BGM_MAX_VOL = 0.62;
+
+  let plateCount = 20;
   let wasabiIndex = 0;
-  let remaining = PLATE_COUNT;
+  let remaining = plateCount;
   let locked = false;
+  let revealing = false;
+  let gameOver = false;
   let plates = [];
   let bgmOn = true;
   let audioUnlocked = false;
 
   const bgm = new Audio(BGM_SRC);
   bgm.loop = true;
-  bgm.volume = 0.32;
+  bgm.volume = BGM_BASE_VOL;
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function randBetween(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function pickPenalty() {
+    return PENALTIES[Math.floor(Math.random() * PENALTIES.length)];
+  }
 
   function makeSfx(src) {
     const a = new Audio(src);
@@ -44,6 +71,7 @@
     if (!bgmOn) return;
     try {
       await bgm.play();
+      applyBgmPressure();
     } catch (e) {
       /* autoplay blocked until next gesture */
     }
@@ -55,8 +83,41 @@
     document.body.setAttribute("data-theme", theme);
   }
 
-  function shuffleWasabi() {
-    wasabiIndex = Math.floor(Math.random() * PLATE_COUNT);
+  function tensionLevel() {
+    if (remaining <= 1) return 3;
+    const ratio = remaining / plateCount;
+    if (ratio <= 0.2) return 3;
+    if (ratio <= 0.4) return 2;
+    if (ratio <= 0.65) return 1;
+    return 0;
+  }
+
+  /** Tension ↑ → volume & playbackRate climb for psychological pressure */
+  function applyBgmPressure() {
+    if (!bgmOn || !audioUnlocked) return;
+    const level = tensionLevel();
+    const volCurve = [0, 0.08, 0.18, 0.3][level];
+    bgm.volume = Math.min(BGM_MAX_VOL, BGM_BASE_VOL + volCurve);
+    try {
+      bgm.playbackRate = [1, 1.04, 1.1, 1.18][level];
+    } catch (e) {
+      /* ignore unsupported rate */
+    }
+  }
+
+  function applyTension() {
+    const level = tensionLevel();
+    if (stage) stage.dataset.tension = String(level);
+    applyBgmPressure();
+  }
+
+  function hintForRemaining() {
+    const level = tensionLevel();
+    if (remaining === 1) return "· 마지막 접시… 집으면 벌칙!";
+    if (level >= 3) return "· 심장이 뛴다…";
+    if (level >= 2) return "· 위험해진다";
+    if (level >= 1) return "· 슬슬 긴장";
+    return "· 와사비를 피하세요";
   }
 
   function setStatus(count, hint) {
@@ -83,6 +144,26 @@
     if (detailEl) detailEl.textContent = detail;
   }
 
+  function pulseFx(kind, durationMs) {
+    if (!fxEl) return;
+    fxEl.className = `bw-wasabi-fx is-${kind}`;
+    void fxEl.offsetWidth;
+    fxEl.classList.add("is-active");
+    window.setTimeout(() => {
+      fxEl.classList.remove("is-active");
+    }, durationMs || 700);
+  }
+
+  function shakeStage(intensity) {
+    if (!stage) return;
+    stage.classList.remove("is-shaking", "is-shaking-hard");
+    void stage.offsetWidth;
+    stage.classList.add(intensity >= 2 ? "is-shaking-hard" : "is-shaking");
+    window.setTimeout(() => {
+      stage.classList.remove("is-shaking", "is-shaking-hard");
+    }, intensity >= 2 ? 780 : 620);
+  }
+
   function nigiriHtml(variant) {
     const toppingClass =
       variant === "salmon"
@@ -95,18 +176,52 @@
         <span class="bw-wasabi-nori"></span>
       </span>
       <span class="bw-wasabi-blob" aria-hidden="true"></span>
+      <span class="bw-wasabi-splat" aria-hidden="true"></span>
     `;
+  }
+
+  function colsForCount(count) {
+    if (count <= 20) return 5;
+    return 6;
+  }
+
+  function shuffleWasabi() {
+    wasabiIndex = Math.floor(Math.random() * plateCount);
+  }
+
+  function setSetupEnabled(enabled) {
+    if (!setupEl) return;
+    setupEl.classList.toggle("is-locked", !enabled);
+    setupEl.querySelectorAll("button").forEach((el) => {
+      el.disabled = !enabled;
+    });
   }
 
   function buildBoard() {
     board.innerHTML = "";
     plates = [];
-    remaining = PLATE_COUNT;
+    remaining = plateCount;
     locked = false;
+    revealing = false;
+    gameOver = false;
     hideResult();
     shuffleWasabi();
+    setSetupEnabled(true);
 
-    for (let i = 0; i < PLATE_COUNT; i += 1) {
+    if (bgmOn) {
+      bgm.volume = BGM_BASE_VOL;
+      try {
+        bgm.playbackRate = 1;
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    const cols = colsForCount(plateCount);
+    board.dataset.cols = String(cols);
+    board.style.setProperty("--ws-cols", String(cols));
+
+    for (let i = 0; i < plateCount; i += 1) {
       const variant = TOPPINGS[i % TOPPINGS.length];
       const btn = document.createElement("button");
       btn.type = "button";
@@ -119,49 +234,122 @@
       plates.push(btn);
     }
 
-    setStatus(remaining, "· 와사비를 피하세요");
+    applyTension();
+    setStatus(remaining, hintForRemaining());
   }
 
   function freezeBoard() {
     locked = true;
+    gameOver = true;
     plates.forEach((p) => {
       p.disabled = true;
     });
+    setSetupEnabled(true);
   }
 
-  function onPick(index) {
-    if (locked) return;
+  /** Varied suspense hold — higher tension = longer, jitterier waits */
+  function revealDelayMs() {
+    const level = tensionLevel();
+    const ranges = [
+      [360, 480],
+      [520, 720],
+      [700, 980],
+      [900, 1280],
+    ];
+    const [lo, hi] = ranges[level];
+    let ms = randBetween(lo, hi);
+    // rare extra hold at high tension (heart stops)
+    if (level >= 2 && Math.random() < 0.28) ms += randBetween(220, 420);
+    if (level >= 3 && Math.random() < 0.18) ms += randBetween(280, 520);
+    return Math.round(ms);
+  }
+
+  function shouldFakeScare() {
+    const level = tensionLevel();
+    const chances = [0.1, 0.22, 0.4, 0.58];
+    return Math.random() < chances[level];
+  }
+
+  function fakeScareMs() {
+    const level = tensionLevel();
+    return Math.round([320, 420, 520, 640][level] + randBetween(0, 80));
+  }
+
+  async function onPick(index) {
+    if (locked || revealing || gameOver) return;
     const plate = plates[index];
     if (!plate || plate.classList.contains("is-opened")) return;
 
     unlockAndPlayBgm();
+    setSetupEnabled(false);
+    revealing = true;
+    locked = true;
+
+    const levelAtPick = tensionLevel();
+    plate.disabled = true;
+    plate.classList.add("is-revealing");
+    if (levelAtPick >= 2) plate.classList.add("is-revealing-tense");
+
+    await sleep(revealDelayMs());
 
     const isWasabi = index === wasabiIndex;
+
+    if (!isWasabi && shouldFakeScare()) {
+      const scareLevel = Math.min(3, levelAtPick + (Math.random() < 0.35 ? 1 : 0));
+      const scareMs = fakeScareMs();
+      plate.classList.add("is-fake-scare");
+      if (scareLevel >= 2) plate.classList.add("is-fake-scare-hard");
+      pulseFx(scareLevel >= 2 ? "scare-hard" : "scare", scareMs);
+      if (scareLevel >= 2) shakeStage(1);
+      await sleep(scareMs);
+      plate.classList.remove("is-fake-scare", "is-fake-scare-hard");
+    }
+
+    plate.classList.remove("is-revealing", "is-revealing-tense");
     plate.classList.add("is-opened");
-    plate.disabled = true;
 
     if (isWasabi) {
-      plate.classList.add("is-wasabi");
+      plate.classList.add("is-wasabi", "is-hit");
       playSfx(SFX_WASABI);
+      pulseFx("boom", 900);
+      shakeStage(3);
+
+      await sleep(820);
+
       freezeBoard();
       setStatus(0, "");
       showResult(
         "lose",
-        "벌칙 당첨!",
-        "와사비 초밥을 집었습니다. 커피내기·점심내기 벌칙!"
+        pickPenalty(),
+        "벌칙 당첨! 와사비 초밥을 집었습니다."
       );
+      revealing = false;
       return;
     }
 
     playSfx(SFX_SAFE);
-    plate.classList.add("is-safe");
-    remaining -= 1;
+    plate.classList.add("is-safe", "is-relief");
+    window.setTimeout(() => plate.classList.remove("is-relief"), 450);
 
-    if (remaining === 1) {
-      setStatus(remaining, "· 마지막 접시… 집으면 벌칙!");
-    } else {
-      setStatus(remaining, "· 와사비를 피하세요");
-    }
+    remaining -= 1;
+    applyTension();
+    setStatus(remaining, hintForRemaining());
+
+    revealing = false;
+    locked = false;
+  }
+
+  if (plateOpts) {
+    plateOpts.addEventListener("click", (e) => {
+      const btn = e.target.closest(".bw-wasabi-seg-btn");
+      if (!btn || setupEl?.classList.contains("is-locked")) return;
+      const value = Number(btn.dataset.plates);
+      if (!Number.isFinite(value)) return;
+      plateOpts.querySelectorAll(".bw-wasabi-seg-btn").forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      plateCount = value;
+      buildBoard();
+    });
   }
 
   restartBtn.addEventListener("click", () => {
@@ -179,6 +367,12 @@
         await unlockAndPlayBgm();
       } else {
         bgm.pause();
+        try {
+          bgm.playbackRate = 1;
+        } catch (e) {
+          /* ignore */
+        }
+        bgm.volume = BGM_BASE_VOL;
       }
     });
   }
