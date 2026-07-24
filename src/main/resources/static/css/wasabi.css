@@ -303,6 +303,17 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-stage {
   transition: opacity 0.35s var(--ws-ease);
 }
 
+/* Red warning pulse from start; faster at half remaining */
+.bw-wasabi-stage[data-alert="on"]::before,
+.bw-wasabi-stage[data-alert="fast"]::before {
+  opacity: 1;
+  animation: ws-heartbeat-vignette 1.2s ease-in-out infinite;
+}
+
+.bw-wasabi-stage[data-alert="fast"]::before {
+  animation-duration: 0.6s;
+}
+
 .bw-wasabi-stage[data-tension="1"] {
   box-shadow:
     var(--ws-shadow),
@@ -316,22 +327,11 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-stage {
     0 0 28px rgba(124, 181, 24, 0.16);
 }
 
-.bw-wasabi-stage[data-tension="2"]::before {
-  opacity: 1;
-  animation: ws-heartbeat-vignette 1.2s ease-in-out infinite;
-}
-
 .bw-wasabi-stage[data-tension="3"] {
   border-color: rgba(198, 239, 99, 0.5);
   box-shadow:
     var(--ws-shadow),
     0 0 36px rgba(180, 40, 40, 0.22);
-}
-
-.bw-wasabi-stage[data-tension="3"]::before {
-  opacity: 1;
-  /* 2× faster heartbeat */
-  animation: ws-heartbeat-vignette 0.6s ease-in-out infinite;
 }
 
 .bw-wasabi-stage.is-shaking {
@@ -340,6 +340,32 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-stage {
 
 .bw-wasabi-stage.is-shaking-hard {
   animation: ws-stage-shake-hard 0.78s var(--ws-ease);
+}
+
+.bw-wasabi-toast {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 9;
+  max-width: min(90%, 16rem);
+  padding: 0.65rem 1rem;
+  border-radius: 0.85rem;
+  background: rgba(12, 18, 14, 0.82);
+  color: #f4ffe8;
+  font-family: var(--ws-font-display);
+  font-size: clamp(1.05rem, 3.8vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-align: center;
+  line-height: 1.25;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.bw-wasabi-toast.is-show {
+  animation: ws-toast-flash 0.9s var(--ws-ease);
 }
 
 .bw-wasabi-fx {
@@ -968,9 +994,16 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay-card .bw-wasabi-btn {
   100% { transform: scale(1); }
 }
 
+@keyframes ws-toast-flash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  55% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bw-wasabi-stage[data-tension="2"]::before,
-  .bw-wasabi-stage[data-tension="3"]::before,
+  .bw-wasabi-stage[data-alert="on"]::before,
+  .bw-wasabi-stage[data-alert="fast"]::before,
   .bw-wasabi-stage[data-tension="2"] .bw-wasabi-plate:not(.is-opened):not(.is-revealing),
   .bw-wasabi-stage[data-tension="3"] .bw-wasabi-plate:not(.is-opened):not(.is-revealing),
   .bw-wasabi-stage.is-shaking,
@@ -981,7 +1014,8 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay-card .bw-wasabi-btn {
   .bw-wasabi-plate.is-fake-scare::after,
   .bw-wasabi-fx.is-active,
   .bw-wasabi-overlay.is-lose .bw-wasabi-overlay-title,
-  .bw-wasabi-overlay.is-lose.is-visible .bw-wasabi-overlay-card {
+  .bw-wasabi-overlay.is-lose.is-visible .bw-wasabi-overlay-card,
+  .bw-wasabi-toast.is-show {
     animation: none !important;
   }
 }

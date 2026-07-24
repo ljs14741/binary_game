@@ -2,7 +2,7 @@
   const TOPPINGS = ["salmon", "tuna", "egg", "shrimp"];
   const PENALTIES = [
     "☕ 오늘 커피 당첨!",
-    "🍱 점심값 1/N 제외!",
+    "🍱 점심값 당첨!",
     "💥 인중 딱밤 1대!",
     "🥤 물 한 컵 원샷!",
   ];
@@ -17,13 +17,14 @@
   const themeLink = document.getElementById("theme-style");
   const plateOpts = document.getElementById("wasabi-plate-opts");
   const setupEl = document.getElementById("wasabi-setup");
+  const toastEl = document.getElementById("wasabi-toast");
 
   const BGM_SRC = "/assets/mugunghwa/bgm.mp3";
   const SFX_SAFE = "/assets/horseRace/jump.mp3";
   const SFX_WASABI = "/assets/horseRace/puddle.mp3";
 
-  const BGM_BASE_VOL = 0.26;
-  const BGM_MAX_VOL = 0.62;
+  const BGM_BASE_VOL = 0.14;
+  const SFX_VOL = 1;
 
   let plateCount = 20;
   let wasabiIndex = 0;
@@ -34,6 +35,8 @@
   let plates = [];
   let bgmOn = true;
   let audioUnlocked = false;
+  let lastToastKey = "";
+  let toastTimer = 0;
 
   const bgm = new Audio(BGM_SRC);
   bgm.loop = true;
@@ -53,7 +56,7 @@
 
   function makeSfx(src) {
     const a = new Audio(src);
-    a.volume = 0.7;
+    a.volume = SFX_VOL;
     return a;
   }
 
@@ -92,22 +95,32 @@
     return 0;
   }
 
-  /** Tension ↑ → volume & playbackRate climb for psychological pressure */
+  /** Cleared 1/3 → mild speedup; cleared 1/2 → faster. BGM stays quiet. */
   function applyBgmPressure() {
     if (!bgmOn || !audioUnlocked) return;
-    const level = tensionLevel();
-    const volCurve = [0, 0.08, 0.18, 0.3][level];
-    bgm.volume = Math.min(BGM_MAX_VOL, BGM_BASE_VOL + volCurve);
+    bgm.volume = BGM_BASE_VOL;
+    const clearedRatio = (plateCount - remaining) / plateCount;
+    let rate = 1;
+    if (clearedRatio >= 0.5) rate = 1.18;
+    else if (clearedRatio >= 1 / 3) rate = 1.1;
     try {
-      bgm.playbackRate = [1, 1.04, 1.1, 1.18][level];
+      bgm.playbackRate = rate;
     } catch (e) {
       /* ignore unsupported rate */
     }
   }
 
+  function applyAlertPulse() {
+    if (!stage) return;
+    const remRatio = remaining / plateCount;
+    // red warning from start; faster from half remaining
+    stage.dataset.alert = remRatio <= 0.5 ? "fast" : "on";
+  }
+
   function applyTension() {
     const level = tensionLevel();
     if (stage) stage.dataset.tension = String(level);
+    applyAlertPulse();
     applyBgmPressure();
   }
 
@@ -120,12 +133,29 @@
     return "· 와사비를 피하세요";
   }
 
+  function flashToast(hint) {
+    if (!toastEl) return;
+    const text = String(hint || "").replace(/^·\s*/, "").trim();
+    if (!text || text === "와사비를 피하세요") return;
+    if (text === lastToastKey) return;
+    lastToastKey = text;
+    toastEl.textContent = text;
+    toastEl.classList.remove("is-show");
+    void toastEl.offsetWidth;
+    toastEl.classList.add("is-show");
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => {
+      toastEl.classList.remove("is-show");
+    }, 900);
+  }
+
   function setStatus(count, hint) {
     statusEl.innerHTML = `
       <span>남은 접시</span>
       <span class="bw-wasabi-count">${count}</span>
       <span>${hint || ""}</span>
     `;
+    flashToast(hint);
   }
 
   function hideResult() {
@@ -204,6 +234,8 @@
     locked = false;
     revealing = false;
     gameOver = false;
+    lastToastKey = "";
+    if (toastEl) toastEl.classList.remove("is-show");
     hideResult();
     shuffleWasabi();
     setSetupEnabled(true);
