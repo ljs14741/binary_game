@@ -891,7 +891,7 @@ window.onload = function() {
 
     function saveGameData(scene, score) {
         const gameData = {
-            gameName: "김치 타워 디펜스",
+            gameName: "김치 랜덤 디펜스",
             kakaoId: 9999, // 여기에 적절한 kakaoId를 설정하세요
             score: score // 전달된 점수 저장
         };

@@ -165,7 +165,7 @@
         <div class="icon-container">
             <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
             <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
-            <a id="btnKakao" class="link-icon kakao" href="javascript:shareKakao();"></a>
+            <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
         </div>
 
         <div class="description">
@@ -265,7 +265,7 @@
         if (token) headers['X-CSRF-TOKEN'] = token;
 
         // ✅ fetch Promise를 반환!
-        return fetch('api/scores', {
+        return fetch('/api/scores', {
             method: 'POST',
             headers,
             body: JSON.stringify({ nickname, score })
@@ -274,7 +274,7 @@
 
     async function refreshLeaderboards() {
         try {
-            const res = await fetch('api/scores/leaderboards', { cache: 'no-store' });
+            const res = await fetch('/api/scores/leaderboards', { cache: 'no-store' });
             const data = await res.json();
 
             // 1) 명예의 전당 테이블 바디 교체
