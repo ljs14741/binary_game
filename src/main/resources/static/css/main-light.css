@@ -479,6 +479,19 @@ body,
   color: var(--bw-text);
 }
 
+.mg-description ol li,
+.hr-description ol li,
+.mg-description ul li,
+.hr-description ul li {
+  color: var(--bw-text);
+}
+
+.mg-description strong,
+.hr-description strong {
+  color: var(--bw-text);
+  font-weight: 800;
+}
+
 .description ol li::before {
   counter-increment: step;
   content: counter(step);

@@ -402,10 +402,18 @@
         }
         .mg-description p, .mg-description li {
             font-size: 14px;
-            color: #aaaaaa;
+            color: var(--bw-text);
             line-height: 1.7;
         }
-        .mg-description strong { color: #dddddd; }
+        .mg-description strong {
+            color: var(--bw-text);
+            font-weight: 800;
+        }
+        .mg-description .mg-desc-note {
+            margin-top: 14px;
+            font-size: 13px;
+            color: var(--bw-muted);
+        }
     </style>
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
@@ -461,7 +469,7 @@
                 <li id="mg-desc-feat-3"><strong>성격 랜덤 배정</strong> — 🔥 돌진형·🚶 보통형·🐢 신중형마다 반응속도가 달라 항상 공정한 랜덤. 최대 30명 무료</li>
             </ul>
 
-            <p style="margin-top:14px; font-size:13px; color:#888;">
+            <p class="mg-desc-note">
                 <strong>이런 상황에 딱!</strong> — 점심 메뉴 내기 / 커피 내기 / 청소 당번 / 회의 발표 순서 / 팀 회식 벌칙 / 술자리 게임 / 모임 이벤트 뽑기
             </p>
         </div>
