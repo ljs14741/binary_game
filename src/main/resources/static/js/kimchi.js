@@ -111,13 +111,14 @@ window.onload = function() {
         '전설': 200,
         '태초': 200
     };
+    // 스프라이트 원본을 1024px에서 256px로 줄이면서 모든 scale 값을 4배로 보정했다. 화면상 크기는 이전과 같다.
     const towerVisualProps = {
-        '일반': { tint: 0xffffff, scale: 0.05 },
-        '레어': { tint: 0x4a90e2, scale: 0.052 },
-        '영웅': { tint: 0x9b59b6, scale: 0.055 },
-        '유물': { tint: 0xf1c40f, scale: 0.06 },
-        '전설': { tint: 0xe74c3c, scale: 0.065 },
-        '태초': { tint: 0x00ffff, scale: 0.08 }
+        '일반': { tint: 0xffffff, scale: 0.2 },
+        '레어': { tint: 0x4a90e2, scale: 0.208 },
+        '영웅': { tint: 0x9b59b6, scale: 0.22 },
+        '유물': { tint: 0xf1c40f, scale: 0.24 },
+        '전설': { tint: 0xe74c3c, scale: 0.26 },
+        '태초': { tint: 0x00ffff, scale: 0.32 }
     };
     let isDoubleSpeed = false;
 
@@ -190,7 +191,7 @@ window.onload = function() {
         // 직사각형 내부에 soil 이미지를 그리드 형식으로 배치 (테두리 제외)
         for (let x = INSTALL_RECT.left + 50; x < INSTALL_RECT.right; x += 50) {
             for (let y = INSTALL_RECT.top + 50; y < INSTALL_RECT.bottom; y += 50) {
-                const soilSprite = this.add.image(x, y, 'soil').setScale(0.05);
+                const soilSprite = this.add.image(x, y, 'soil').setScale(0.2);
                 soilPositions.push({ x: x, y: y, sprite: soilSprite });
                 soilSprites.push(soilSprite);
             }
@@ -220,7 +221,8 @@ window.onload = function() {
         enemyCountText = this.add.text(350, headerY, `Enemies: ${currentEnemyCount}`, { fontSize: `${headerFontSize}px`, fill: '#FFF', fontFamily: 'Arial' });
 
         const mesoX = 600;
-        const mesoIcon = this.add.sprite(mesoX - 25, headerY, 'meso').setScale(0.012);
+        // meso.png를 4000px에서 96px로 축소하면서 배율을 0.012 → 0.5로 보정했다. 표시 크기는 48px로 동일하다.
+        const mesoIcon = this.add.sprite(mesoX - 25, headerY, 'meso').setScale(0.5);
         currencyText = this.add.text(mesoX + 5, headerY - 12, `: ${currency}`, { fontSize: `${headerFontSize}px`, fill: '#FFF', fontFamily: 'Arial' });
 
         roundText.setDepth(6);
@@ -280,7 +282,7 @@ window.onload = function() {
                     tower.aura = self.add.graphics();
                     tower.aura.setPosition(x, y);
                     tower.aura.fillStyle(v.tint, 0.4);
-                    tower.aura.fillEllipse(0, 15, 50 * (v.scale / 0.05), 25 * (v.scale / 0.05));
+                    tower.aura.fillEllipse(0, 15, 50 * (v.scale / 0.2), 25 * (v.scale / 0.2));
                     tower.aura.setDepth(1);
                     tower.setDepth(2);
 
@@ -427,7 +429,7 @@ window.onload = function() {
                     cursorTower.aura = self.add.graphics();
                     cursorTower.aura.setPosition(px, py);
                     cursorTower.aura.fillStyle(v.tint, 0.4);
-                    cursorTower.aura.fillEllipse(0, 15, 50 * (v.scale / 0.05), 25 * (v.scale / 0.05));
+                    cursorTower.aura.fillEllipse(0, 15, 50 * (v.scale / 0.2), 25 * (v.scale / 0.2));
                     cursorTower.aura.setDepth(1).setAlpha(0.5);
                     cursorTower.setDepth(2);
 
@@ -547,7 +549,7 @@ window.onload = function() {
     }
 
     function createFlame(scene, tower, target) {
-        const flame = scene.physics.add.sprite(tower.x, tower.y, 'flame_1').setScale(0.02);
+        const flame = scene.physics.add.sprite(tower.x, tower.y, 'flame_1').setScale(0.08);
         flame.attackPower = tower.attackPower;
         flame.target = target; // 목표 적 설정
         scene.flames.add(flame);
@@ -577,7 +579,7 @@ window.onload = function() {
         enemy1AttackSound.play();
 
         // 적 위치에 불꽃 폭발 효과 (애니메이션이 있는 경우)
-        const explosion = scene.add.sprite(enemy.x, enemy.y, 'flame_1').setScale(0.01); // 폭발 이미지 크기 조정
+        const explosion = scene.add.sprite(enemy.x, enemy.y, 'flame_1').setScale(0.04); // 폭발 이미지 크기 조정
         explosion.play('flame_anim');
         explosion.on('animationcomplete', () => {
             explosion.destroy();
@@ -740,7 +742,7 @@ window.onload = function() {
         } else if (!bossSpawned) {
             // 최종 라운드 보스 생성
             enemyHealth = 500000;
-            enemy = scene.add.follower(path, 50, 150, 'boss').setScale(0.1);
+            enemy = scene.add.follower(path, 50, 150, 'boss').setScale(0.4);
             bossSpawned = true; // 보스가 생성되었음을 기록
         } else {
             return; // 이미 보스가 생성된 경우 함수를 종료
