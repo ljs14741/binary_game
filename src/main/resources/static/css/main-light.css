@@ -730,22 +730,6 @@ body,
 .link-icon.facebook { background-image: url(../img/icon-facebook.png); }
 .link-icon.kakao { background-image: url(../img/icon-kakao.png); }
 
-/* ===== Ads ===== */
-.side-ad {
-  display: none;
-}
-
-@media (min-width: 1280px) {
-  .side-ad {
-    display: block;
-    position: fixed;
-    top: 120px;
-    z-index: 20;
-  }
-  .side-ad.left-ad { left: 12px; }
-  .side-ad.right-ad { right: 12px; }
-}
-
 /* ===== Motion ===== */
 @keyframes bw-game-rise {
   from { opacity: 0; transform: translateY(14px); }
