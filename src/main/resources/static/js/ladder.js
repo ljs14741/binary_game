@@ -2,17 +2,20 @@
  * 블라인드 사다리타기 — 워터슬라이드
  *
  * 설계 메모 (docs/plans/ladder.md)
- *  - 물이 미끄럼틀을 타고 내려가는 모양이다. 점이 선을 따라가는 것보다 훨씬 잘 읽힌다.
+ *  - 물이 미끄럼틀을 타고 내려간다. 점이 선을 따라가는 것보다 훨씬 잘 읽힌다.
  *  - 갈림길에서 물이 잠깐 망설였다가 한쪽으로 쏠린다. 뜸 들이기가 공짜로 생긴다.
  *  - 카메라가 물을 따라 내려간다. 아래가 안 보여서 긴장이 살고, 화면도 크게 쓸 수 있다.
- *  - 꽝(폭탄) 위치는 처음부터 공개한다. 어디로 가면 안 되는지 알아야 감정이 생긴다.
- *  - 점선 아래 "운명의 구간"만 숨긴다. 위쪽까지 다 숨겼더니 볼 게 없어서 무감각했다.
+ *  - 꽝 위치는 처음부터 공개한다. 어디로 가면 안 되는지 알아야 감정이 생긴다.
+ *  - 점선 아래 "운명의 구간"만 숨긴다. 위쪽까지 숨겼더니 볼 게 없어서 무감각했다.
+ *
+ * 도착 현황은 캔버스 밖 HUD로 따로 뺐다. 카메라가 내려가면 도착 풀이 화면 밖으로 나가서
+ * "어디가 꽝이었지?"를 알 수 없었기 때문이다. HUD는 항상 보인다.
  *
  * 운명의 구간은 참가자가 들어올 때 정해진다. 다만 두 사람이 같은 도착점에 가면
  * 복불복이 성립하지 않으므로 "남은 도착점 중에서만" 뽑는다. 진짜 랜덤이면서 1:1이 유지된다.
  *
  * 움직임은 경로 전체를 하나의 폴리라인으로 만들어 길이를 따라 보간한다.
- * 예전에는 줄마다 타이머를 새로 시작해서 줄 경계마다 속도가 끊겼다(버벅임).
+ * 줄마다 타이머를 새로 시작하면 줄 경계에서 속도가 끊긴다(버벅임).
  *
  * Phaser를 쓰지 않는다. 물리가 없고 선과 원만 그리면 된다.
  */
@@ -22,20 +25,21 @@
     // ── 설정값 ──────────────────────────────────────────────
     var UPPER_ROWS = 12;
     var RUNG_DENSITY = 0.30;
-    var ROW_H = 62;               // 한 줄의 세로 길이(월드 좌표). 카메라가 따라가므로 넉넉히 준다
+    var ROW_H = 62;
     var PAD_TOP = 40;
-    var POOL_H = 92;              // 맨 아래 도착 풀 영역
-    var JUNCTION_DWELL = 240;     // 갈림길에서 망설이는 시간(ms)
-    var HOLD_MS = 1100;           // 도착 직전 정지
+    var POOL_H = 92;
+    var DWELL_UPPER = 80;         // 위쪽 갈림길에서 망설이는 시간(ms). 길면 속도감이 죽는다
+    var DWELL_ZONE = 230;         // 운명의 구간은 길게 끈다
+    var HOLD_MS = 1100;
 
     var COLORS = ['#38bdf8', '#f97316', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#22d3ee', '#c084fc'];
 
     // 아래로 갈수록 느려진다. 월드 y 비율(0~1)을 받아 px/초를 돌려준다.
     function speedAt(ratio, inZone) {
-        if (inZone) { return 165; }
-        if (ratio < 0.35) { return 900; }
-        if (ratio < 0.70) { return 520; }
-        return 340;
+        if (inZone) { return 210; }
+        if (ratio < 0.35) { return 1150; }
+        if (ratio < 0.70) { return 700; }
+        return 430;
     }
 
     // ── 상태 ────────────────────────────────────────────────
@@ -44,13 +48,15 @@
         zoneRows: 3, totalRows: 15,
         upperRungs: [], zoneRungs: [],
         bombSlots: [], usedCols: [], takenSlots: [],
+        slotOwner: {},            // 도착점 -> 출발 번호
         paths: [], current: null,
         phase: 'setup', losers: []
     };
 
     var canvas, ctx, dpr = 1, view = { w: 320, h: 420 };
-    var camY = 0, camTarget = 0;
+    var camY = 0;
     var el = {}, bgm = null;
+    var flowPhase = 0, confetti = [], shake = 0;
 
     // ── 사다리 생성 ─────────────────────────────────────────
     function makeUpperRungs(cols, rows) {
@@ -73,7 +79,6 @@
         return false;
     }
 
-    // from 에서 to 로 가는 경로를 zoneRows 줄에 흩뿌린다.
     function makeZoneRungs(from, to, zoneRows, cols) {
         var need = to - from;
         var moves = new Array(zoneRows).fill(0);
@@ -122,15 +127,9 @@
 
     // ── 좌표 ────────────────────────────────────────────────
     function worldH() { return PAD_TOP + state.totalRows * ROW_H + POOL_H; }
-    function colX(c) {
-        var padX = Math.max(26, view.w * 0.09);
-        var gap = (view.w - padX * 2) / Math.max(1, state.cols - 1);
-        return padX + c * gap;
-    }
-    function colGap() {
-        var padX = Math.max(26, view.w * 0.09);
-        return (view.w - padX * 2) / Math.max(1, state.cols - 1);
-    }
+    function padX() { return Math.max(26, view.w * 0.09); }
+    function colGap() { return (view.w - padX() * 2) / Math.max(1, state.cols - 1); }
+    function colX(c) { return padX() + c * colGap(); }
     function rowY(r) { return PAD_TOP + r * ROW_H; }
 
     // ── 판 시작 ─────────────────────────────────────────────
@@ -144,6 +143,7 @@
         state.zoneRungs = [];
         state.usedCols = [];
         state.takenSlots = [];
+        state.slotOwner = {};
         state.paths = [];
         state.losers = [];
         state.current = null;
@@ -153,24 +153,23 @@
         for (var i = 0; i < state.cols; i++) { slots.push(i); }
         state.bombSlots = shuffle(slots.slice()).slice(0, state.bombs);
 
-        camY = 0; camTarget = 0;
+        camY = 0;
+        confetti = [];
         resize();
         renderColumnButtons();
+        renderSlots();
         setStatus('출발할 번호를 고르세요');
-        draw();
     }
 
-    // ── 경로를 폴리라인으로 만든다 ──────────────────────────
+    // ── 경로를 폴리라인으로 ─────────────────────────────────
     function buildPath(startCol) {
         var pts = [{ x: colX(startCol), y: rowY(0), row: 0, col: startCol }];
         var col = startCol;
         for (var r = 0; r < state.totalRows; r++) {
             var next = walkRow(col, r);
             var y = rowY(r + 1);
-            pts.push({ x: colX(col), y: y, row: r + 1, col: col });          // 내려온다
-            if (next !== col) {
-                pts.push({ x: colX(next), y: y, row: r + 1, col: next });    // 갈림길에서 옮긴다
-            }
+            pts.push({ x: colX(col), y: y, row: r + 1, col: col });
+            if (next !== col) { pts.push({ x: colX(next), y: y, row: r + 1, col: next }); }
             col = next;
         }
         pts.push({ x: colX(col), y: rowY(state.totalRows) + POOL_H * 0.45, row: state.totalRows, col: col });
@@ -190,11 +189,7 @@
             var s = path.segs[i];
             if (dist <= s.start + s.len || i === path.segs.length - 1) {
                 var t = s.len === 0 ? 1 : Math.min(1, (dist - s.start) / s.len);
-                return {
-                    x: s.a.x + (s.b.x - s.a.x) * t,
-                    y: s.a.y + (s.b.y - s.a.y) * t,
-                    seg: i, row: s.b.row
-                };
+                return { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t, seg: i, row: s.b.row };
             }
         }
         var last = path.pts[path.pts.length - 1];
@@ -206,7 +201,6 @@
         if (state.phase !== 'ready') { return; }
         if (state.usedCols.indexOf(startCol) >= 0) { return; }
 
-        // 운명의 구간을 이번 차례용으로 다시 섞는다. 남은 도착점 중에서만 뽑는다.
         var col = startCol;
         for (var r = 0; r < UPPER_ROWS; r++) { col = walkRow(col, r); }
         var free = [];
@@ -219,6 +213,7 @@
         var path = buildPath(startCol);
         state.usedCols.push(startCol);
         state.takenSlots.push(target);
+        state.slotOwner[target] = startCol + 1;
         state.phase = 'descending';
         state.current = {
             col: startCol,
@@ -232,42 +227,56 @@
         setStatus('내려가는 중…');
         el.skip.hidden = false;
         renderColumnButtons();
+        renderSlots();
         startBgm();
-        animate();
     }
 
-    // ── 애니메이션 ──────────────────────────────────────────
-    var raf = null, lastTime = 0, skipping = false;
+    // ── 메인 루프 (항상 돌면서 물 흐름을 애니메이션한다) ────
+    var raf = null, lastTime = 0, skipping = false, running = false;
 
-    function animate() {
-        skipping = false;
-        lastTime = performance.now();
-        cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(tick);
-    }
-
-    function tick(now) {
-        var cur = state.current;
-        if (!cur) { return; }
+    function loop(now) {
         var dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
+        flowPhase += dt * 90;
+
+        if (state.phase === 'descending') { update(dt); }
+        if (shake > 0) { shake = Math.max(0, shake - dt * 1000); }
+        stepConfetti(dt);
+        draw();
+
+        raf = requestAnimationFrame(loop);
+    }
+
+    function startLoop() {
+        if (running) { return; }
+        running = true;
+        lastTime = performance.now();
+        raf = requestAnimationFrame(loop);
+    }
+
+    function stopLoop() {
+        running = false;
+        cancelAnimationFrame(raf);
+    }
+
+    function update(dt) {
+        var cur = state.current;
+        if (!cur) { return; }
 
         var p = pointAt(cur.path, cur.dist);
-        var ratio = (p.y - PAD_TOP) / (state.totalRows * ROW_H);
         var inZone = p.row > UPPER_ROWS;
 
         if (cur.dwell > 0) {
             cur.dwell -= dt * 1000;
         } else {
-            var sp = skipping ? 4200 : speedAt(ratio, inZone);
-            cur.dist += sp * dt;
+            var ratio = (p.y - PAD_TOP) / (state.totalRows * ROW_H);
+            cur.dist += (skipping ? 5200 : speedAt(ratio, inZone)) * dt;
 
             var np = pointAt(cur.path, cur.dist);
-            // 갈림길(가로 구간)에 막 들어섰으면 잠깐 망설인다
             if (np.seg !== cur.seg) {
                 var seg = cur.path.segs[np.seg];
                 if (seg && seg.horizontal && !skipping) {
-                    cur.dwell = JUNCTION_DWELL;
+                    cur.dwell = np.row > UPPER_ROWS ? DWELL_ZONE : DWELL_UPPER;
                     sfx.split();
                     addSplash(cur, np.x, np.y);
                 }
@@ -277,25 +286,20 @@
             p = np;
         }
 
-        // 카메라. 물을 화면 45% 지점에 두고 따라간다
-        camTarget = clamp(p.y - view.h * 0.45, 0, Math.max(0, worldH() - view.h));
-        camY += (camTarget - camY) * Math.min(1, dt * 9);
-
+        camY += (clamp(p.y - view.h * 0.45, 0, Math.max(0, worldH() - view.h)) - camY) * Math.min(1, dt * 9);
         stepSplash(cur, dt);
-        draw();
 
-        if (cur.dist >= cur.path.total) { finishDescent(); return; }
-        raf = requestAnimationFrame(tick);
+        if (cur.dist >= cur.path.total) { finishDescent(); }
     }
 
     function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
     function addSplash(cur, x, y) {
-        for (var i = 0; i < 7; i++) {
+        for (var i = 0; i < 8; i++) {
             cur.splash.push({
                 x: x, y: y,
-                vx: (Math.random() - 0.5) * 90,
-                vy: -Math.random() * 70 - 10,
+                vx: (Math.random() - 0.5) * 110,
+                vy: -Math.random() * 80 - 10,
                 life: 0.5 + Math.random() * 0.3
             });
         }
@@ -306,9 +310,7 @@
             var s = cur.splash[i];
             s.life -= dt;
             if (s.life <= 0) { cur.splash.splice(i, 1); continue; }
-            s.x += s.vx * dt;
-            s.y += s.vy * dt;
-            s.vy += 260 * dt;
+            s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 280 * dt;
         }
     }
 
@@ -317,28 +319,27 @@
         cur.dist = cur.path.total;
         cur.revealed = state.totalRows;
         el.skip.hidden = true;
-        state.phase = 'result';
+        state.phase = 'holding';
         setStatus('…');
         el.stage.classList.add('is-holding');
-        draw();
-
-        var hold = skipping ? 200 : HOLD_MS;
         if (!skipping) { sfx.heartbeat(); }
 
         setTimeout(function () {
             el.stage.classList.remove('is-holding');
             state.paths.push(cur);
+            renderSlots();
+
             if (cur.hit) {
                 state.losers.push(cur.col + 1);
                 sfx.boom();
-                addSplash(cur, colX(cur.slot), rowY(state.totalRows) + 30);
-                showResult(true, (cur.col + 1) + '번 당첨!', '벌칙 확정입니다.');
+                shake = 380;
+                burstConfetti();
+                showResult(true, '🎉 ' + (cur.col + 1) + '번 당첨!', '축하합니다. 벌칙 확정입니다.');
             } else {
                 sfx.relief();
                 showResult(false, (cur.col + 1) + '번 안전', '휴… 살았습니다.');
             }
-            draw();
-        }, hold);
+        }, skipping ? 200 : HOLD_MS);
     }
 
     function showResult(hit, title, detail) {
@@ -352,6 +353,7 @@
             state.phase = 'over';
             el.resultNext.hidden = true;
             el.resultRestart.hidden = false;
+            el.resultSetup.hidden = false;
             el.resultDetail.textContent = '걸린 사람: ' +
                 (state.losers.length ? state.losers.join(', ') + '번' : '없음');
         } else {
@@ -359,6 +361,7 @@
             state.phase = 'result';
             el.resultNext.hidden = false;
             el.resultRestart.hidden = true;
+            el.resultSetup.hidden = true;
         }
     }
 
@@ -367,24 +370,51 @@
         state.current = null;
         state.zoneRungs = [];
         state.phase = 'ready';
-        camTarget = 0;
-        smoothCamHome();
         renderColumnButtons();
         var left = state.cols - state.usedCols.length;
         var chance = Math.round((state.bombs - state.losers.length) / left * 100);
         setStatus('남은 사람 ' + left + '명 · 걸릴 확률 ' + chance + '%');
     }
 
-    function smoothCamHome() {
-        cancelAnimationFrame(raf);
-        var t0 = performance.now();
-        (function step(now) {
-            var dt = Math.min(0.05, (now - t0) / 1000); t0 = now;
-            camY += (0 - camY) * Math.min(1, dt * 8);
-            draw();
-            if (Math.abs(camY) > 0.6) { raf = requestAnimationFrame(step); }
-            else { camY = 0; draw(); }
-        })(t0);
+    // 설정 화면으로 되돌린다. 다시하기만 있고 인원을 못 바꾸는 게 답답했다.
+    function backToSetup() {
+        el.result.hidden = true;
+        el.play.hidden = true;
+        el.setup.hidden = false;
+        el.start.hidden = false;
+        state.phase = 'setup';
+        state.current = null;
+        confetti = [];
+        if (bgm) { bgm.pause(); }
+    }
+
+    // ── 축하 연출 ───────────────────────────────────────────
+    function burstConfetti() {
+        for (var i = 0; i < 90; i++) {
+            confetti.push({
+                x: view.w * (0.2 + Math.random() * 0.6),
+                y: view.h * 0.3 + Math.random() * 40,
+                vx: (Math.random() - 0.5) * 320,
+                vy: -Math.random() * 340 - 60,
+                w: 4 + Math.random() * 5,
+                h: 7 + Math.random() * 7,
+                rot: Math.random() * Math.PI,
+                vr: (Math.random() - 0.5) * 12,
+                color: COLORS[Math.floor(Math.random() * COLORS.length)],
+                life: 1.6 + Math.random() * 0.9
+            });
+        }
+    }
+
+    function stepConfetti(dt) {
+        for (var i = confetti.length - 1; i >= 0; i--) {
+            var c = confetti[i];
+            c.life -= dt;
+            if (c.life <= 0) { confetti.splice(i, 1); continue; }
+            c.x += c.vx * dt; c.y += c.vy * dt;
+            c.vy += 520 * dt; c.vx *= 0.995;
+            c.rot += c.vr * dt;
+        }
     }
 
     // ── 그리기 ──────────────────────────────────────────────
@@ -404,8 +434,8 @@
     function theme() {
         var light = document.documentElement.getAttribute('data-theme') === 'light';
         return light
-            ? { bg1: '#eef4fb', bg2: '#dbe6f2', chute: '#b9c7d8', chuteIn: '#ffffff', zone: '#8aa0b8', text: '#1b2028', pool: '#cfe0f0' }
-            : { bg1: '#101720', bg2: '#0a0e14', chute: '#2b3644', chuteIn: '#3c4a5c', zone: '#5b6675', text: '#e8ecf1', pool: '#18222e' };
+            ? { bg1: '#eef4fb', bg2: '#dbe6f2', chute: '#b9c7d8', chuteIn: '#ffffff', flow: '#7fb6e6', zone: '#8aa0b8', pool: '#cfe0f0' }
+            : { bg1: '#101720', bg2: '#0a0e14', chute: '#2b3644', chuteIn: '#3c4a5c', flow: '#5c7d9c', zone: '#5b6675', pool: '#18222e' };
     }
 
     function draw() {
@@ -417,54 +447,65 @@
         ctx.fillRect(0, 0, view.w, view.h);
 
         ctx.save();
-        ctx.translate(0, -camY);
+        var sx = shake > 0 ? (Math.random() - 0.5) * (shake / 40) : 0;
+        var sy = shake > 0 ? (Math.random() - 0.5) * (shake / 40) : 0;
+        ctx.translate(sx, -camY + sy);
 
         drawChutes(t);
         drawZoneBand(t);
 
         for (var i = 0; i < state.paths.length; i++) {
-            drawStream(state.paths[i], state.paths[i].path.total, 0.28);
+            drawStream(state.paths[i], state.paths[i].path.total, 0.26, false);
         }
         if (state.current) {
-            drawStream(state.current, state.current.dist, 1);
+            drawStream(state.current, state.current.dist, 1, true);
             drawDrop(state.current);
             drawSplash(state.current);
         }
 
         drawPools(t);
         ctx.restore();
+
+        drawConfetti();
         drawEdgeFade(t);
     }
 
-    // 세로 미끄럼틀 + 드러난 갈림길
     function drawChutes(t) {
         var gap = colGap();
         var wide = Math.max(9, Math.min(16, gap * 0.3));
-
         ctx.lineCap = 'round';
-        for (var c = 0; c < state.cols; c++) {
-            line(colX(c), rowY(0), colX(c), rowY(state.totalRows), t.chute, wide);
-            line(colX(c), rowY(0), colX(c), rowY(state.totalRows), t.chuteIn, wide * 0.45);
-        }
 
+        var lines = [];
+        for (var c = 0; c < state.cols; c++) {
+            lines.push([colX(c), rowY(0), colX(c), rowY(state.totalRows)]);
+        }
         for (var r = 0; r < state.totalRows; r++) {
-            // 운명의 구간만 숨긴다. 위쪽은 처음부터 보여야 예측이 생긴다.
             if (r >= UPPER_ROWS) {
+                // 운명의 구간만 숨긴다. 위쪽은 처음부터 보여야 예측이 생긴다.
                 var cur = state.current;
                 if (!cur || cur.revealed < r + 1) { continue; }
             }
             var rs = rungsAt(r);
             for (var i = 0; i < rs.length; i++) {
-                var y = rowY(r + 1);
-                line(colX(rs[i]), y, colX(rs[i] + 1), y, t.chute, wide);
-                line(colX(rs[i]), y, colX(rs[i] + 1), y, t.chuteIn, wide * 0.45);
+                lines.push([colX(rs[i]), rowY(r + 1), colX(rs[i] + 1), rowY(r + 1)]);
             }
         }
+
+        for (var k = 0; k < lines.length; k++) { stroke(lines[k], t.chute, wide); }
+        for (k = 0; k < lines.length; k++) { stroke(lines[k], t.chuteIn, wide * 0.45); }
+
+        // 흐르는 줄무늬. 미끄럼틀 전체에 물이 졸졸 흐르는 느낌을 준다.
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.setLineDash([9, 17]);
+        ctx.lineDashOffset = -flowPhase;
+        for (k = 0; k < lines.length; k++) { stroke(lines[k], t.flow, wide * 0.3); }
+        ctx.restore();
     }
 
-    function line(x1, y1, x2, y2, color, w) {
+    function stroke(l, color, w) {
         ctx.strokeStyle = color; ctx.lineWidth = w;
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(l[0], l[1]); ctx.lineTo(l[2], l[3]); ctx.stroke();
     }
 
     function drawZoneBand(t) {
@@ -481,14 +522,32 @@
         ctx.restore();
     }
 
-    // 지나온 물줄기
-    function drawStream(cur, upto, alpha) {
+    function drawStream(cur, upto, alpha, animated) {
         var path = cur.path;
+        var w = Math.max(6, Math.min(12, colGap() * 0.2));
+
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.lineJoin = 'round'; ctx.lineCap = 'round';
         ctx.strokeStyle = cur.color;
-        ctx.lineWidth = Math.max(5, Math.min(10, colGap() * 0.18));
+        ctx.lineWidth = w;
+        traceStream(path, upto);
+        ctx.stroke();
+
+        if (animated) {
+            // 안쪽에 밝은 줄무늬가 흘러가면 '흐르는 물'로 읽힌다
+            ctx.globalAlpha = alpha * 0.85;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = w * 0.34;
+            ctx.setLineDash([7, 15]);
+            ctx.lineDashOffset = -flowPhase * 2.4;
+            traceStream(path, upto);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    function traceStream(path, upto) {
         ctx.beginPath();
         ctx.moveTo(path.pts[0].x, path.pts[0].y);
         for (var i = 0; i < path.segs.length; i++) {
@@ -500,25 +559,22 @@
                 break;
             }
         }
-        ctx.stroke();
-        ctx.restore();
     }
 
     function drawDrop(cur) {
         var p = pointAt(cur.path, cur.dist);
         var r = Math.max(8, Math.min(14, colGap() * 0.24));
-        var wob = cur.dwell > 0 ? Math.sin(performance.now() / 40) * 2 : 0;
+        var wob = cur.dwell > 0 ? Math.sin(performance.now() / 34) * 2.4 : 0;
 
         ctx.save();
-        ctx.shadowColor = cur.color;
-        ctx.shadowBlur = 14;
+        ctx.shadowColor = cur.color; ctx.shadowBlur = 16;
         ctx.fillStyle = cur.color;
         ctx.beginPath();
         ctx.ellipse(p.x + wob, p.y, r, r * 1.08, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.fillStyle = 'rgba(255,255,255,0.78)';
         ctx.beginPath();
         ctx.arc(p.x + wob - r * 0.28, p.y - r * 0.3, r * 0.26, 0, Math.PI * 2);
         ctx.fill();
@@ -529,9 +585,7 @@
         for (var i = 0; i < cur.splash.length; i++) {
             var s = cur.splash[i];
             ctx.globalAlpha = Math.max(0, s.life);
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, 2.4, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(s.x, s.y, 2.4, 0, Math.PI * 2); ctx.fill();
         }
         ctx.globalAlpha = 1;
     }
@@ -543,15 +597,11 @@
         for (var c = 0; c < state.cols; c++) {
             var x = colX(c);
             var bomb = state.bombSlots.indexOf(c) >= 0;
-            var taken = state.takenSlots.indexOf(c) >= 0;
-
-            ctx.globalAlpha = taken ? 0.35 : 1;
+            ctx.globalAlpha = state.takenSlots.indexOf(c) >= 0 ? 0.4 : 1;
             ctx.fillStyle = t.pool;
             ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = bomb ? '#fb7185' : '#34d399';
-            ctx.lineWidth = 2.5;
-            ctx.stroke();
-
+            ctx.lineWidth = 2.5; ctx.stroke();
             if (bomb) { drawBomb(x, y, r * 0.52); } else { drawSmile(x, y, r * 0.52); }
             ctx.globalAlpha = 1;
         }
@@ -576,7 +626,19 @@
         ctx.beginPath(); ctx.arc(x, y + r * 0.08, r * 0.52, 0.25 * Math.PI, 0.75 * Math.PI); ctx.stroke();
     }
 
-    // 위아래 가장자리를 살짝 흐리면 카메라가 움직이는 느낌이 산다
+    function drawConfetti() {
+        for (var i = 0; i < confetti.length; i++) {
+            var c = confetti[i];
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, c.life);
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.rot);
+            ctx.fillStyle = c.color;
+            ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+            ctx.restore();
+        }
+    }
+
     function drawEdgeFade(t) {
         var top = ctx.createLinearGradient(0, 0, 0, 34);
         top.addColorStop(0, t.bg1); top.addColorStop(1, 'rgba(0,0,0,0)');
@@ -620,7 +682,7 @@
             src.start();
         }
         return {
-            split: function () { noise(0.13, 0.09); },
+            split: function () { noise(0.1, 0.08); },
             heartbeat: function () {
                 beep(70, 0.18, 'sine', 0.16);
                 setTimeout(function () { beep(62, 0.22, 'sine', 0.13); }, 260);
@@ -634,8 +696,7 @@
 
     // BGM은 핀볼룰렛과 같은 곡을 참조만 한다. 파일을 복사하면 750KB가 중복된다.
     function startBgm() {
-        if (!bgm || sfx.isMuted()) { return; }
-        if (!bgm.paused) { return; }
+        if (!bgm || sfx.isMuted() || !bgm.paused) { return; }
         var p = bgm.play();
         if (p && p.catch) { p.catch(function () { /* 자동재생 차단은 무시 */ }); }
     }
@@ -652,6 +713,22 @@
                 ' style="--col-color:' + COLORS[c % COLORS.length] + '">' + (c + 1) + '</button>';
         }
         el.cols.innerHTML = html;
+    }
+
+    // 도착 현황. 카메라가 내려가면 도착 풀이 화면 밖으로 나가므로 여기 항상 띄운다.
+    function renderSlots() {
+        var html = '';
+        for (var c = 0; c < state.cols; c++) {
+            var bomb = state.bombSlots.indexOf(c) >= 0;
+            var owner = state.slotOwner[c];
+            var cls = 'bw-ladder-slot' + (bomb ? ' is-bomb' : '') + (owner ? ' is-taken' : '');
+            var color = owner ? COLORS[(owner - 1) % COLORS.length] : 'transparent';
+            html += '<div class="' + cls + '" style="--col-color:' + color + '">' +
+                '<span class="bw-ladder-slot-tag">' + (bomb ? '꽝' : '안전') + '</span>' +
+                '<span class="bw-ladder-slot-who">' + (owner ? owner + '번' : '—') + '</span>' +
+                '</div>';
+        }
+        el.slots.innerHTML = html;
     }
 
     function bind() {
@@ -675,14 +752,17 @@
             el.start.hidden = true;
             el.play.hidden = false;
             startGame(p, b);
+            startLoop();
         });
 
         el.skip.addEventListener('click', function () { skipping = true; });
-        el.resultNext.addEventListener('click', nextTurn);
+        el.resultNext.addEventListener('click', function () { skipping = false; nextTurn(); });
         el.resultRestart.addEventListener('click', function () {
+            skipping = false;
             el.result.hidden = true;
             startGame(state.players, state.bombs);
         });
+        el.resultSetup.addEventListener('click', backToSetup);
 
         el.mute.addEventListener('click', function () {
             var m = !sfx.isMuted();
@@ -692,8 +772,14 @@
             el.mute.setAttribute('aria-pressed', String(!m));
         });
 
-        window.addEventListener('resize', function () { resize(); draw(); });
+        window.addEventListener('resize', function () { resize(); });
         document.addEventListener('bw:theme-change', function () { draw(); });
+
+        // 배경 탭에서 애니메이션을 돌릴 이유가 없다
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) { stopLoop(); }
+            else if (state.phase !== 'setup') { startLoop(); }
+        });
     }
 
     // 사다리 생성 로직만 떼어 검증할 수 있게 열어둔다. 브라우저에서는 module 이 없어 무시된다.
@@ -715,6 +801,7 @@
         el.start = document.getElementById('ladder-start');
         el.play = document.getElementById('ladder-play');
         el.cols = document.getElementById('ladder-cols');
+        el.slots = document.getElementById('ladder-slots');
         el.status = document.getElementById('ladder-status');
         el.stage = document.getElementById('ladder-stage');
         el.skip = document.getElementById('ladder-skip');
@@ -724,6 +811,7 @@
         el.resultDetail = document.getElementById('ladder-result-detail');
         el.resultNext = document.getElementById('ladder-next');
         el.resultRestart = document.getElementById('ladder-restart');
+        el.resultSetup = document.getElementById('ladder-setup-again');
 
         bgm = document.getElementById('ladder-bgm');
         if (bgm) { bgm.volume = 0.35; }

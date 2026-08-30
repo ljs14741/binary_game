@@ -170,6 +170,57 @@
   width: 100%;
 }
 
+/* ── 도착 현황 ──
+   카메라가 아래로 내려가면 도착 풀이 화면 밖으로 나간다.
+   무엇이 꽝이고 누가 어디에 갔는지는 항상 보여야 한다. */
+.bw-ladder-slots {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.bw-ladder-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.4rem 0.2rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.55rem;
+  background: var(--bw-surface);
+  text-align: center;
+}
+
+.bw-ladder-slot-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #34d399;
+}
+
+.bw-ladder-slot.is-bomb .bw-ladder-slot-tag {
+  color: #fb7185;
+}
+
+.bw-ladder-slot-who {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--bw-muted);
+}
+
+.bw-ladder-slot.is-taken {
+  border-color: var(--col-color);
+}
+
+.bw-ladder-slot.is-taken .bw-ladder-slot-who {
+  color: var(--col-color);
+}
+
+.bw-ladder-slot.is-bomb.is-taken {
+  background: rgba(251, 113, 133, 0.14);
+}
+
 /* ── 결과 ── */
 .bw-ladder-result {
   position: absolute;
