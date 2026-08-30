@@ -13,6 +13,11 @@
 
   목록의 출처는 GameCatalog 하나뿐이다. 현재 게임은 빠지고, 개수도 거기서 제한한다.
 
+  가로 스크롤 스트립인 이유:
+  처음에는 그리드로 만들었는데 카드가 너무 크고, 페이지마다 컨테이너 폭이 달라
+  어떤 페이지는 한 줄, 어떤 페이지는 두 줄로 갈렸다. 스트립은 폭과 무관하게 항상 한 줄이고,
+  게임이 20개로 늘어도 레이아웃이 그대로다. 모바일에서는 스와이프가 자연스럽다.
+
   스타일을 여기 같이 둔 이유: main-dark.css / main-light.css 두 벌을 모두 고치지 않고
   한 파일에서 관리하기 위해서다. 테마는 <html data-theme>로 구분한다 (theme.js가 세팅).
 */-->
@@ -20,29 +25,67 @@
     <style>
         .bw-other-games {
             max-width: 960px;
-            margin: 48px auto 24px;
+            margin: 40px auto 20px;
             padding: 0 16px;
         }
 
-        .bw-other-games > h2 {
-            margin: 0 0 16px;
-            font-size: 1.15rem;
+        .bw-other-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .bw-other-head h2 {
+            margin: 0;
+            font-size: 1.05rem;
             font-weight: 700;
             color: #e8ecf1;
         }
 
-        .bw-other-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 12px;
+        .bw-other-hint {
+            flex: none;
+            font-size: .74rem;
+            font-weight: 600;
+            color: #7d8794;
+        }
+
+        .bw-other-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scroll-snap-type: x proximity;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: #333a44 transparent;
+        }
+
+        .bw-other-strip::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .bw-other-strip::-webkit-scrollbar-thumb {
+            background: #333a44;
+            border-radius: 999px;
+        }
+
+        .bw-other-strip:focus-visible {
+            outline: 2px solid #4a90d9;
+            outline-offset: 3px;
+            border-radius: 12px;
         }
 
         .bw-other-card {
+            flex: 0 0 132px;
+            scroll-snap-align: start;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             border: 1px solid #262b33;
-            border-radius: 12px;
+            border-radius: 10px;
             background: #14181e;
             color: #e8ecf1;
             text-decoration: none;
@@ -64,14 +107,26 @@
         }
 
         .bw-other-card span {
-            padding: 10px 12px;
-            font-size: .88rem;
+            padding: 8px 10px 10px;
+            font-size: .78rem;
             font-weight: 600;
-            line-height: 1.35;
+            line-height: 1.3;
         }
 
-        :root[data-theme="light"] .bw-other-games > h2 {
+        :root[data-theme="light"] .bw-other-head h2 {
             color: #1b2028;
+        }
+
+        :root[data-theme="light"] .bw-other-hint {
+            color: #79828f;
+        }
+
+        :root[data-theme="light"] .bw-other-strip {
+            scrollbar-color: #c8ced8 transparent;
+        }
+
+        :root[data-theme="light"] .bw-other-strip::-webkit-scrollbar-thumb {
+            background: #c8ced8;
         }
 
         :root[data-theme="light"] .bw-other-card {
@@ -96,9 +151,13 @@
         }
     </style>
 
-    <h2>다른 게임도 해보세요</h2>
+    <div class="bw-other-head">
+        <h2>다른 게임도 해보세요</h2>
+        <span class="bw-other-hint" aria-hidden="true">밀어서 더 보기 →</span>
+    </div>
 
-    <div class="bw-other-grid">
+    <!--/* 스크롤 영역은 키보드로도 움직일 수 있어야 해서 tabindex를 준다 */-->
+    <div class="bw-other-strip" tabindex="0" role="group" aria-label="다른 게임 목록">
         <a th:each="g : ${otherGames}" th:href="@{${g.path}}" class="bw-other-card">
             <img th:src="@{${g.card}}" th:alt="${g.name}" width="600" height="400" loading="lazy" decoding="async">
             <span th:text="${g.name}">게임 이름</span>

@@ -109,6 +109,7 @@
                     <span class="bw-game-card-kicker" th:text="${g.kicker}">Pick</span>
                     <h2 th:text="${g.name}">게임 이름</h2>
                     <p th:text="${g.tagline}">한 줄 설명</p>
+                    <span class="bw-game-card-cta" th:if="${g.featured}" aria-hidden="true">▶ 지금 하기</span>
                 </div>
             </a>
         </div>

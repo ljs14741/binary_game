@@ -187,7 +187,7 @@ body,
 .bw-game-grid,
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
   max-width: 1120px;
   margin: 0 auto 1.5rem;
@@ -214,24 +214,37 @@ body,
   box-shadow: 0 24px 48px rgba(18, 18, 16, 0.1);
 }
 
+/* 왼쪽 한 칸을 세로로 차지한다.
+   span 3은 featured 외 카드가 5개(2열 x 3줄)라는 뜻이다.
+   게임이 늘면 왼쪽 카드가 바닥까지 안 닿을 뿐 레이아웃은 깨지지 않는다. */
 .bw-game-card-featured {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-column: 1;
+  grid-row: span 3;
+  display: flex;
+  flex-direction: column;
 }
 
 .bw-game-card img,
 .game-card img {
   width: 100%;
-  height: 200px;
+  height: 150px;
   object-fit: cover;
   display: block;
   background: #eef2f1;
 }
 
 .bw-game-card-featured img {
-  height: 100%;
-  min-height: 220px;
+  flex: 1;
+  height: auto;
+  min-height: 260px;
+}
+
+/* 대표 게임에만 붙는 유도 문구 */
+.bw-game-card-cta {
+  margin-top: 0.65rem;
+  color: var(--bw-accent);
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .bw-game-card-body {
@@ -758,8 +771,14 @@ body,
 
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
+  .bw-game-grid,
+  .game-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .bw-game-card-featured {
-    grid-template-columns: 1fr;
+    grid-column: 1 / -1;
+    grid-row: auto;
   }
 
   .bw-game-card-featured img {
