@@ -13,58 +13,63 @@
 
   목록의 출처는 GameCatalog 하나뿐이다. 현재 게임은 빠지고, 개수도 거기서 제한한다.
 
-  가로 스크롤 스트립인 이유:
-  처음에는 그리드로 만들었는데 카드가 너무 크고, 페이지마다 컨테이너 폭이 달라
-  어떤 페이지는 한 줄, 어떤 페이지는 두 줄로 갈렸다. 스트립은 폭과 무관하게 항상 한 줄이고,
-  게임이 20개로 늘어도 레이아웃이 그대로다. 모바일에서는 스와이프가 자연스럽다.
+  설계 메모
+  - 가로 스크롤 스트립이라 컨테이너 폭과 무관하게 항상 한 줄이다.
+    그리드였을 때는 페이지마다 한 줄/두 줄로 갈렸다.
+  - 이미지 높이를 aspect-ratio 가 아니라 고정 px 로 준다.
+    aspect-ratio 는 카드 폭에 따라 세로가 딸려 늘어나서 카드가 비정상적으로 길어졌다.
+  - 제목은 두 줄에서 자른다. 제목 길이가 제각각이면 flex 가 제일 긴 카드에 맞춰
+    전부 늘어나기 때문이다.
 
   스타일을 여기 같이 둔 이유: main-dark.css / main-light.css 두 벌을 모두 고치지 않고
   한 파일에서 관리하기 위해서다. 테마는 <html data-theme>로 구분한다 (theme.js가 세팅).
 */-->
 <section class="bw-other-games" th:fragment="otherGames" th:if="${otherGames != null and !otherGames.isEmpty()}">
     <style>
+        /* 모바일 우선. 아래쪽 미디어쿼리에서 넓은 화면을 키운다. */
         .bw-other-games {
             max-width: 960px;
-            margin: 40px auto 20px;
-            padding: 0 16px;
+            margin: 32px auto 16px;
+            padding: 0 14px;
         }
 
         .bw-other-head {
             display: flex;
             align-items: baseline;
             justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
         .bw-other-head h2 {
             margin: 0;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: #e8ecf1;
         }
 
         .bw-other-hint {
             flex: none;
-            font-size: .74rem;
+            font-size: .7rem;
             font-weight: 600;
             color: #7d8794;
         }
 
         .bw-other-strip {
             display: flex;
-            gap: 10px;
+            align-items: flex-start;
+            gap: 8px;
             overflow-x: auto;
             overscroll-behavior-x: contain;
             scroll-snap-type: x proximity;
             -webkit-overflow-scrolling: touch;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
             scrollbar-width: thin;
             scrollbar-color: #333a44 transparent;
         }
 
         .bw-other-strip::-webkit-scrollbar {
-            height: 6px;
+            height: 5px;
         }
 
         .bw-other-strip::-webkit-scrollbar-thumb {
@@ -75,17 +80,16 @@
         .bw-other-strip:focus-visible {
             outline: 2px solid #4a90d9;
             outline-offset: 3px;
-            border-radius: 12px;
+            border-radius: 10px;
         }
 
         .bw-other-card {
-            flex: 0 0 132px;
+            flex: 0 0 96px;
             scroll-snap-align: start;
-            display: flex;
-            flex-direction: column;
+            display: block;
             overflow: hidden;
             border: 1px solid #262b33;
-            border-radius: 10px;
+            border-radius: 9px;
             background: #14181e;
             color: #e8ecf1;
             text-decoration: none;
@@ -98,19 +102,49 @@
             border-color: #4a90d9;
         }
 
+        /* 높이를 고정한다. 폭에 딸려 늘어나지 않게. */
         .bw-other-card img {
             display: block;
             width: 100%;
-            aspect-ratio: 3 / 2;
+            height: 58px;
             object-fit: cover;
             background: #0b0d10;
         }
 
+        /* 제목은 두 줄까지. 넘치면 자른다. */
         .bw-other-card span {
-            padding: 8px 10px 10px;
-            font-size: .78rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            padding: 6px 7px 7px;
+            font-size: .7rem;
             font-weight: 600;
-            line-height: 1.3;
+            line-height: 1.25;
+        }
+
+        @media (min-width: 640px) {
+            .bw-other-games {
+                margin: 40px auto 20px;
+                padding: 0 16px;
+            }
+
+            .bw-other-head h2 {
+                font-size: 1.05rem;
+            }
+
+            .bw-other-card {
+                flex: 0 0 116px;
+            }
+
+            .bw-other-card img {
+                height: 70px;
+            }
+
+            .bw-other-card span {
+                padding: 7px 9px 9px;
+                font-size: .75rem;
+            }
         }
 
         :root[data-theme="light"] .bw-other-head h2 {

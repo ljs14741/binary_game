@@ -98,18 +98,20 @@
             <p>모바일·PC 모두 바로 플레이할 수 있는 무료 웹게임입니다.</p>
         </div>
 
-        <!--/* 카드 목록의 출처는 GameCatalog 하나다. 게임 추가는 거기 한 줄이면 된다. */-->
+        <!--/*
+          카드 목록의 출처는 GameCatalog 하나다. 게임 추가는 거기 한 줄이면 된다.
+          카드는 전부 같은 크기다. 예전에 무궁화만 크게 띄웠더니 나머지가 들러리로 보였다.
+          첫 카드만 eager 로 받아 첫 화면이 비어 보이지 않게 한다.
+        */-->
         <div class="bw-game-grid">
-            <a th:each="g : ${games}" th:href="@{${g.path}}"
-               class="bw-game-card" th:classappend="${g.featured} ? 'bw-game-card-featured'">
+            <a th:each="g, s : ${games}" th:href="@{${g.path}}" class="bw-game-card">
                 <img th:src="@{${g.card}}" th:alt="${g.name}"
                      width="600" height="400" decoding="async"
-                     th:attr="loading=${g.featured} ? 'eager' : 'lazy'">
+                     th:attr="loading=${s.first} ? 'eager' : 'lazy'">
                 <div class="bw-game-card-body">
                     <span class="bw-game-card-kicker" th:text="${g.kicker}">Pick</span>
                     <h2 th:text="${g.name}">게임 이름</h2>
                     <p th:text="${g.tagline}">한 줄 설명</p>
-                    <span class="bw-game-card-cta" th:if="${g.featured}" aria-hidden="true">▶ 지금 하기</span>
                 </div>
             </a>
         </div>

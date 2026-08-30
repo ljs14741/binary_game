@@ -26,7 +26,6 @@ public final class GameCatalog {
      * @param name     화면에 보이는 게임 이름
      * @param kicker   카드 상단의 짧은 영문 라벨
      * @param tagline  카드 아래 한 줄 설명
-     * @param featured 메인 화면에서 크게 보여줄지 여부. 한 개만 true 로 둔다
      * @param lastmod  사이트맵의 lastmod. 페이지를 크게 고쳤을 때 갱신한다
      */
     public record Game(
@@ -34,7 +33,6 @@ public final class GameCatalog {
             String name,
             String kicker,
             String tagline,
-            boolean featured,
             String lastmod
     ) {
         /** 카드 썸네일. 600x400(3:2) WebP 로 통일돼 있다. */
@@ -46,17 +44,17 @@ public final class GameCatalog {
     /** 표시 순서 = 이 목록의 순서. 유입이 많은 게임을 위로 둔다. */
     public static final List<Game> GAMES = List.of(
             new Game("/mugunghwa", "무궁화 꽃이 피었습니다", "Pick",
-                    "커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체", true, "2026-08-30"),
+                    "커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체", "2026-08-30"),
             new Game("/wasabi", "와사비 룰렛", "Roulette",
-                    "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", false, "2026-08-30"),
+                    "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-08-30"),
             new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",
-                    "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", false, "2026-08-30"),
+                    "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", "2026-08-30"),
             new Game("/horserace", "말달리자 경마내기게임", "Race",
-                    "말 하나 골라놓고 끝까지 조마조마 · 경마내기", false, "2026-08-30"),
+                    "말 하나 골라놓고 끝까지 조마조마 · 경마내기", "2026-08-30"),
             new Game("/dodge", "총알 피하기", "Arcade",
-                    "랭킹 도전 · 오래 버틸수록 빨라지는 생존 아케이드", false, "2026-08-30"),
+                    "랭킹 도전 · 오래 버틸수록 빨라지는 생존 아케이드", "2026-08-30"),
             new Game("/kimchi", "김치 랜덤 디펜스", "Defense",
-                    "뽑기 운으로 막는 랜덤 타워 디펜스", false, "2026-08-30")
+                    "뽑기 운으로 막는 랜덤 타워 디펜스", "2026-08-30")
     );
 
     /** 경로로 하나 찾는다. 없으면 null. */

@@ -184,11 +184,12 @@ body,
   font-weight: 500;
 }
 
+/* 모바일 2열이 기본. 넓어지면 아래 미디어쿼리에서 3열이 된다. */
 .bw-game-grid,
 .game-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
   max-width: 1120px;
   margin: 0 auto 1.5rem;
 }
@@ -214,49 +215,27 @@ body,
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
 }
 
-/* 왼쪽 한 칸을 세로로 차지한다.
-   span 3은 featured 외 카드가 5개(2열 x 3줄)라는 뜻이다.
-   게임이 늘면 왼쪽 카드가 바닥까지 안 닿을 뿐 레이아웃은 깨지지 않는다. */
-.bw-game-card-featured {
-  grid-column: 1;
-  grid-row: span 3;
-  display: flex;
-  flex-direction: column;
-}
 
 .bw-game-card img,
 .game-card img {
   width: 100%;
-  height: 150px;
+  height: 96px;
   object-fit: cover;
   display: block;
   background: #10141a;
 }
 
-.bw-game-card-featured img {
-  flex: 1;
-  height: auto;
-  min-height: 260px;
-}
-
-/* 대표 게임에만 붙는 유도 문구 */
-.bw-game-card-cta {
-  margin-top: 0.65rem;
-  color: var(--bw-accent);
-  font-size: 0.88rem;
-  font-weight: 700;
-}
 
 .bw-game-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 1.1rem 1.15rem 1.2rem;
+  gap: 0.25rem;
+  padding: 0.7rem 0.75rem 0.85rem;
 }
 
 .bw-game-card-kicker {
   color: var(--bw-accent);
-  font-size: 0.72rem;
+  font-size: 0.64rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -266,8 +245,12 @@ body,
 .game-card h2 {
   margin: 0;
   padding: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   font-family: var(--bw-font-display);
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--bw-text);
@@ -275,9 +258,14 @@ body,
 
 .bw-game-card-body p {
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   color: var(--bw-muted);
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 500;
+  line-height: 1.4;
 }
 
 /* legacy portal title (if any) */
@@ -771,20 +759,6 @@ body,
 
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
-  .bw-game-grid,
-  .game-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .bw-game-card-featured {
-    grid-column: 1 / -1;
-    grid-row: auto;
-  }
-
-  .bw-game-card-featured img {
-    min-height: 180px;
-    height: 200px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -793,11 +767,6 @@ body,
     width: min(100% - 1.25rem, 1120px);
   }
 
-  .bw-game-grid,
-  .game-grid {
-    grid-template-columns: 1fr;
-    gap: 0.8rem;
-  }
 
   .leaderboards {
     grid-template-columns: 1fr;
@@ -834,12 +803,40 @@ body,
 }
 
 @media (max-width: 500px) {
-  .bw-game-card img,
-  .game-card img {
-    height: 160px;
-  }
 
   .bw-game-btn {
     flex: 1 1 auto;
+  }
+}
+
+/* ===== 게임 목록: 넓은 화면 ===== */
+@media (min-width: 720px) {
+  .bw-game-grid,
+  .game-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .bw-game-card img,
+  .game-card img {
+    height: 150px;
+  }
+
+  .bw-game-card-body {
+    gap: 0.35rem;
+    padding: 1rem 1.05rem 1.1rem;
+  }
+
+  .bw-game-card h2,
+  .game-card h2 {
+    font-size: 1.15rem;
+  }
+
+  .bw-game-card-body p {
+    font-size: 0.88rem;
+  }
+
+  .bw-game-card-kicker {
+    font-size: 0.72rem;
   }
 }
