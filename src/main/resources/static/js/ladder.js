@@ -30,7 +30,8 @@
     var POOL_H = 92;
     var DWELL_UPPER = 80;         // 위쪽 갈림길에서 망설이는 시간(ms). 길면 속도감이 죽는다
     var DWELL_ZONE = 230;         // 운명의 구간은 길게 끈다
-    var HOLD_MS = 1100;
+    var DWELL_FINAL = 560;        // 마지막 줄에서 트는 순간. 여기가 제일 조여야 한다
+    var HOLD_MS = 820;
 
     var COLORS = ['#38bdf8', '#f97316', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#22d3ee', '#c084fc'];
 
@@ -48,7 +49,7 @@
         zoneRows: 3, totalRows: 15,
         upperRungs: [], zoneRungs: [],
         bombSlots: [], usedCols: [], takenSlots: [],
-        slotOwner: {},            // 도착점 -> 출발 번호
+        slotOwner: {},            // 도착점 -> 출발 번호. 도착한 뒤에만 채운다 (미리 채우면 결과가 새어나간다)
         paths: [], current: null,
         phase: 'setup', losers: []
     };
@@ -79,14 +80,33 @@
         return false;
     }
 
-    function makeZoneRungs(from, to, zoneRows, cols) {
+    // from 에서 to 까지 rows 줄에 걸쳐 한 칸씩 움직이는 계획을 만든다.
+    function movesFor(from, to, rows) {
         var need = to - from;
-        var moves = new Array(zoneRows).fill(0);
+        var moves = new Array(rows).fill(0);
         var dir = need > 0 ? 1 : -1;
         var slots = [];
-        for (var i = 0; i < zoneRows; i++) { slots.push(i); }
+        for (var i = 0; i < rows; i++) { slots.push(i); }
         shuffle(slots);
         for (var k = 0; k < Math.abs(need); k++) { moves[slots[k]] = dir; }
+        return moves;
+    }
+
+    /*
+     * 운명의 구간 가로줄.
+     *
+     * fakeCol 을 주면 마지막 줄 직전까지 그 자리에 가 있다가 마지막 줄에서 한 칸 튼다.
+     * 안전한 자리로 들어갈 것처럼 굴다가 꽝으로 새는(또는 그 반대) 장면이 여기서 나온다.
+     * |fakeCol - to| 는 항상 1이라 마지막 이동은 한 칸이다.
+     */
+    function makeZoneRungs(from, to, zoneRows, cols, fakeCol) {
+        var moves;
+        if (fakeCol === null || fakeCol === undefined) {
+            moves = movesFor(from, to, zoneRows);
+        } else {
+            moves = movesFor(from, fakeCol, zoneRows - 1);
+            moves.push(to - fakeCol);
+        }
 
         var rungs = [], col = from;
         for (var r = 0; r < zoneRows; r++) {
@@ -137,7 +157,7 @@
         state.players = players;
         state.bombs = Math.min(bombs, players - 1);
         state.cols = players;
-        state.zoneRows = Math.max(3, players - 1);
+        state.zoneRows = Math.max(4, players + 1);   // 마지막 한 줄은 막판에 트는 데 쓴다
         state.totalRows = UPPER_ROWS + state.zoneRows;
         state.upperRungs = makeUpperRungs(state.cols, UPPER_ROWS);
         state.zoneRungs = [];
@@ -196,6 +216,25 @@
         return { x: last.x, y: last.y, seg: path.segs.length - 1, row: last.row };
     }
 
+    /*
+     * 마지막 줄 직전에 머물 자리를 고른다.
+     * 도착점 바로 옆 칸 중에서, 성격이 반대인 쪽(꽝 옆의 안전, 안전 옆의 꽝)을 우선한다.
+     * 안전한 데로 들어갈 것처럼 굴다가 꽝으로 새는 장면이 여기서 만들어진다.
+     */
+    function pickFake(to) {
+        var cands = [];
+        if (to - 1 >= 0) { cands.push(to - 1); }
+        if (to + 1 < state.cols) { cands.push(to + 1); }
+        if (!cands.length) { return null; }
+
+        var toIsBomb = state.bombSlots.indexOf(to) >= 0;
+        var contrast = cands.filter(function (c) {
+            return (state.bombSlots.indexOf(c) >= 0) !== toIsBomb;
+        });
+        var pool = contrast.length ? contrast : cands;
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+
     // ── 한 명 내려가기 ──────────────────────────────────────
     function descend(startCol) {
         if (state.phase !== 'ready') { return; }
@@ -208,12 +247,14 @@
             if (state.takenSlots.indexOf(i) < 0) { free.push(i); }
         }
         var target = free[Math.floor(Math.random() * free.length)];
-        state.zoneRungs = makeZoneRungs(col, target, state.zoneRows, state.cols);
+
+        // 대체로 막판에 한 번 튼다. 항상 틀면 눈치채므로 가끔은 그냥 들어간다.
+        var fake = Math.random() < 0.75 ? pickFake(target) : null;
+        state.zoneRungs = makeZoneRungs(col, target, state.zoneRows, state.cols, fake);
 
         var path = buildPath(startCol);
         state.usedCols.push(startCol);
         state.takenSlots.push(target);
-        state.slotOwner[target] = startCol + 1;
         state.phase = 'descending';
         state.current = {
             col: startCol,
@@ -227,7 +268,6 @@
         setStatus('내려가는 중…');
         el.skip.hidden = false;
         renderColumnButtons();
-        renderSlots();
         startBgm();
     }
 
@@ -276,8 +316,9 @@
             if (np.seg !== cur.seg) {
                 var seg = cur.path.segs[np.seg];
                 if (seg && seg.horizontal && !skipping) {
-                    cur.dwell = np.row > UPPER_ROWS ? DWELL_ZONE : DWELL_UPPER;
-                    sfx.split();
+                    var isLast = np.row >= state.totalRows;
+                    cur.dwell = isLast ? DWELL_FINAL : (np.row > UPPER_ROWS ? DWELL_ZONE : DWELL_UPPER);
+                    if (isLast) { sfx.heartbeat(); } else { sfx.split(); }
                     addSplash(cur, np.x, np.y);
                 }
                 cur.seg = np.seg;
@@ -322,11 +363,11 @@
         state.phase = 'holding';
         setStatus('…');
         el.stage.classList.add('is-holding');
-        if (!skipping) { sfx.heartbeat(); }
 
         setTimeout(function () {
             el.stage.classList.remove('is-holding');
             state.paths.push(cur);
+            state.slotOwner[cur.slot] = cur.col + 1;   // 여기서야 공개한다
             renderSlots();
 
             if (cur.hit) {
@@ -597,7 +638,7 @@
         for (var c = 0; c < state.cols; c++) {
             var x = colX(c);
             var bomb = state.bombSlots.indexOf(c) >= 0;
-            ctx.globalAlpha = state.takenSlots.indexOf(c) >= 0 ? 0.4 : 1;
+            ctx.globalAlpha = state.slotOwner[c] ? 0.4 : 1;   // 아직 안 간 자리를 흐리면 결과가 새어나간다
             ctx.fillStyle = t.pool;
             ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = bomb ? '#fb7185' : '#34d399';
