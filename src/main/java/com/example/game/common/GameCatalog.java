@@ -45,6 +45,8 @@ public final class GameCatalog {
     public static final List<Game> GAMES = List.of(
             new Game("/mugunghwa", "무궁화 꽃이 피었습니다", "Pick",
                     "커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체", "2026-08-30"),
+            new Game("/ladder", "사다리타기", "Ladder",
+                    "가로줄이 안 보이는 블라인드 사다리 · 커피내기·벌칙뽑기", "2026-08-30"),
             new Game("/wasabi", "와사비 룰렛", "Roulette",
                     "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-08-30"),
             new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",

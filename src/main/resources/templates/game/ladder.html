@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>사다리타기 – 가로줄이 숨겨진 블라인드 사다리 | 커피내기·벌칙뽑기 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <meta name="description" content="가로줄이 보이지 않는 사다리타기. 꽝 위치는 미리 공개되고, 마지막 구간은 도착 직전에 정해집니다. 커피내기·점심내기·벌칙뽑기용 무료 온라인 사다리타기.">
+    <meta name="keywords" content="사다리타기, 온라인 사다리타기, 모바일 사다리타기, 커피내기 사다리타기, 점심내기 사다리타기, 벌칙 사다리타기, 사다리타기 룰렛, 사다리타기 8명, 제비뽑기, 랜덤뽑기, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="사다리타기 – 가로줄이 숨겨진 블라인드 사다리 | Binary World">
+    <meta property="og:description" content="가로줄이 보이지 않습니다. 꽝은 미리 공개되고, 마지막 구간은 도착 직전에 정해집니다. 커피내기·점심내기·벌칙뽑기용 무료 사다리타기.">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/ladder.png">
+    <meta property="og:url" content="https://game.binaryworld.kr/ladder">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="사다리타기 – 가로줄이 숨겨진 블라인드 사다리 | Binary World">
+    <meta name="twitter:description" content="가로줄이 보이지 않습니다. 꽝은 미리 공개되고, 마지막 구간은 도착 직전에 정해집니다.">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/ladder.png">
+
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="theme-color" content="#0b0d10">
+    <link rel="canonical" href="https://game.binaryworld.kr/ladder">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "사다리타기",
+      "alternateName": ["블라인드 사다리타기", "온라인 사다리타기", "커피내기 사다리타기", "벌칙 사다리타기"],
+      "url": "https://game.binaryworld.kr/ladder",
+      "description": "가로줄이 보이지 않는 사다리타기. 꽝 위치는 미리 공개되고 마지막 구간은 도착 직전에 정해진다. 커피내기·점심내기·벌칙뽑기에 적합.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": "사다리타기, 온라인 사다리타기, 커피내기, 점심내기, 벌칙뽑기, 제비뽑기"
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/ladder.css}">
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-0TSFJBQ41N');
+    </script>
+</head>
+<body class="bw-game-body">
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
+
+<div class="bw-ladder-shell">
+    <div class="nav-back">
+        <a href="/" class="back-btn">← 게임 목록</a>
+    </div>
+
+    <h1 class="game-title">사다리타기</h1>
+    <p class="game-desc">가로줄이 보이지 않습니다. 내려가 봐야 압니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+
+    <div class="bw-ladder-setup" id="ladder-setup">
+        <div class="bw-ladder-field">
+            <span>인원</span>
+            <div class="bw-ladder-seg" role="group" aria-label="인원 수">
+                <button type="button" data-players="2">2</button>
+                <button type="button" data-players="3">3</button>
+                <button type="button" data-players="4" class="is-active">4</button>
+                <button type="button" data-players="5">5</button>
+                <button type="button" data-players="6">6</button>
+                <button type="button" data-players="8">8</button>
+            </div>
+        </div>
+        <div class="bw-ladder-field">
+            <span>꽝</span>
+            <div class="bw-ladder-seg" role="group" aria-label="꽝 개수">
+                <button type="button" data-bombs="1" class="is-active">1개</button>
+                <button type="button" data-bombs="2">2개</button>
+            </div>
+        </div>
+    </div>
+
+    <button type="button" class="bw-ladder-btn" id="ladder-start" style="width:100%">사다리 만들기</button>
+
+    <div id="ladder-play" hidden>
+        <div class="bw-ladder-hud">
+            <p class="bw-ladder-status" id="ladder-status">출발할 번호를 고르세요</p>
+            <div class="bw-ladder-actions">
+                <button type="button" id="ladder-skip" hidden>건너뛰기</button>
+                <button type="button" id="ladder-mute" aria-pressed="true">소리 켜짐</button>
+            </div>
+        </div>
+
+        <div class="bw-ladder-cols" id="ladder-cols" role="group" aria-label="출발 번호"></div>
+
+        <div class="bw-ladder-stage" id="ladder-stage">
+            <canvas id="ladder-canvas" aria-label="사다리 화면" role="img"></canvas>
+
+            <div class="bw-ladder-result" id="ladder-result" role="status" aria-live="polite" hidden>
+                <div class="bw-ladder-result-card">
+                    <p class="bw-ladder-result-title" id="ladder-result-title"></p>
+                    <span class="bw-ladder-result-detail" id="ladder-result-detail"></span>
+                    <button type="button" class="bw-ladder-btn" id="ladder-next">다음 사람</button>
+                    <button type="button" class="bw-ladder-btn" id="ladder-restart" hidden>다시 하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="bw-ladder-help">
+        <h2>게임 방법</h2>
+        <ol>
+            <li>인원과 꽝 개수를 고르고 사다리를 만듭니다.</li>
+            <li><strong>꽝(💣)이 어디 있는지는 처음부터 보입니다.</strong> 어디로 가면 안 되는지 알고 시작합니다.</li>
+            <li>가로줄은 보이지 않습니다. 말이 내려가면서 하나씩 드러납니다.</li>
+            <li>맨 아래 점선 구간은 <strong>매 차례 다시 섞입니다.</strong> 도착 직전까지 결과를 알 수 없습니다.</li>
+            <li>한 명씩 순서대로 내려갑니다. 사람이 줄어들수록 걸릴 확률이 올라갑니다.</li>
+            <li>급하면 <strong>건너뛰기</strong>로 바로 결과를 볼 수 있습니다.</li>
+        </ol>
+    </section>
+</div>
+
+<div th:replace="~{fragments/other-games :: otherGames}"></div>
+
+<div id="bw-guestbook" aria-label="방명록"></div>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
+
+<script th:src="@{/js/ladder.js}"></script>
+
+<script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
+</body>
+</html>

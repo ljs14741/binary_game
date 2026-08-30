@@ -1,0 +1,255 @@
+/*
+  사다리타기 — 모바일 세로 우선.
+  캔버스가 화면을 꽉 채우지 않는다. 자동 광고가 들어갈 여백이 필요하다.
+*/
+
+.bw-ladder-shell {
+  width: min(560px, calc(100% - 1rem));
+  margin: 0 auto;
+  padding: 0.65rem 0 1.75rem;
+}
+
+/* ── 시작 전 설정 ── */
+.bw-ladder-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+}
+
+.bw-ladder-field {
+  display: grid;
+  grid-template-columns: 3.6rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bw-ladder-field > span {
+  color: var(--bw-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.bw-ladder-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.bw-ladder-seg button {
+  flex: 1 1 auto;
+  min-width: 2.6rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-ladder-seg button.is-active {
+  border-color: var(--bw-accent);
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+}
+
+.bw-ladder-btn {
+  min-height: 2.9rem;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid var(--bw-accent);
+  border-radius: 0.7rem;
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-ladder-btn-ghost {
+  border-color: var(--bw-border);
+  background: transparent;
+  color: var(--bw-muted);
+}
+
+/* ── 진행 중 ── */
+.bw-ladder-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.bw-ladder-status {
+  margin: 0;
+  color: var(--bw-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.bw-ladder-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.bw-ladder-actions button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 출발 번호. 최소 터치 영역을 지킨다. */
+.bw-ladder-cols {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+}
+
+.bw-ladder-col {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 2.75rem;
+  border: 1px solid var(--col-color, var(--bw-border));
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--col-color, var(--bw-text));
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.bw-ladder-col:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.bw-ladder-col.is-used {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.bw-ladder-stage {
+  position: relative;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+  overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+/* 도착 직전 뜸 들이기: 화면이 어두워진다 */
+.bw-ladder-stage.is-holding::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  animation: bw-ladder-hold 1.2s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes bw-ladder-hold {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#ladder-canvas {
+  display: block;
+  width: 100%;
+}
+
+/* ── 결과 ── */
+.bw-ladder-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(8, 10, 14, 0.78);
+}
+
+.bw-ladder-result[hidden] {
+  display: none;
+}
+
+.bw-ladder-result-card {
+  width: min(300px, 100%);
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface-strong);
+  text-align: center;
+}
+
+.bw-ladder-result-title {
+  margin: 0 0 0.35rem;
+  color: var(--bw-text);
+  font-family: var(--bw-font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.bw-ladder-result.is-bad .bw-ladder-result-title {
+  color: #fb7185;
+}
+
+.bw-ladder-result-detail {
+  display: block;
+  margin-bottom: 0.9rem;
+  color: var(--bw-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.bw-ladder-result-card button {
+  width: 100%;
+}
+
+.bw-ladder-result-card button + button {
+  margin-top: 0.4rem;
+}
+
+/* ── 안내 ── */
+.bw-ladder-help {
+  margin-top: 1.4rem;
+  color: var(--bw-muted);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.bw-ladder-help h2 {
+  margin: 0 0 0.5rem;
+  color: var(--bw-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.bw-ladder-help ol {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw-ladder-col,
+  .bw-ladder-stage {
+    transition: none;
+  }
+
+  .bw-ladder-stage.is-holding::after {
+    animation: none;
+    opacity: 1;
+  }
+}

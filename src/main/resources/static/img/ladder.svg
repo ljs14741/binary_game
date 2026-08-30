@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="사다리타기">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#141a22"/>
+      <stop offset="100%" stop-color="#0b0d10"/>
+    </linearGradient>
+    <linearGradient id="trail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f97316" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#f97316" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="600" fill="url(#bg)"/>
+
+  <!-- 세로줄 -->
+  <g stroke="#39424f" stroke-width="5" stroke-linecap="round">
+    <line x1="150" y1="120" x2="150" y2="470"/>
+    <line x1="350" y1="120" x2="350" y2="470"/>
+    <line x1="550" y1="120" x2="550" y2="470"/>
+    <line x1="750" y1="120" x2="750" y2="470"/>
+  </g>
+
+  <!-- 드러난 가로줄 -->
+  <g stroke="#39424f" stroke-width="5" stroke-linecap="round">
+    <line x1="150" y1="180" x2="350" y2="180"/>
+    <line x1="550" y1="240" x2="750" y2="240"/>
+    <line x1="350" y1="300" x2="550" y2="300"/>
+  </g>
+
+  <!-- 운명의 구간 -->
+  <line x1="110" y1="380" x2="790" y2="380" stroke="#5b6675" stroke-width="3" stroke-dasharray="12 14"/>
+
+  <!-- 지나간 경로 -->
+  <polyline points="150,120 150,180 350,180 350,300 550,300 550,470"
+            fill="none" stroke="url(#trail)" stroke-width="9"
+            stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="550" cy="470" r="16" fill="#f97316"/>
+
+  <!-- 도착점 -->
+  <g font-family="Segoe UI Emoji, Apple Color Emoji, sans-serif" font-size="56" text-anchor="middle">
+    <text x="150" y="545">🙂</text>
+    <text x="350" y="545">🙂</text>
+    <text x="550" y="545">💣</text>
+    <text x="750" y="545">🙂</text>
+  </g>
+
+  <text x="450" y="72" text-anchor="middle" font-family="Segoe UI, Avenir Next, sans-serif"
+        font-size="46" font-weight="800" fill="#e8ecf1">사다리타기</text>
+</svg>
