@@ -98,53 +98,17 @@
             <p>모바일·PC 모두 바로 플레이할 수 있는 무료 웹게임입니다.</p>
         </div>
 
+        <!--/* 카드 목록의 출처는 GameCatalog 하나다. 게임 추가는 거기 한 줄이면 된다. */-->
         <div class="bw-game-grid">
-            <a href="/mugunghwa" class="bw-game-card bw-game-card-featured">
-                <img th:src="@{/img/mugunghwa.png}" src="/img/mugunghwa.png" alt="무궁화 꽃이 피었습니다">
+            <a th:each="g : ${games}" th:href="@{${g.path}}"
+               class="bw-game-card" th:classappend="${g.featured} ? 'bw-game-card-featured'">
+                <img th:src="@{${g.card}}" th:alt="${g.name}"
+                     width="600" height="400" decoding="async"
+                     th:attr="loading=${g.featured} ? 'eager' : 'lazy'">
                 <div class="bw-game-card-body">
-                    <span class="bw-game-card-kicker">Pick</span>
-                    <h2>무궁화 꽃이 피었습니다</h2>
-                    <p>커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체</p>
-                </div>
-            </a>
-            <a href="/wasabi" class="bw-game-card">
-                <img th:src="@{/img/wasabi.jpg}" src="/img/wasabi.jpg" alt="와사비 룰렛">
-                <div class="bw-game-card-body">
-                    <span class="bw-game-card-kicker">Roulette</span>
-                    <h2>와사비 룰렛</h2>
-                    <p>커피내기·점심내기·벌칙뽑기</p>
-                </div>
-            </a>
-            <a href="/pinball" class="bw-game-card">
-                <img th:src="@{/img/pinball.png}" src="/img/pinball.png" alt="핀볼룰렛 랜덤공뽑기">
-                <div class="bw-game-card-body">
-                    <span class="bw-game-card-kicker">Roulette</span>
-                    <h2>핀볼룰렛 랜덤공뽑기</h2>
-                    <p>핀볼뽑기·랜덤볼뽑기·랜덤핀볼룰렛 · 커피내기·점심내기·벌칙뽑기</p>
-                </div>
-            </a>
-            <a href="/horserace" class="bw-game-card">
-                <img th:src="@{/img/horserace.png}" src="/img/horserace.png" alt="말달리자 경마내기게임">
-                <div class="bw-game-card-body">
-                    <span class="bw-game-card-kicker">Race</span>
-                    <h2>말달리자 경마내기게임</h2>
-                    <p>커피내기·점심내기·벌칙뽑기 · 경마내기</p>
-                </div>
-            </a>
-            <a href="/dodge" class="bw-game-card">
-                <img th:src="@{/img/dodge.png}" src="/img/dodge.png" alt="총알 피하기">
-                <div class="bw-game-card-body">
-                    <span class="bw-game-card-kicker">Arcade</span>
-                    <h2>총알 피하기</h2>
-                    <p>랭킹 도전 · 생존 아케이드</p>
-                </div>
-            </a>
-            <a href="/kimchi" class="bw-game-card">
-                <img th:src="@{/img/kimchi.png}" src="/img/kimchi.png" alt="김치 랜덤 디펜스">
-                <div class="bw-game-card-body">
-                    <span class="bw-game-card-kicker">Defense</span>
-                    <h2>김치 랜덤 디펜스</h2>
-                    <p>랜덤 타워로 막는 디펜스</p>
+                    <span class="bw-game-card-kicker" th:text="${g.kicker}">Pick</span>
+                    <h2 th:text="${g.name}">게임 이름</h2>
+                    <p th:text="${g.tagline}">한 줄 설명</p>
                 </div>
             </a>
         </div>

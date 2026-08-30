@@ -322,13 +322,22 @@ body,
 }
 
 .game-title {
-  margin: 0 0 1rem;
+  margin: 0 0 0.5rem;
   color: var(--bw-text);
   font-family: var(--bw-font-display);
   font-size: clamp(1.45rem, 3vw, 2rem);
   font-weight: 800;
   letter-spacing: -0.04em;
 }
+/* 제목 아래 한 줄 설명. 게임 페이지 구조를 통일하면서 추가했다. */
+.game-desc {
+  margin: 0 0 1.25rem;
+  color: var(--bw-muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 
 .game-bgm {
   display: flex;

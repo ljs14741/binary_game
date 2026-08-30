@@ -95,6 +95,30 @@
             <a href="/" class="back-btn">← 게임 목록</a>
         </div>
 
+        <h1 class="game-title">총알피하기</h1>
+        <p class="game-desc">총알을 피해 최대한 오래 버티세요. 버틸수록 빨라집니다.</p>
+
+        <div class="game-bgm">
+            <button id="bgmToggle">BGM 켜기/끄기</button>
+            <label for="volumeControl">BGM 볼륨:</label>
+            <input type="range" id="volumeControl" min="0" max="100" value="100">
+        </div>
+
+        <div class="nickname-bar">
+            <label for="nicknameInput">닉네임</label>
+            <input id="nicknameInput" type="text" maxlength="10" placeholder="닉네임(최대 10자)">
+            <button id="nicknameSave" type="button">저장</button>
+            <span id="nickStatus">미설정</span>
+        </div>
+
+        <div id="game-container"></div>
+
+        <div class="icon-container">
+            <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
+            <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
+            <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
+        </div>
+
         <section class="leaderboards">
             <!-- 명예의 전당 Top10 -->
             <div class="board-card">
@@ -154,29 +178,6 @@
             </div>
         </section>
 
-        <h1 class="game-title">총알피하기</h1>
-
-        <div class="game-bgm">
-            <button id="bgmToggle">BGM 켜기/끄기</button>
-            <label for="volumeControl">BGM 볼륨:</label>
-            <input type="range" id="volumeControl" min="0" max="100" value="100">
-        </div>
-
-        <div class="nickname-bar">
-            <label for="nicknameInput">닉네임</label>
-            <input id="nicknameInput" type="text" maxlength="10" placeholder="닉네임(최대 10자)">
-            <button id="nicknameSave" type="button">저장</button>
-            <span id="nickStatus">미설정</span>
-        </div>
-
-        <div id="game-container"></div>
-
-        <div class="icon-container">
-            <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
-            <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
-            <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
-        </div>
-
         <div class="description">
             <h2>게임 설명</h2>
             <p>
@@ -187,7 +188,7 @@
         </div>
     </div>
 
-    <div th:replace="~{fragments/other-games :: otherGames('/dodge')}"></div>
+    <div th:replace="~{fragments/other-games :: otherGames}"></div>
 
     <div id="bw-guestbook" aria-label="방명록"></div>
 </div>

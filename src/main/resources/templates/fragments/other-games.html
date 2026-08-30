@@ -8,13 +8,15 @@
   게임 하나를 끝낸 직후가 다음 행동을 고르는 순간이라 여기서 이탈을 막는다.
   이 섹션이 없을 때는 게임 페이지에서 다른 게임으로 가는 링크가 하나도 없었다.
 
-  쓰는 법 — 현재 페이지 경로를 넘기면 그 게임은 목록에서 빠진다.
-    <div th:replace="~{fragments/other-games :: otherGames('/wasabi')}"></div>
+  쓰는 법 — 인자가 없다. 현재 경로는 GameCatalogAdvice 가 알아서 판단한다.
+    <div th:replace="~{fragments/other-games :: otherGames}"></div>
+
+  목록의 출처는 GameCatalog 하나뿐이다. 현재 게임은 빠지고, 개수도 거기서 제한한다.
 
   스타일을 여기 같이 둔 이유: main-dark.css / main-light.css 두 벌을 모두 고치지 않고
   한 파일에서 관리하기 위해서다. 테마는 <html data-theme>로 구분한다 (theme.js가 세팅).
 */-->
-<section class="bw-other-games" th:fragment="otherGames(current)">
+<section class="bw-other-games" th:fragment="otherGames" th:if="${otherGames != null and !otherGames.isEmpty()}">
     <style>
         .bw-other-games {
             max-width: 960px;
@@ -97,29 +99,9 @@
     <h2>다른 게임도 해보세요</h2>
 
     <div class="bw-other-grid">
-        <a th:if="${current != '/mugunghwa'}" href="/mugunghwa" class="bw-other-card">
-            <img th:src="@{/img/mugunghwa.png}" alt="무궁화 꽃이 피었습니다" loading="lazy">
-            <span>무궁화 꽃이 피었습니다</span>
-        </a>
-        <a th:if="${current != '/wasabi'}" href="/wasabi" class="bw-other-card">
-            <img th:src="@{/img/wasabi.jpg}" alt="와사비 룰렛" loading="lazy">
-            <span>와사비 룰렛</span>
-        </a>
-        <a th:if="${current != '/pinball'}" href="/pinball" class="bw-other-card">
-            <img th:src="@{/img/pinball.png}" alt="핀볼룰렛 랜덤공뽑기" loading="lazy">
-            <span>핀볼룰렛 랜덤공뽑기</span>
-        </a>
-        <a th:if="${current != '/horserace'}" href="/horserace" class="bw-other-card">
-            <img th:src="@{/img/horserace.png}" alt="말달리자 경마내기게임" loading="lazy">
-            <span>말달리자 경마내기게임</span>
-        </a>
-        <a th:if="${current != '/dodge'}" href="/dodge" class="bw-other-card">
-            <img th:src="@{/img/dodge.png}" alt="총알 피하기" loading="lazy">
-            <span>총알 피하기</span>
-        </a>
-        <a th:if="${current != '/kimchi'}" href="/kimchi" class="bw-other-card">
-            <img th:src="@{/img/kimchi.png}" alt="김치 랜덤 디펜스" loading="lazy">
-            <span>김치 랜덤 디펜스</span>
+        <a th:each="g : ${otherGames}" th:href="@{${g.path}}" class="bw-other-card">
+            <img th:src="@{${g.card}}" th:alt="${g.name}" width="600" height="400" loading="lazy" decoding="async">
+            <span th:text="${g.name}">게임 이름</span>
         </a>
     </div>
 </section>
