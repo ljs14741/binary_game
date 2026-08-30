@@ -52,6 +52,7 @@
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/ladder.css}">
 
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
     <!-- Google tag (gtag.js) -->
@@ -124,6 +125,12 @@
 
         <!--/* 도착 현황. 카메라가 내려가면 도착 풀이 화면 밖으로 나가서 여기 따로 띄운다. */-->
         <div class="bw-ladder-slots" id="ladder-slots" aria-label="도착 현황"></div>
+    </div>
+
+    <div class="bw-ladder-share">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
     </div>
 
     <section class="bw-ladder-help">

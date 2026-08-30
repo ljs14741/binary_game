@@ -304,3 +304,11 @@
     opacity: 1;
   }
 }
+
+/* ── 공유 ── */
+.bw-ladder-share {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
