@@ -48,7 +48,7 @@
     <link rel="manifest" href="/img/favicon/manifest.json">
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/img/favicon/ms-icon-144x144.png">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#0b0d10">
 
     <link rel="canonical"  href="https://game.binaryworld.kr/mugunghwa">
     <link rel="alternate"  hreflang="x-default" href="https://game.binaryworld.kr/mugunghwa">
@@ -87,6 +87,7 @@
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
 
     <style>
         html { overflow: hidden; }
@@ -483,6 +484,8 @@
         </div>
 
     </div>
+
+    <div th:replace="~{fragments/other-games :: otherGames('/mugunghwa')}"></div>
 
     <div id="bw-guestbook" aria-label="방명록"></div>
 </div>

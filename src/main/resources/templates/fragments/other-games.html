@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/*
+  게임 페이지 하단에 붙는 공통 "다른 게임" 섹션.
+
+  게임 하나를 끝낸 직후가 다음 행동을 고르는 순간이라 여기서 이탈을 막는다.
+  이 섹션이 없을 때는 게임 페이지에서 다른 게임으로 가는 링크가 하나도 없었다.
+
+  쓰는 법 — 현재 페이지 경로를 넘기면 그 게임은 목록에서 빠진다.
+    <div th:replace="~{fragments/other-games :: otherGames('/wasabi')}"></div>
+
+  스타일을 여기 같이 둔 이유: main-dark.css / main-light.css 두 벌을 모두 고치지 않고
+  한 파일에서 관리하기 위해서다. 테마는 <html data-theme>로 구분한다 (theme.js가 세팅).
+*/-->
+<section class="bw-other-games" th:fragment="otherGames(current)">
+    <style>
+        .bw-other-games {
+            max-width: 960px;
+            margin: 48px auto 24px;
+            padding: 0 16px;
+        }
+
+        .bw-other-games > h2 {
+            margin: 0 0 16px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #e8ecf1;
+        }
+
+        .bw-other-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .bw-other-card {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #262b33;
+            border-radius: 12px;
+            background: #14181e;
+            color: #e8ecf1;
+            text-decoration: none;
+            transition: transform .15s ease, border-color .15s ease;
+        }
+
+        .bw-other-card:hover,
+        .bw-other-card:focus-visible {
+            transform: translateY(-2px);
+            border-color: #4a90d9;
+        }
+
+        .bw-other-card img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 3 / 2;
+            object-fit: cover;
+            background: #0b0d10;
+        }
+
+        .bw-other-card span {
+            padding: 10px 12px;
+            font-size: .88rem;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        :root[data-theme="light"] .bw-other-games > h2 {
+            color: #1b2028;
+        }
+
+        :root[data-theme="light"] .bw-other-card {
+            border-color: #d9dee6;
+            background: #ffffff;
+            color: #1b2028;
+        }
+
+        :root[data-theme="light"] .bw-other-card img {
+            background: #eef1f5;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .bw-other-card {
+                transition: none;
+            }
+
+            .bw-other-card:hover,
+            .bw-other-card:focus-visible {
+                transform: none;
+            }
+        }
+    </style>
+
+    <h2>다른 게임도 해보세요</h2>
+
+    <div class="bw-other-grid">
+        <a th:if="${current != '/mugunghwa'}" href="/mugunghwa" class="bw-other-card">
+            <img th:src="@{/img/mugunghwa.png}" alt="무궁화 꽃이 피었습니다" loading="lazy">
+            <span>무궁화 꽃이 피었습니다</span>
+        </a>
+        <a th:if="${current != '/wasabi'}" href="/wasabi" class="bw-other-card">
+            <img th:src="@{/img/wasabi.jpg}" alt="와사비 룰렛" loading="lazy">
+            <span>와사비 룰렛</span>
+        </a>
+        <a th:if="${current != '/pinball'}" href="/pinball" class="bw-other-card">
+            <img th:src="@{/img/pinball.png}" alt="핀볼룰렛 랜덤공뽑기" loading="lazy">
+            <span>핀볼룰렛 랜덤공뽑기</span>
+        </a>
+        <a th:if="${current != '/horserace'}" href="/horserace" class="bw-other-card">
+            <img th:src="@{/img/horserace.png}" alt="말달리자 경마내기게임" loading="lazy">
+            <span>말달리자 경마내기게임</span>
+        </a>
+        <a th:if="${current != '/dodge'}" href="/dodge" class="bw-other-card">
+            <img th:src="@{/img/dodge.png}" alt="총알 피하기" loading="lazy">
+            <span>총알 피하기</span>
+        </a>
+        <a th:if="${current != '/kimchi'}" href="/kimchi" class="bw-other-card">
+            <img th:src="@{/img/kimchi.png}" alt="김치 랜덤 디펜스" loading="lazy">
+            <span>김치 랜덤 디펜스</span>
+        </a>
+    </div>
+</section>
+
+</body>
+</html>

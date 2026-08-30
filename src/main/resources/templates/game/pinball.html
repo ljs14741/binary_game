@@ -45,7 +45,7 @@
     <link rel="manifest" href="/img/favicon/manifest.json">
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#0b0d10">
 
     <meta name="_csrf" th:content="${_csrf.token}" />
 
@@ -74,6 +74,7 @@
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/pinball.css}">
 
     <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
@@ -141,6 +142,8 @@
         </div>
     </div>
 
+    <div th:replace="~{fragments/other-games :: otherGames('/pinball')}"></div>
+
     <div id="bw-guestbook" aria-label="방명록"></div>
 </div>
 
@@ -164,25 +167,7 @@
             });
         }
 
-        // 2. 테마 토글
-        const themeToggle = document.getElementById('themeToggle');
-        const themeLink = document.getElementById('theme-style');
-        const currentTheme = localStorage.getItem('theme') || 'dark';
-
-        applyTheme(currentTheme);
-
-        if (themeToggle && themeLink) {
-            themeToggle.addEventListener('click', () => {
-                const isDark = themeLink.getAttribute('href').includes('dark');
-                const nextTheme = isDark ? 'light' : 'dark';
-                applyTheme(nextTheme);
-            });
-        }
-
-        function applyTheme(theme) {
-            themeLink.setAttribute('href', `/css/main-${theme}.css`);
-            localStorage.setItem('theme', theme);
-        }
+        // 2. 테마 토글은 공통 스크립트(/js/theme.js)가 처리한다.
     });
 
     const gc = document.getElementById('game-container');
@@ -288,6 +273,7 @@
     setupKakaoShareButton();
 
 </script>
+
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
 <script src="https://binaryworld.kr/common/guestbook.js" defer></script>

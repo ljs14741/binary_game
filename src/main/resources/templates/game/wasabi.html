@@ -24,7 +24,7 @@
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
     <link rel="manifest" href="/img/favicon/manifest.json">
-    <meta name="theme-color" content="#e7efe6">
+    <meta name="theme-color" content="#0b0d10">
     <link rel="canonical" href="https://game.binaryworld.kr/wasabi">
 
     <script type="application/ld+json">
@@ -48,7 +48,8 @@
     <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
     <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
-    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-light.css}">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/wasabi.css}">
 
     <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
@@ -128,36 +129,21 @@
     </section>
 </div>
 
+<div th:replace="~{fragments/other-games :: otherGames('/wasabi')}"></div>
+
 <div id="bw-guestbook" aria-label="방명록"></div>
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
 <script th:src="@{/js/wasabi.js}"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const themeToggle = document.getElementById("themeToggle");
-        const themeLink = document.getElementById("theme-style");
-        const currentTheme = localStorage.getItem("theme") || "light";
-
-        function applyTheme(theme) {
-            if (!themeLink) return;
-            themeLink.setAttribute("href", `/css/main-${theme}.css`);
-            localStorage.setItem("theme", theme);
-            document.body.setAttribute("data-theme", theme);
-        }
-
-        applyTheme(currentTheme);
-        if (themeToggle && themeLink) {
-            themeToggle.addEventListener("click", () => {
-                const isDark = themeLink.getAttribute("href").includes("dark");
-                applyTheme(isDark ? "light" : "dark");
-            });
-        }
-
+        // 테마 토글은 공통 스크립트(/js/theme.js)가 처리한다.
         if (typeof setupKakaoShareButton === "function") {
             setupKakaoShareButton();
         }
     });
 </script>
+
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
 <script src="https://binaryworld.kr/common/guestbook.js" defer></script>
