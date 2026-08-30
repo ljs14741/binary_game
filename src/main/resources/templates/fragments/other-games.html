@@ -48,11 +48,18 @@
             color: #e8ecf1;
         }
 
+        /* 실제로 넘칠 때만 보인다. 아래 스크립트가 is-scrollable 을 붙인다.
+           브레이크포인트로 숨기면 화면 폭이 애매할 때 안내가 어긋난다. */
         .bw-other-hint {
+            display: none;
             flex: none;
             font-size: .7rem;
             font-weight: 600;
             color: #7d8794;
+        }
+
+        .bw-other-games.is-scrollable .bw-other-hint {
+            display: block;
         }
 
         .bw-other-strip {
@@ -197,6 +204,29 @@
             <span th:text="${g.name}">게임 이름</span>
         </a>
     </div>
+
+    <script>
+        // "밀어서 더 보기" 안내를 실제로 넘칠 때만 띄운다.
+        // PC에서는 카드가 다 보이는데도 안내가 떠서 틀린 말이 됐다.
+        (function () {
+            var section = document.currentScript.closest('.bw-other-games');
+            var strip = section && section.querySelector('.bw-other-strip');
+            if (!strip) { return; }
+
+            function sync() {
+                section.classList.toggle('is-scrollable', strip.scrollWidth > strip.clientWidth + 1);
+            }
+
+            sync();
+            // 썸네일이 늦게 로드되면 폭이 달라지므로 창 크기 변화까지 따라간다.
+            window.addEventListener('load', sync);
+            if (window.ResizeObserver) {
+                new ResizeObserver(sync).observe(strip);
+            } else {
+                window.addEventListener('resize', sync);
+            }
+        })();
+    </script>
 </section>
 
 </body>
