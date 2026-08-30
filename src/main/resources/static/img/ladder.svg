@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="블라인드 사다리타기">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="사다리타기 워터슬라이드">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#101720"/>
@@ -60,5 +60,5 @@
   </g>
 
   <text x="450" y="76" text-anchor="middle" font-family="Segoe UI, Avenir Next, sans-serif"
-        font-size="44" font-weight="800" fill="#e8ecf1">블라인드 사다리타기</text>
+        font-size="44" font-weight="800" fill="#e8ecf1">사다리타기 워터슬라이드</text>
 </svg>

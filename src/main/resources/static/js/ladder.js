@@ -1,5 +1,5 @@
 /*
- * 블라인드 사다리타기 — 워터슬라이드
+ * 사다리타기 워터슬라이드 — 워터슬라이드
  *
  * 설계 메모 (docs/plans/ladder.md)
  *  - 물이 미끄럼틀을 타고 내려간다. 점이 선을 따라가는 것보다 훨씬 잘 읽힌다.
@@ -23,30 +23,37 @@
     'use strict';
 
     // ── 설정값 ──────────────────────────────────────────────
-    var UPPER_ROWS = 12;
+    var TOTAL_ROWS = 16;          // 인원과 무관하게 사다리 길이를 일정하게 유지한다
+    var MIN_UPPER_ROWS = 6;
     var RUNG_DENSITY = 0.30;
     var ROW_H = 62;
     var PAD_TOP = 40;
     var POOL_H = 92;
     var DWELL_UPPER = 80;         // 위쪽 갈림길에서 망설이는 시간(ms). 길면 속도감이 죽는다
-    var DWELL_ZONE = 230;         // 운명의 구간은 길게 끈다
+    var DWELL_ZONE = 140;         // 운명의 구간 중간. 여기서 오래 끌면 답답하다
     var DWELL_FINAL = 560;        // 마지막 줄에서 트는 순간. 여기가 제일 조여야 한다
     var HOLD_MS = 820;
 
     var COLORS = ['#38bdf8', '#f97316', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#22d3ee', '#c084fc'];
 
-    // 아래로 갈수록 느려진다. 월드 y 비율(0~1)을 받아 px/초를 돌려준다.
-    function speedAt(ratio, inZone) {
-        if (inZone) { return 210; }
+    /*
+     * 하강 속도(px/초).
+     * 점선부터 끝까지 계속 느리게 했더니 구간이 길어서 답답했다.
+     * 운명의 구간 안에서도 앞부분은 적당히 흘러가고, 마지막 두 줄에서만 확 조인다.
+     */
+    function speedAt(ratio, rowsLeft) {
+        if (rowsLeft <= 1) { return 150; }
+        if (rowsLeft <= 2) { return 250; }
+        if (rowsLeft <= 4) { return 430; }
         if (ratio < 0.35) { return 1150; }
-        if (ratio < 0.70) { return 700; }
-        return 430;
+        if (ratio < 0.70) { return 780; }
+        return 560;
     }
 
     // ── 상태 ────────────────────────────────────────────────
     var state = {
         players: 4, bombs: 1, cols: 4,
-        zoneRows: 3, totalRows: 15,
+        zoneRows: 4, upperRows: 12, totalRows: 16,
         upperRungs: [], zoneRungs: [],
         bombSlots: [], usedCols: [], takenSlots: [],
         slotOwner: {},            // 도착점 -> 출발 번호. 도착한 뒤에만 채운다 (미리 채우면 결과가 새어나간다)
@@ -135,7 +142,7 @@
     }
 
     function rungsAt(row) {
-        return row < UPPER_ROWS ? state.upperRungs[row] : (state.zoneRungs[row - UPPER_ROWS] || []);
+        return row < state.upperRows ? state.upperRungs[row] : (state.zoneRungs[row - state.upperRows] || []);
     }
 
     function walkRow(col, row) {
@@ -157,9 +164,12 @@
         state.players = players;
         state.bombs = Math.min(bombs, players - 1);
         state.cols = players;
-        state.zoneRows = Math.max(4, players + 1);   // 마지막 한 줄은 막판에 트는 데 쓴다
-        state.totalRows = UPPER_ROWS + state.zoneRows;
-        state.upperRungs = makeUpperRungs(state.cols, UPPER_ROWS);
+        // 운명의 구간은 "도착점 옆 칸까지 이동 + 마지막에 한 칸 틀기"가 가능해야 한다.
+        // 최악의 경우 끝에서 끝까지 옮겨야 하므로 열 수만큼은 필요하다.
+        state.zoneRows = Math.max(4, players);
+        state.upperRows = Math.max(MIN_UPPER_ROWS, TOTAL_ROWS - state.zoneRows);
+        state.totalRows = state.upperRows + state.zoneRows;
+        state.upperRungs = makeUpperRungs(state.cols, state.upperRows);
         state.zoneRungs = [];
         state.usedCols = [];
         state.takenSlots = [];
@@ -241,7 +251,7 @@
         if (state.usedCols.indexOf(startCol) >= 0) { return; }
 
         var col = startCol;
-        for (var r = 0; r < UPPER_ROWS; r++) { col = walkRow(col, r); }
+        for (var r = 0; r < state.upperRows; r++) { col = walkRow(col, r); }
         var free = [];
         for (var i = 0; i < state.cols; i++) {
             if (state.takenSlots.indexOf(i) < 0) { free.push(i); }
@@ -304,20 +314,19 @@
         if (!cur) { return; }
 
         var p = pointAt(cur.path, cur.dist);
-        var inZone = p.row > UPPER_ROWS;
 
         if (cur.dwell > 0) {
             cur.dwell -= dt * 1000;
         } else {
             var ratio = (p.y - PAD_TOP) / (state.totalRows * ROW_H);
-            cur.dist += (skipping ? 5200 : speedAt(ratio, inZone)) * dt;
+            cur.dist += (skipping ? 5200 : speedAt(ratio, state.totalRows - p.row)) * dt;
 
             var np = pointAt(cur.path, cur.dist);
             if (np.seg !== cur.seg) {
                 var seg = cur.path.segs[np.seg];
                 if (seg && seg.horizontal && !skipping) {
                     var isLast = np.row >= state.totalRows;
-                    cur.dwell = isLast ? DWELL_FINAL : (np.row > UPPER_ROWS ? DWELL_ZONE : DWELL_UPPER);
+                    cur.dwell = isLast ? DWELL_FINAL : (np.row > state.upperRows ? DWELL_ZONE : DWELL_UPPER);
                     if (isLast) { sfx.heartbeat(); } else { sfx.split(); }
                     addSplash(cur, np.x, np.y);
                 }
@@ -521,7 +530,7 @@
             lines.push([colX(c), rowY(0), colX(c), rowY(state.totalRows)]);
         }
         for (var r = 0; r < state.totalRows; r++) {
-            if (r >= UPPER_ROWS) {
+            if (r >= state.upperRows) {
                 // 운명의 구간만 숨긴다. 위쪽은 처음부터 보여야 예측이 생긴다.
                 var cur = state.current;
                 if (!cur || cur.revealed < r + 1) { continue; }
@@ -550,7 +559,7 @@
     }
 
     function drawZoneBand(t) {
-        var y = rowY(UPPER_ROWS);
+        var y = rowY(state.upperRows);
         ctx.save();
         ctx.setLineDash([6, 7]);
         ctx.strokeStyle = t.zone; ctx.lineWidth = 1.5;
