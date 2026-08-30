@@ -1,49 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="사다리타기">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="블라인드 사다리타기">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#141a22"/>
-      <stop offset="100%" stop-color="#0b0d10"/>
+      <stop offset="0%" stop-color="#101720"/>
+      <stop offset="100%" stop-color="#0a0e14"/>
     </linearGradient>
-    <linearGradient id="trail" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f97316" stop-opacity="0.25"/>
-      <stop offset="100%" stop-color="#f97316" stop-opacity="1"/>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="1"/>
     </linearGradient>
   </defs>
 
   <rect width="900" height="600" fill="url(#bg)"/>
 
-  <!-- 세로줄 -->
-  <g stroke="#39424f" stroke-width="5" stroke-linecap="round">
-    <line x1="150" y1="120" x2="150" y2="470"/>
-    <line x1="350" y1="120" x2="350" y2="470"/>
-    <line x1="550" y1="120" x2="550" y2="470"/>
-    <line x1="750" y1="120" x2="750" y2="470"/>
+  <!-- 미끄럼틀 -->
+  <g stroke="#2b3644" stroke-width="20" stroke-linecap="round">
+    <line x1="160" y1="130" x2="160" y2="450"/>
+    <line x1="360" y1="130" x2="360" y2="450"/>
+    <line x1="560" y1="130" x2="560" y2="450"/>
+    <line x1="760" y1="130" x2="760" y2="450"/>
+    <line x1="160" y1="205" x2="360" y2="205"/>
+    <line x1="560" y1="270" x2="760" y2="270"/>
+    <line x1="360" y1="330" x2="560" y2="330"/>
+  </g>
+  <g stroke="#3c4a5c" stroke-width="9" stroke-linecap="round">
+    <line x1="160" y1="130" x2="160" y2="450"/>
+    <line x1="360" y1="130" x2="360" y2="450"/>
+    <line x1="560" y1="130" x2="560" y2="450"/>
+    <line x1="760" y1="130" x2="760" y2="450"/>
+    <line x1="160" y1="205" x2="360" y2="205"/>
+    <line x1="560" y1="270" x2="760" y2="270"/>
+    <line x1="360" y1="330" x2="560" y2="330"/>
   </g>
 
-  <!-- 드러난 가로줄 -->
-  <g stroke="#39424f" stroke-width="5" stroke-linecap="round">
-    <line x1="150" y1="180" x2="350" y2="180"/>
-    <line x1="550" y1="240" x2="750" y2="240"/>
-    <line x1="350" y1="300" x2="550" y2="300"/>
-  </g>
+  <!-- 가려진 구간 -->
+  <line x1="120" y1="385" x2="800" y2="385" stroke="#5b6675" stroke-width="3" stroke-dasharray="10 12"/>
 
-  <!-- 운명의 구간 -->
-  <line x1="110" y1="380" x2="790" y2="380" stroke="#5b6675" stroke-width="3" stroke-dasharray="12 14"/>
-
-  <!-- 지나간 경로 -->
-  <polyline points="150,120 150,180 350,180 350,300 550,300 550,470"
-            fill="none" stroke="url(#trail)" stroke-width="9"
+  <!-- 흘러내린 물 -->
+  <polyline points="160,130 160,205 360,205 360,330 560,330 560,450"
+            fill="none" stroke="url(#water)" stroke-width="13"
             stroke-linejoin="round" stroke-linecap="round"/>
-  <circle cx="550" cy="470" r="16" fill="#f97316"/>
+  <ellipse cx="560" cy="450" rx="17" ry="19" fill="#38bdf8"/>
+  <circle cx="554" cy="444" r="5" fill="#ffffff" opacity="0.75"/>
 
-  <!-- 도착점 -->
-  <g font-family="Segoe UI Emoji, Apple Color Emoji, sans-serif" font-size="56" text-anchor="middle">
-    <text x="150" y="545">🙂</text>
-    <text x="350" y="545">🙂</text>
-    <text x="550" y="545">💣</text>
-    <text x="750" y="545">🙂</text>
+  <!-- 도착 풀 -->
+  <g fill="#18222e" stroke-width="4">
+    <circle cx="160" cy="510" r="30" stroke="#34d399"/>
+    <circle cx="360" cy="510" r="30" stroke="#34d399"/>
+    <circle cx="560" cy="510" r="30" stroke="#fb7185"/>
+    <circle cx="760" cy="510" r="30" stroke="#34d399"/>
+  </g>
+  <g fill="#fb7185">
+    <circle cx="560" cy="513" r="12"/>
+  </g>
+  <path d="M568 498 q12 -12 4 -19" stroke="#fb7185" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <g stroke="#34d399" stroke-width="3" fill="none">
+    <circle cx="160" cy="510" r="12"/>
+    <circle cx="360" cy="510" r="12"/>
+    <circle cx="760" cy="510" r="12"/>
   </g>
 
-  <text x="450" y="72" text-anchor="middle" font-family="Segoe UI, Avenir Next, sans-serif"
-        font-size="46" font-weight="800" fill="#e8ecf1">사다리타기</text>
+  <text x="450" y="76" text-anchor="middle" font-family="Segoe UI, Avenir Next, sans-serif"
+        font-size="44" font-weight="800" fill="#e8ecf1">블라인드 사다리타기</text>
 </svg>

@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>사다리타기 – 가로줄이 숨겨진 블라인드 사다리 | 커피내기·벌칙뽑기 | Binary World</title>
+    <title>블라인드 사다리타기 – 워터슬라이드 사다리게임 | 커피내기·벌칙뽑기 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <meta name="description" content="가로줄이 보이지 않는 사다리타기. 꽝 위치는 미리 공개되고, 마지막 구간은 도착 직전에 정해집니다. 커피내기·점심내기·벌칙뽑기용 무료 온라인 사다리타기.">
-    <meta name="keywords" content="사다리타기, 온라인 사다리타기, 모바일 사다리타기, 커피내기 사다리타기, 점심내기 사다리타기, 벌칙 사다리타기, 사다리타기 룰렛, 사다리타기 8명, 제비뽑기, 랜덤뽑기, Binary World">
+    <meta name="description" content="물이 미끄럼틀을 타고 내려가는 사다리타기. 꽝 위치는 미리 공개되고, 마지막 구간은 가려져 있어 도착 직전까지 결과를 모릅니다. 커피내기·점심내기·벌칙뽑기용 무료 온라인 사다리타기.">
+    <meta name="keywords" content="블라인드 사다리타기, 사다리타기, 온라인 사다리타기, 모바일 사다리타기, 커피내기 사다리타기, 점심내기 사다리타기, 벌칙 사다리타기, 사다리타기 룰렛, 사다리타기 8명, 제비뽑기, 랜덤뽑기, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="사다리타기 – 가로줄이 숨겨진 블라인드 사다리 | Binary World">
-    <meta property="og:description" content="가로줄이 보이지 않습니다. 꽝은 미리 공개되고, 마지막 구간은 도착 직전에 정해집니다. 커피내기·점심내기·벌칙뽑기용 무료 사다리타기.">
+    <meta property="og:title" content="블라인드 사다리타기 – 워터슬라이드 사다리게임 | Binary World">
+    <meta property="og:description" content="물이 미끄럼틀을 타고 내려갑니다. 꽝은 미리 공개되고, 마지막 구간은 가려져 있습니다. 커피내기·점심내기·벌칙뽑기용 무료 사다리타기.">
     <meta property="og:image" content="https://game.binaryworld.kr/img/ladder.png">
     <meta property="og:url" content="https://game.binaryworld.kr/ladder">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="사다리타기 – 가로줄이 숨겨진 블라인드 사다리 | Binary World">
-    <meta name="twitter:description" content="가로줄이 보이지 않습니다. 꽝은 미리 공개되고, 마지막 구간은 도착 직전에 정해집니다.">
+    <meta name="twitter:title" content="블라인드 사다리타기 – 워터슬라이드 사다리게임 | Binary World">
+    <meta name="twitter:description" content="물이 미끄럼틀을 타고 내려갑니다. 꽝은 미리 공개되고, 마지막 구간은 가려져 있습니다.">
     <meta name="twitter:image" content="https://game.binaryworld.kr/img/ladder.png">
 
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
@@ -31,10 +31,10 @@
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "사다리타기",
-      "alternateName": ["블라인드 사다리타기", "온라인 사다리타기", "커피내기 사다리타기", "벌칙 사다리타기"],
+      "name": "블라인드 사다리타기",
+      "alternateName": ["사다리타기", "온라인 사다리타기", "커피내기 사다리타기", "벌칙 사다리타기", "워터슬라이드 사다리"],
       "url": "https://game.binaryworld.kr/ladder",
-      "description": "가로줄이 보이지 않는 사다리타기. 꽝 위치는 미리 공개되고 마지막 구간은 도착 직전에 정해진다. 커피내기·점심내기·벌칙뽑기에 적합.",
+      "description": "물이 미끄럼틀을 타고 내려가는 사다리타기. 꽝 위치는 미리 공개되고 마지막 구간은 가려져 있다. 커피내기·점심내기·벌칙뽑기에 적합.",
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
@@ -71,8 +71,8 @@
         <a href="/" class="back-btn">← 게임 목록</a>
     </div>
 
-    <h1 class="game-title">사다리타기</h1>
-    <p class="game-desc">가로줄이 보이지 않습니다. 내려가 봐야 압니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+    <h1 class="game-title">블라인드 사다리타기</h1>
+    <p class="game-desc">물이 미끄럼틀을 타고 내려갑니다. 마지막 구간은 가려져 있어요. 커피내기·점심내기·벌칙뽑기에 딱!</p>
 
     <div class="bw-ladder-setup" id="ladder-setup">
         <div class="bw-ladder-field">
@@ -127,8 +127,8 @@
         <ol>
             <li>인원과 꽝 개수를 고르고 사다리를 만듭니다.</li>
             <li><strong>꽝(💣)이 어디 있는지는 처음부터 보입니다.</strong> 어디로 가면 안 되는지 알고 시작합니다.</li>
-            <li>가로줄은 보이지 않습니다. 말이 내려가면서 하나씩 드러납니다.</li>
-            <li>맨 아래 점선 구간은 <strong>매 차례 다시 섞입니다.</strong> 도착 직전까지 결과를 알 수 없습니다.</li>
+            <li>물길은 위쪽부터 보입니다. 어디로 흘러갈지 미리 그려보세요.</li>
+            <li><strong>점선 아래는 보이지 않습니다.</strong> 게다가 매 차례 다시 섞여서, 도착 직전까지 결과를 알 수 없습니다.</li>
             <li>한 명씩 순서대로 내려갑니다. 사람이 줄어들수록 걸릴 확률이 올라갑니다.</li>
             <li>급하면 <strong>건너뛰기</strong>로 바로 결과를 볼 수 있습니다.</li>
         </ol>
@@ -139,6 +139,9 @@
 
 <div id="bw-guestbook" aria-label="방명록"></div>
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
+
+<!--/* BGM은 핀볼룰렛과 같은 곡을 참조만 한다. 복사하면 750KB가 중복된다. */-->
+<audio id="ladder-bgm" th:src="@{/assets/luckyRacing/audio/luckyRacingBGM.mp3}" loop preload="none"></audio>
 
 <script th:src="@{/js/ladder.js}"></script>
 

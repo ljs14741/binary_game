@@ -1,60 +1,58 @@
 /*
- * 사다리타기 — 가로줄이 숨겨진 블라인드 사다리
+ * 블라인드 사다리타기 — 워터슬라이드
  *
  * 설계 메모 (docs/plans/ladder.md)
- *  1. 꽝(폭탄) 위치는 처음부터 공개한다. 안 그러면 이동에 감정이 안 붙는다.
- *  2. 가로줄은 말이 그 높이에 닿을 때만 그린다. 눈으로 미리 읽지 못하게.
- *  3. 아래로 갈수록 느려지고, 도착 직전에 완전히 멈춘다.
- *  4. 맨 아래 "운명의 구간"은 미리 정해져 있지 않다. 말이 들어올 때 뽑는다.
+ *  - 물이 미끄럼틀을 타고 내려가는 모양이다. 점이 선을 따라가는 것보다 훨씬 잘 읽힌다.
+ *  - 갈림길에서 물이 잠깐 망설였다가 한쪽으로 쏠린다. 뜸 들이기가 공짜로 생긴다.
+ *  - 카메라가 물을 따라 내려간다. 아래가 안 보여서 긴장이 살고, 화면도 크게 쓸 수 있다.
+ *  - 꽝(폭탄) 위치는 처음부터 공개한다. 어디로 가면 안 되는지 알아야 감정이 생긴다.
+ *  - 점선 아래 "운명의 구간"만 숨긴다. 위쪽까지 다 숨겼더니 볼 게 없어서 무감각했다.
  *
- * 4번 때문에 1:1 대응이 깨질 뻔했다. 두 참가자가 같은 도착점에 갈 수 있기 때문이다.
- * 그래서 "남은 도착점 중에서만" 뽑는다. 진짜 랜덤이면서 1:1은 유지된다.
- * 대신 참가자마다 운명의 구간 가로줄이 달라지므로, 그 구간은 매 차례 다시 섞이는 것으로
- * 규칙을 정하고 화면에도 그렇게 안내한다.
+ * 운명의 구간은 참가자가 들어올 때 정해진다. 다만 두 사람이 같은 도착점에 가면
+ * 복불복이 성립하지 않으므로 "남은 도착점 중에서만" 뽑는다. 진짜 랜덤이면서 1:1이 유지된다.
  *
- * Phaser를 쓰지 않는다. 선과 원만 그리면 되고 물리가 없다. Canvas 2D 한 장이면 충분하다.
+ * 움직임은 경로 전체를 하나의 폴리라인으로 만들어 길이를 따라 보간한다.
+ * 예전에는 줄마다 타이머를 새로 시작해서 줄 경계마다 속도가 끊겼다(버벅임).
+ *
+ * Phaser를 쓰지 않는다. 물리가 없고 선과 원만 그리면 된다.
  */
 (function () {
     'use strict';
 
     // ── 설정값 ──────────────────────────────────────────────
-    var UPPER_ROWS = 10;          // 운명의 구간 위쪽 줄 수
-    var RUNG_DENSITY = 0.30;      // 위쪽 가로줄 밀도
-    var COLORS = ['#f97316', '#38bdf8', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#22d3ee', '#c084fc'];
+    var UPPER_ROWS = 12;
+    var RUNG_DENSITY = 0.30;
+    var ROW_H = 62;               // 한 줄의 세로 길이(월드 좌표). 카메라가 따라가므로 넉넉히 준다
+    var PAD_TOP = 40;
+    var POOL_H = 92;              // 맨 아래 도착 풀 영역
+    var JUNCTION_DWELL = 240;     // 갈림길에서 망설이는 시간(ms)
+    var HOLD_MS = 1100;           // 도착 직전 정지
 
-    // 구간별 한 칸 이동 시간(ms). 아래로 갈수록 느려진다.
-    function stepDuration(row, totalRows, zoneStart) {
-        if (row >= zoneStart) { return 520; }
-        var t = row / Math.max(1, zoneStart);
-        if (t < 0.34) { return 130; }
-        if (t < 0.7) { return 250; }
-        return 380;
+    var COLORS = ['#38bdf8', '#f97316', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#22d3ee', '#c084fc'];
+
+    // 아래로 갈수록 느려진다. 월드 y 비율(0~1)을 받아 px/초를 돌려준다.
+    function speedAt(ratio, inZone) {
+        if (inZone) { return 165; }
+        if (ratio < 0.35) { return 900; }
+        if (ratio < 0.70) { return 520; }
+        return 340;
     }
 
     // ── 상태 ────────────────────────────────────────────────
     var state = {
-        players: 4,
-        bombs: 1,
-        cols: 4,
-        zoneRows: 3,
-        totalRows: 13,
-        upperRungs: [],     // upperRungs[row] = [왼쪽 열 번호, ...]
-        zoneRungs: [],      // 이번 차례에만 쓰는 운명의 구간 가로줄
-        bombSlots: [],      // 폭탄이 있는 도착점
-        usedCols: [],       // 이미 내려간 출발 열
-        takenSlots: [],     // 이미 찜한 도착점
-        paths: [],          // {col, color, points:[{row,col}], slot, hit}
-        current: null,
-        phase: 'setup',     // setup | ready | descending | result | over
-        losers: []
+        players: 4, bombs: 1, cols: 4,
+        zoneRows: 3, totalRows: 15,
+        upperRungs: [], zoneRungs: [],
+        bombSlots: [], usedCols: [], takenSlots: [],
+        paths: [], current: null,
+        phase: 'setup', losers: []
     };
 
-    var canvas, ctx, dpr = 1;
-    var el = {};
+    var canvas, ctx, dpr = 1, view = { w: 320, h: 420 };
+    var camY = 0, camTarget = 0;
+    var el = {}, bgm = null;
 
     // ── 사다리 생성 ─────────────────────────────────────────
-
-    // 같은 줄에 가로줄을 붙여 놓으면 경로가 꼬여 보인다. 인접 배치를 금지한다.
     function makeUpperRungs(cols, rows) {
         var out = [];
         for (var r = 0; r < rows; r++) {
@@ -68,11 +66,14 @@
         return out;
     }
 
-    /*
-     * 운명의 구간 가로줄을 만든다.
-     * from 열에서 시작해 to 도착점으로 가는 경로를 zoneRows 줄 안에 흩뿌린다.
-     * 한 줄에 한 칸씩만 움직이므로 zoneRows >= |to - from| 이면 항상 만들 수 있다.
-     */
+    function touchesAny(row, c) {
+        for (var i = 0; i < row.length; i++) {
+            if (Math.abs(row[i] - c) < 2) { return true; }
+        }
+        return false;
+    }
+
+    // from 에서 to 로 가는 경로를 zoneRows 줄에 흩뿌린다.
     function makeZoneRungs(from, to, zoneRows, cols) {
         var need = to - from;
         var moves = new Array(zoneRows).fill(0);
@@ -82,16 +83,13 @@
         shuffle(slots);
         for (var k = 0; k < Math.abs(need); k++) { moves[slots[k]] = dir; }
 
-        var rungs = [];
-        var col = from;
+        var rungs = [], col = from;
         for (var r = 0; r < zoneRows; r++) {
-            var row = [];
-            var prev = col;               // 이 줄에 들어올 때의 열. 판정 기준은 이쪽이다
+            var row = [], prev = col;   // 판정 기준은 이 줄에 들어올 때의 열이다
             if (moves[r] === 1) { row.push(prev); col = prev + 1; }
             else if (moves[r] === -1) { row.push(prev - 1); col = prev - 1; }
 
-            // 장식용 가로줄. 허전함을 더는 용도라 경로를 건드리면 안 된다.
-            // prev 또는 prev-1 자리에 놓으면 말이 엉뚱한 쪽으로 새므로 제외한다.
+            // 장식용. prev / prev-1 자리에 놓으면 물이 엉뚱한 쪽으로 샌다
             for (var c = 0; c < cols - 1; c++) {
                 if (c === prev || c === prev - 1) { continue; }
                 if (touchesAny(row, c)) { continue; }
@@ -103,14 +101,6 @@
         return rungs;
     }
 
-    // 같은 줄에서 가로줄끼리 맞닿으면 경로가 꼬여 보인다.
-    function touchesAny(row, c) {
-        for (var i = 0; i < row.length; i++) {
-            if (Math.abs(row[i] - c) < 2) { return true; }
-        }
-        return false;
-    }
-
     function shuffle(a) {
         for (var i = a.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
@@ -119,29 +109,29 @@
         return a;
     }
 
-    // 위쪽 구간만 따라 내려간 결과 열
-    function walkUpper(startCol) {
-        var col = startCol;
-        var pts = [{ row: 0, col: col }];
-        for (var r = 0; r < UPPER_ROWS; r++) {
-            var row = state.upperRungs[r];
-            if (row.indexOf(col) >= 0) { col += 1; }
-            else if (row.indexOf(col - 1) >= 0) { col -= 1; }
-            pts.push({ row: r + 1, col: col });
-        }
-        return { col: col, points: pts };
+    function rungsAt(row) {
+        return row < UPPER_ROWS ? state.upperRungs[row] : (state.zoneRungs[row - UPPER_ROWS] || []);
     }
 
-    function walkZone(startCol, pts) {
-        var col = startCol;
-        for (var r = 0; r < state.zoneRows; r++) {
-            var row = state.zoneRungs[r];
-            if (row.indexOf(col) >= 0) { col += 1; }
-            else if (row.indexOf(col - 1) >= 0) { col -= 1; }
-            pts.push({ row: UPPER_ROWS + r + 1, col: col });
-        }
+    function walkRow(col, row) {
+        var rs = rungsAt(row);
+        if (rs.indexOf(col) >= 0) { return col + 1; }
+        if (rs.indexOf(col - 1) >= 0) { return col - 1; }
         return col;
     }
+
+    // ── 좌표 ────────────────────────────────────────────────
+    function worldH() { return PAD_TOP + state.totalRows * ROW_H + POOL_H; }
+    function colX(c) {
+        var padX = Math.max(26, view.w * 0.09);
+        var gap = (view.w - padX * 2) / Math.max(1, state.cols - 1);
+        return padX + c * gap;
+    }
+    function colGap() {
+        var padX = Math.max(26, view.w * 0.09);
+        return (view.w - padX * 2) / Math.max(1, state.cols - 1);
+    }
+    function rowY(r) { return PAD_TOP + r * ROW_H; }
 
     // ── 판 시작 ─────────────────────────────────────────────
     function startGame(players, bombs) {
@@ -163,10 +153,52 @@
         for (var i = 0; i < state.cols; i++) { slots.push(i); }
         state.bombSlots = shuffle(slots.slice()).slice(0, state.bombs);
 
+        camY = 0; camTarget = 0;
         resize();
         renderColumnButtons();
         setStatus('출발할 번호를 고르세요');
         draw();
+    }
+
+    // ── 경로를 폴리라인으로 만든다 ──────────────────────────
+    function buildPath(startCol) {
+        var pts = [{ x: colX(startCol), y: rowY(0), row: 0, col: startCol }];
+        var col = startCol;
+        for (var r = 0; r < state.totalRows; r++) {
+            var next = walkRow(col, r);
+            var y = rowY(r + 1);
+            pts.push({ x: colX(col), y: y, row: r + 1, col: col });          // 내려온다
+            if (next !== col) {
+                pts.push({ x: colX(next), y: y, row: r + 1, col: next });    // 갈림길에서 옮긴다
+            }
+            col = next;
+        }
+        pts.push({ x: colX(col), y: rowY(state.totalRows) + POOL_H * 0.45, row: state.totalRows, col: col });
+
+        var segs = [], total = 0;
+        for (var i = 1; i < pts.length; i++) {
+            var dx = pts[i].x - pts[i - 1].x, dy = pts[i].y - pts[i - 1].y;
+            var len = Math.hypot(dx, dy);
+            segs.push({ a: pts[i - 1], b: pts[i], len: len, start: total, horizontal: Math.abs(dy) < 0.5 });
+            total += len;
+        }
+        return { pts: pts, segs: segs, total: total, endCol: col };
+    }
+
+    function pointAt(path, dist) {
+        for (var i = 0; i < path.segs.length; i++) {
+            var s = path.segs[i];
+            if (dist <= s.start + s.len || i === path.segs.length - 1) {
+                var t = s.len === 0 ? 1 : Math.min(1, (dist - s.start) / s.len);
+                return {
+                    x: s.a.x + (s.b.x - s.a.x) * t,
+                    y: s.a.y + (s.b.y - s.a.y) * t,
+                    seg: i, row: s.b.row
+                };
+            }
+        }
+        var last = path.pts[path.pts.length - 1];
+        return { x: last.x, y: last.y, seg: path.segs.length - 1, row: last.row };
     }
 
     // ── 한 명 내려가기 ──────────────────────────────────────
@@ -174,44 +206,42 @@
         if (state.phase !== 'ready') { return; }
         if (state.usedCols.indexOf(startCol) >= 0) { return; }
 
-        state.phase = 'descending';
-        state.usedCols.push(startCol);
-        setStatus('내려가는 중…');
-        el.skip.hidden = false;
-        renderColumnButtons();
-
-        var upper = walkUpper(startCol);
-
-        // 남은 도착점 중에서 뽑는다. 여기가 진짜로 결과가 정해지는 순간이다.
+        // 운명의 구간을 이번 차례용으로 다시 섞는다. 남은 도착점 중에서만 뽑는다.
+        var col = startCol;
+        for (var r = 0; r < UPPER_ROWS; r++) { col = walkRow(col, r); }
         var free = [];
         for (var i = 0; i < state.cols; i++) {
             if (state.takenSlots.indexOf(i) < 0) { free.push(i); }
         }
         var target = free[Math.floor(Math.random() * free.length)];
-        state.zoneRungs = makeZoneRungs(upper.col, target, state.zoneRows, state.cols);
+        state.zoneRungs = makeZoneRungs(col, target, state.zoneRows, state.cols);
 
-        var points = upper.points.slice();
-        walkZone(upper.col, points);
-
+        var path = buildPath(startCol);
+        state.usedCols.push(startCol);
+        state.takenSlots.push(target);
+        state.phase = 'descending';
         state.current = {
             col: startCol,
             color: COLORS[startCol % COLORS.length],
-            points: points,
-            slot: target,
-            hit: state.bombSlots.indexOf(target) >= 0,
-            step: 0,
-            revealed: 0
+            path: path,
+            slot: path.endCol,
+            hit: state.bombSlots.indexOf(path.endCol) >= 0,
+            dist: 0, seg: 0, dwell: 0, revealed: 0, splash: []
         };
-        state.takenSlots.push(target);
+
+        setStatus('내려가는 중…');
+        el.skip.hidden = false;
+        renderColumnButtons();
+        startBgm();
         animate();
     }
 
     // ── 애니메이션 ──────────────────────────────────────────
-    var raf = null, stepStart = 0, skipping = false;
+    var raf = null, lastTime = 0, skipping = false;
 
     function animate() {
         skipping = false;
-        stepStart = performance.now();
+        lastTime = performance.now();
         cancelAnimationFrame(raf);
         raf = requestAnimationFrame(tick);
     }
@@ -219,56 +249,89 @@
     function tick(now) {
         var cur = state.current;
         if (!cur) { return; }
+        var dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
 
-        var row = cur.step;
-        var dur = skipping ? 24 : stepDuration(row, state.totalRows, UPPER_ROWS);
-        var p = Math.min(1, (now - stepStart) / dur);
-        cur.progress = p;
-        // 가로줄은 말이 그 높이에 닿는 순간 드러난다. 옆으로 새기 직전이다.
-        cur.revealed = row + (p > 0.7 ? 1 : 0);
+        var p = pointAt(cur.path, cur.dist);
+        var ratio = (p.y - PAD_TOP) / (state.totalRows * ROW_H);
+        var inZone = p.row > UPPER_ROWS;
 
+        if (cur.dwell > 0) {
+            cur.dwell -= dt * 1000;
+        } else {
+            var sp = skipping ? 4200 : speedAt(ratio, inZone);
+            cur.dist += sp * dt;
+
+            var np = pointAt(cur.path, cur.dist);
+            // 갈림길(가로 구간)에 막 들어섰으면 잠깐 망설인다
+            if (np.seg !== cur.seg) {
+                var seg = cur.path.segs[np.seg];
+                if (seg && seg.horizontal && !skipping) {
+                    cur.dwell = JUNCTION_DWELL;
+                    sfx.split();
+                    addSplash(cur, np.x, np.y);
+                }
+                cur.seg = np.seg;
+            }
+            cur.revealed = Math.max(cur.revealed, np.row);
+            p = np;
+        }
+
+        // 카메라. 물을 화면 45% 지점에 두고 따라간다
+        camTarget = clamp(p.y - view.h * 0.45, 0, Math.max(0, worldH() - view.h));
+        camY += (camTarget - camY) * Math.min(1, dt * 9);
+
+        stepSplash(cur, dt);
         draw();
 
-        if (p >= 1) {
-            cur.step += 1;
-            stepStart = now;
-
-            if (cur.step === UPPER_ROWS && !skipping) {
-                sfx.heartbeat();
-            } else if (!skipping) {
-                var moved = cur.points[cur.step] && cur.points[cur.step - 1] &&
-                    cur.points[cur.step].col !== cur.points[cur.step - 1].col;
-                if (moved) { sfx.turn(); } else { sfx.tick(); }
-            }
-
-            if (cur.step >= state.totalRows) {
-                finishDescent();
-                return;
-            }
-        }
+        if (cur.dist >= cur.path.total) { finishDescent(); return; }
         raf = requestAnimationFrame(tick);
     }
 
-    // 도착 직전 뜸 들이기 → 결과
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+    function addSplash(cur, x, y) {
+        for (var i = 0; i < 7; i++) {
+            cur.splash.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 90,
+                vy: -Math.random() * 70 - 10,
+                life: 0.5 + Math.random() * 0.3
+            });
+        }
+    }
+
+    function stepSplash(cur, dt) {
+        for (var i = cur.splash.length - 1; i >= 0; i--) {
+            var s = cur.splash[i];
+            s.life -= dt;
+            if (s.life <= 0) { cur.splash.splice(i, 1); continue; }
+            s.x += s.vx * dt;
+            s.y += s.vy * dt;
+            s.vy += 260 * dt;
+        }
+    }
+
     function finishDescent() {
         var cur = state.current;
-        cur.progress = 1;
+        cur.dist = cur.path.total;
         cur.revealed = state.totalRows;
-        draw();
-
         el.skip.hidden = true;
         state.phase = 'result';
         setStatus('…');
         el.stage.classList.add('is-holding');
+        draw();
 
-        var hold = skipping ? 200 : 1200;
+        var hold = skipping ? 200 : HOLD_MS;
+        if (!skipping) { sfx.heartbeat(); }
+
         setTimeout(function () {
             el.stage.classList.remove('is-holding');
             state.paths.push(cur);
-
             if (cur.hit) {
                 state.losers.push(cur.col + 1);
                 sfx.boom();
+                addSplash(cur, colX(cur.slot), rowY(state.totalRows) + 30);
                 showResult(true, (cur.col + 1) + '번 당첨!', '벌칙 확정입니다.');
             } else {
                 sfx.relief();
@@ -289,11 +352,10 @@
             state.phase = 'over';
             el.resultNext.hidden = true;
             el.resultRestart.hidden = false;
-            var names = state.losers.length ? state.losers.join(', ') + '번' : '없음';
-            el.resultDetail.textContent = '걸린 사람: ' + names;
+            el.resultDetail.textContent = '걸린 사람: ' +
+                (state.losers.length ? state.losers.join(', ') + '번' : '없음');
         } else {
-            // 결과 카드가 떠 있는 동안에는 다음 사람을 못 고르게 막는다.
-            // 출발 번호 버튼이 캔버스 밖에 있어서 오버레이로는 안 가려진다.
+            // 결과 카드가 떠 있는 동안 다음 사람을 못 고르게 막는다
             state.phase = 'result';
             el.resultNext.hidden = false;
             el.resultRestart.hidden = true;
@@ -305,11 +367,24 @@
         state.current = null;
         state.zoneRungs = [];
         state.phase = 'ready';
+        camTarget = 0;
+        smoothCamHome();
         renderColumnButtons();
         var left = state.cols - state.usedCols.length;
         var chance = Math.round((state.bombs - state.losers.length) / left * 100);
         setStatus('남은 사람 ' + left + '명 · 걸릴 확률 ' + chance + '%');
-        draw();
+    }
+
+    function smoothCamHome() {
+        cancelAnimationFrame(raf);
+        var t0 = performance.now();
+        (function step(now) {
+            var dt = Math.min(0.05, (now - t0) / 1000); t0 = now;
+            camY += (0 - camY) * Math.min(1, dt * 8);
+            draw();
+            if (Math.abs(camY) > 0.6) { raf = requestAnimationFrame(step); }
+            else { camY = 0; draw(); }
+        })(t0);
     }
 
     // ── 그리기 ──────────────────────────────────────────────
@@ -317,153 +392,200 @@
         if (!canvas) { return; }
         var rect = canvas.parentElement.getBoundingClientRect();
         dpr = Math.min(2, window.devicePixelRatio || 1);
-        var w = Math.max(260, rect.width);
-        var h = Math.max(280, Math.min(window.innerHeight * 0.55, 520));
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(h * dpr);
-        canvas.style.width = w + 'px';
-        canvas.style.height = h + 'px';
+        view.w = Math.max(260, rect.width);
+        view.h = Math.max(340, Math.min(window.innerHeight * 0.6, 600));
+        canvas.width = Math.round(view.w * dpr);
+        canvas.height = Math.round(view.h * dpr);
+        canvas.style.width = view.w + 'px';
+        canvas.style.height = view.h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function geom() {
-        var w = canvas.width / dpr, h = canvas.height / dpr;
-        var padX = Math.max(22, w * 0.08);
-        var padTop = 14, padBottom = 14;
-        var colGap = (w - padX * 2) / Math.max(1, state.cols - 1);
-        var rowGap = (h - padTop - padBottom) / state.totalRows;
-        return {
-            w: w, h: h, padX: padX, padTop: padTop, colGap: colGap, rowGap: rowGap,
-            x: function (c) { return padX + c * colGap; },
-            y: function (r) { return padTop + r * rowGap; }
-        };
-    }
-
-    function themeColors() {
+    function theme() {
         var light = document.documentElement.getAttribute('data-theme') === 'light';
         return light
-            ? { line: '#c3ccd8', zone: '#9aa6b6', text: '#1b2028' }
-            : { line: '#39424f', zone: '#5b6675', text: '#e8ecf1' };
+            ? { bg1: '#eef4fb', bg2: '#dbe6f2', chute: '#b9c7d8', chuteIn: '#ffffff', zone: '#8aa0b8', text: '#1b2028', pool: '#cfe0f0' }
+            : { bg1: '#101720', bg2: '#0a0e14', chute: '#2b3644', chuteIn: '#3c4a5c', zone: '#5b6675', text: '#e8ecf1', pool: '#18222e' };
     }
 
     function draw() {
         if (!ctx) { return; }
-        var g = geom(), t = themeColors();
-        ctx.clearRect(0, 0, g.w, g.h);
+        var t = theme();
+        var g = ctx.createLinearGradient(0, 0, 0, view.h);
+        g.addColorStop(0, t.bg1); g.addColorStop(1, t.bg2);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, view.w, view.h);
 
-        // 세로줄
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = t.line;
-        for (var c = 0; c < state.cols; c++) {
-            ctx.beginPath();
-            ctx.moveTo(g.x(c), g.y(0));
-            ctx.lineTo(g.x(c), g.y(state.totalRows));
-            ctx.stroke();
-        }
-
-        // 운명의 구간 표시 (점선)
         ctx.save();
-        ctx.setLineDash([4, 5]);
-        ctx.strokeStyle = t.zone;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(g.padX - 12, g.y(UPPER_ROWS));
-        ctx.lineTo(g.w - g.padX + 12, g.y(UPPER_ROWS));
-        ctx.stroke();
-        ctx.restore();
+        ctx.translate(0, -camY);
 
-        // 지나간 참가자들의 경로
+        drawChutes(t);
+        drawZoneBand(t);
+
         for (var i = 0; i < state.paths.length; i++) {
-            drawPath(g, state.paths[i], state.paths[i].points.length, 1, 0.45);
+            drawStream(state.paths[i], state.paths[i].path.total, 0.28);
+        }
+        if (state.current) {
+            drawStream(state.current, state.current.dist, 1);
+            drawDrop(state.current);
+            drawSplash(state.current);
         }
 
-        // 현재 말
-        var cur = state.current;
-        if (cur) {
-            drawRevealedRungs(g, t, cur.revealed);
-            drawPath(g, cur, cur.step + 1, cur.progress || 0, 1);
-        }
-
-        drawSlots(g, t);
+        drawPools(t);
+        ctx.restore();
+        drawEdgeFade(t);
     }
 
-    function drawRevealedRungs(g, t, upto) {
-        ctx.strokeStyle = t.line;
-        ctx.lineWidth = 2;
-        for (var r = 0; r < upto && r < state.totalRows; r++) {
-            var row = r < UPPER_ROWS ? state.upperRungs[r] : state.zoneRungs[r - UPPER_ROWS];
-            if (!row) { continue; }
-            for (var i = 0; i < row.length; i++) {
-                var y = g.y(r + 1);
-                ctx.beginPath();
-                ctx.moveTo(g.x(row[i]), y);
-                ctx.lineTo(g.x(row[i] + 1), y);
-                ctx.stroke();
+    // 세로 미끄럼틀 + 드러난 갈림길
+    function drawChutes(t) {
+        var gap = colGap();
+        var wide = Math.max(9, Math.min(16, gap * 0.3));
+
+        ctx.lineCap = 'round';
+        for (var c = 0; c < state.cols; c++) {
+            line(colX(c), rowY(0), colX(c), rowY(state.totalRows), t.chute, wide);
+            line(colX(c), rowY(0), colX(c), rowY(state.totalRows), t.chuteIn, wide * 0.45);
+        }
+
+        for (var r = 0; r < state.totalRows; r++) {
+            // 운명의 구간만 숨긴다. 위쪽은 처음부터 보여야 예측이 생긴다.
+            if (r >= UPPER_ROWS) {
+                var cur = state.current;
+                if (!cur || cur.revealed < r + 1) { continue; }
+            }
+            var rs = rungsAt(r);
+            for (var i = 0; i < rs.length; i++) {
+                var y = rowY(r + 1);
+                line(colX(rs[i]), y, colX(rs[i] + 1), y, t.chute, wide);
+                line(colX(rs[i]), y, colX(rs[i] + 1), y, t.chuteIn, wide * 0.45);
             }
         }
     }
 
-    function drawPath(g, path, upto, progress, alpha) {
-        var pts = path.points;
+    function line(x1, y1, x2, y2, color, w) {
+        ctx.strokeStyle = color; ctx.lineWidth = w;
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+
+    function drawZoneBand(t) {
+        var y = rowY(UPPER_ROWS);
+        ctx.save();
+        ctx.setLineDash([6, 7]);
+        ctx.strokeStyle = t.zone; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(8, y); ctx.lineTo(view.w - 8, y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = t.zone;
+        ctx.font = '600 11px system-ui, sans-serif';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText('여기서부터는 안 보입니다', 10, y - 5);
+        ctx.restore();
+    }
+
+    // 지나온 물줄기
+    function drawStream(cur, upto, alpha) {
+        var path = cur.path;
         ctx.save();
         ctx.globalAlpha = alpha;
-        ctx.strokeStyle = path.color;
-        ctx.lineWidth = 3.5;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.strokeStyle = cur.color;
+        ctx.lineWidth = Math.max(5, Math.min(10, colGap() * 0.18));
         ctx.beginPath();
-        ctx.moveTo(g.x(pts[0].col), g.y(0));
-
-        // r번째 줄의 가로줄은 y(r+1) 높이에 있다. 거기까지 내려간 뒤 옆으로 옮긴다.
-        var last = Math.min(upto, pts.length) - 1;
-        for (var i = 1; i <= last; i++) {
-            ctx.lineTo(g.x(pts[i - 1].col), g.y(i));
-            ctx.lineTo(g.x(pts[i].col), g.y(i));
-        }
-
-        var hx = g.x(pts[last].col), hy = g.y(last);
-        if (last + 1 < pts.length && progress < 1) {
-            // 앞 75%는 내려가고, 나머지 25%에 옆으로 옮긴다
-            var fromX = g.x(pts[last].col);
-            var toX = g.x(pts[last + 1].col);
-            var y0 = g.y(last), y1 = g.y(last + 1);
-            hy = y0 + (y1 - y0) * Math.min(1, progress / 0.75);
-            hx = fromX;
-            ctx.lineTo(hx, hy);
-            if (progress > 0.75 && toX !== fromX) {
-                hx = fromX + (toX - fromX) * ((progress - 0.75) / 0.25);
-                ctx.lineTo(hx, y1);
+        ctx.moveTo(path.pts[0].x, path.pts[0].y);
+        for (var i = 0; i < path.segs.length; i++) {
+            var s = path.segs[i];
+            if (upto >= s.start + s.len) { ctx.lineTo(s.b.x, s.b.y); }
+            else {
+                var t = s.len === 0 ? 0 : Math.max(0, (upto - s.start) / s.len);
+                ctx.lineTo(s.a.x + (s.b.x - s.a.x) * t, s.a.y + (s.b.y - s.a.y) * t);
+                break;
             }
         }
         ctx.stroke();
         ctx.restore();
-
-        if (alpha === 1) {
-            ctx.fillStyle = path.color;
-            ctx.beginPath();
-            ctx.arc(hx, hy, 7, 0, Math.PI * 2);
-            ctx.fill();
-        }
     }
 
-    function drawSlots(g, t) {
-        var y = g.y(state.totalRows) + 2;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.font = '16px system-ui, sans-serif';
+    function drawDrop(cur) {
+        var p = pointAt(cur.path, cur.dist);
+        var r = Math.max(8, Math.min(14, colGap() * 0.24));
+        var wob = cur.dwell > 0 ? Math.sin(performance.now() / 40) * 2 : 0;
+
+        ctx.save();
+        ctx.shadowColor = cur.color;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = cur.color;
+        ctx.beginPath();
+        ctx.ellipse(p.x + wob, p.y, r, r * 1.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.beginPath();
+        ctx.arc(p.x + wob - r * 0.28, p.y - r * 0.3, r * 0.26, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawSplash(cur) {
+        ctx.fillStyle = cur.color;
+        for (var i = 0; i < cur.splash.length; i++) {
+            var s = cur.splash[i];
+            ctx.globalAlpha = Math.max(0, s.life);
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 2.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // 도착 풀. 이모지는 글꼴에 따라 잘려서 직접 그린다.
+    function drawPools(t) {
+        var y = rowY(state.totalRows) + 34;
+        var r = Math.max(15, Math.min(26, colGap() * 0.38));
         for (var c = 0; c < state.cols; c++) {
+            var x = colX(c);
             var bomb = state.bombSlots.indexOf(c) >= 0;
             var taken = state.takenSlots.indexOf(c) >= 0;
-            ctx.globalAlpha = taken ? 0.4 : 1;
-            ctx.fillText(bomb ? '💣' : '😊', g.x(c), y);
+
+            ctx.globalAlpha = taken ? 0.35 : 1;
+            ctx.fillStyle = t.pool;
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = bomb ? '#fb7185' : '#34d399';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            if (bomb) { drawBomb(x, y, r * 0.52); } else { drawSmile(x, y, r * 0.52); }
             ctx.globalAlpha = 1;
         }
     }
 
-    // ── 사운드 (Web Audio 합성. 오디오 파일을 쓰지 않아 용량이 0이다) ──
+    function drawBomb(x, y, r) {
+        ctx.fillStyle = '#fb7185';
+        ctx.beginPath(); ctx.arc(x, y + r * 0.18, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fb7185'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x + r * 0.5, y - r * 0.6);
+        ctx.quadraticCurveTo(x + r * 1.3, y - r * 1.3, x + r * 0.6, y - r * 1.7);
+        ctx.stroke();
+    }
+
+    function drawSmile(x, y, r) {
+        ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#34d399';
+        ctx.beginPath(); ctx.arc(x - r * 0.38, y - r * 0.25, r * 0.16, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + r * 0.38, y - r * 0.25, r * 0.16, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y + r * 0.08, r * 0.52, 0.25 * Math.PI, 0.75 * Math.PI); ctx.stroke();
+    }
+
+    // 위아래 가장자리를 살짝 흐리면 카메라가 움직이는 느낌이 산다
+    function drawEdgeFade(t) {
+        var top = ctx.createLinearGradient(0, 0, 0, 34);
+        top.addColorStop(0, t.bg1); top.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = top; ctx.fillRect(0, 0, view.w, 34);
+    }
+
+    // ── 사운드 ──────────────────────────────────────────────
     var sfx = (function () {
         var actx = null, muted = false;
-
         function ac() {
             if (!actx) {
                 var C = window.AudioContext || window.webkitAudioContext;
@@ -473,7 +595,6 @@
             if (actx.state === 'suspended') { actx.resume(); }
             return actx;
         }
-
         function beep(freq, dur, type, vol) {
             if (muted) { return; }
             var a = ac(); if (!a) { return; }
@@ -485,7 +606,6 @@
             o.connect(gn); gn.connect(a.destination);
             o.start(); o.stop(a.currentTime + dur);
         }
-
         function noise(dur, vol) {
             if (muted) { return; }
             var a = ac(); if (!a) { return; }
@@ -499,20 +619,26 @@
             src.connect(gn); gn.connect(a.destination);
             src.start();
         }
-
         return {
-            tick: function () { beep(680, 0.05, 'square', 0.03); },
-            turn: function () { beep(420, 0.09, 'triangle', 0.06); },
+            split: function () { noise(0.13, 0.09); },
             heartbeat: function () {
                 beep(70, 0.18, 'sine', 0.16);
                 setTimeout(function () { beep(62, 0.22, 'sine', 0.13); }, 260);
             },
             boom: function () { noise(0.5, 0.3); beep(90, 0.5, 'sawtooth', 0.18); },
             relief: function () { beep(520, 0.16, 'sine', 0.07); setTimeout(function () { beep(780, 0.22, 'sine', 0.06); }, 110); },
-            toggle: function () { muted = !muted; return muted; },
+            setMuted: function (m) { muted = m; },
             isMuted: function () { return muted; }
         };
     })();
+
+    // BGM은 핀볼룰렛과 같은 곡을 참조만 한다. 파일을 복사하면 750KB가 중복된다.
+    function startBgm() {
+        if (!bgm || sfx.isMuted()) { return; }
+        if (!bgm.paused) { return; }
+        var p = bgm.play();
+        if (p && p.catch) { p.catch(function () { /* 자동재생 차단은 무시 */ }); }
+    }
 
     // ── UI ──────────────────────────────────────────────────
     function setStatus(text) { el.status.textContent = text; }
@@ -538,8 +664,7 @@
         el.setup.addEventListener('click', function (e) {
             var btn = e.target.closest('[data-players],[data-bombs]');
             if (!btn) { return; }
-            var group = btn.parentElement;
-            group.querySelectorAll('button').forEach(function (b) { b.classList.remove('is-active'); });
+            btn.parentElement.querySelectorAll('button').forEach(function (b) { b.classList.remove('is-active'); });
             btn.classList.add('is-active');
         });
 
@@ -560,7 +685,9 @@
         });
 
         el.mute.addEventListener('click', function () {
-            var m = sfx.toggle();
+            var m = !sfx.isMuted();
+            sfx.setMuted(m);
+            if (bgm) { if (m) { bgm.pause(); } else { startBgm(); } }
             el.mute.textContent = m ? '소리 꺼짐' : '소리 켜짐';
             el.mute.setAttribute('aria-pressed', String(!m));
         });
@@ -597,6 +724,9 @@
         el.resultDetail = document.getElementById('ladder-result-detail');
         el.resultNext = document.getElementById('ladder-next');
         el.resultRestart = document.getElementById('ladder-restart');
+
+        bgm = document.getElementById('ladder-bgm');
+        if (bgm) { bgm.volume = 0.35; }
 
         bind();
         resize();
