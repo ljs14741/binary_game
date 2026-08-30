@@ -436,6 +436,27 @@
         state.current = null;
         confetti = [];
         if (bgm) { bgm.pause(); }
+        // 스크롤이 결과 화면 높이에 남아 있으면 설정이 화면 위로 벗어나
+        // 아래쪽 게임 방법만 보인다. 설정을 화면에 끌어와야 한다.
+        scrollIntoView(el.setup);
+    }
+
+    /*
+     * 공통 헤더가 붙박이(fixed/sticky)면 그 높이만큼 더 올려야 가려지지 않는다.
+     * 헤더는 binaryworld.kr 에서 나중에 주입되므로 실행 시점에 재본다.
+     */
+    function headerOffset() {
+        var h = document.getElementById('global-header');
+        if (!h) { return 8; }
+        var pos = window.getComputedStyle(h).position;
+        return (pos === 'fixed' || pos === 'sticky') ? h.getBoundingClientRect().height + 12 : 8;
+    }
+
+    function scrollIntoView(target) {
+        if (!target) { return; }
+        var y = target.getBoundingClientRect().top + window.pageYOffset - headerOffset();
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: Math.max(0, y), behavior: reduce ? 'auto' : 'smooth' });
     }
 
     // ── 축하 연출 ───────────────────────────────────────────
@@ -803,6 +824,7 @@
             el.play.hidden = false;
             startGame(p, b);
             startLoop();
+            scrollIntoView(el.play);
         });
 
         el.skip.addEventListener('click', function () { skipping = true; });
@@ -811,6 +833,7 @@
             skipping = false;
             el.result.hidden = true;
             startGame(state.players, state.bombs);
+            scrollIntoView(el.play);
         });
         el.resultSetup.addEventListener('click', backToSetup);
 
