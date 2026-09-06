@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>압력 프레스 – 누를수록 내려온다 | 벌칙게임·복불복 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <meta name="description" content="레버를 당길 때마다 프레스가 내려옵니다. 안전한 순간은 없습니다. 간격과 걸릴 확률이 다 보여서 조여드는 게 눈에 읽히는 복불복 게임. 커피내기·점심내기·벌칙뽑기에 딱.">
+    <meta name="keywords" content="압력 프레스, 벌칙게임, 복불복게임, 내기게임, 랜덤 벌칙 뽑기, 커피내기, 점심내기, 벌칙뽑기, 파티게임, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="압력 프레스 – 누를수록 내려온다 | Binary World">
+    <meta property="og:description" content="안전한 순간은 없습니다. 조여드는 게 눈에 보이는 복불복 게임.">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/press.png">
+    <meta property="og:url" content="https://game.binaryworld.kr/press">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="압력 프레스 – 누를수록 내려온다 | Binary World">
+    <meta name="twitter:description" content="안전한 순간은 없습니다. 조여드는 게 눈에 보이는 복불복 게임.">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/press.png">
+
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="theme-color" content="#0b0d10">
+    <link rel="canonical" href="https://game.binaryworld.kr/press">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "압력 프레스",
+      "alternateName": ["프레스 복불복", "벌칙게임", "복불복게임"],
+      "url": "https://game.binaryworld.kr/press",
+      "description": "누를 때마다 프레스가 내려온다. 안전 확정 구간이 없어 첫 레버부터 끝까지 긴장이 유지되는 복불복 게임.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": "벌칙게임, 복불복게임, 내기게임, 커피내기, 점심내기, 벌칙뽑기"
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/press.css}">
+
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-0TSFJBQ41N');
+    </script>
+</head>
+<body class="bw-game-body">
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
+
+<div class="bw-press-shell">
+    <div class="nav-back">
+        <a href="/" class="back-btn">← 게임 목록</a>
+    </div>
+
+    <h1 class="game-title">압력 프레스</h1>
+    <p class="game-desc">레버를 당길 때마다 프레스가 내려옵니다. 언제 끝까지 내려올지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+
+    <div class="bw-press-setup" id="press-setup">
+        <div class="bw-press-field">
+            <span>인원</span>
+            <div class="bw-press-seg" role="group" aria-label="인원 수">
+                <button type="button" data-players="2">2</button>
+                <button type="button" data-players="3">3</button>
+                <button type="button" data-players="4" class="is-active">4</button>
+                <button type="button" data-players="5">5</button>
+                <button type="button" data-players="6">6</button>
+                <button type="button" data-players="7">7</button>
+                <button type="button" data-players="8">8</button>
+            </div>
+        </div>
+    </div>
+
+    <button type="button" class="bw-press-btn" id="press-start" style="width:100%">프레스 켜기</button>
+
+    <div id="press-play" hidden>
+        <div class="bw-press-hud">
+            <p class="bw-press-turn" id="press-turn">1번 차례</p>
+            <button type="button" id="press-mute" aria-pressed="true">소리 켜짐</button>
+        </div>
+
+        <div class="bw-press-stage" id="press-stage">
+            <canvas id="press-canvas" aria-label="프레스 화면" role="img"></canvas>
+
+            <div class="bw-press-result" id="press-result" role="status" aria-live="polite" hidden>
+                <div class="bw-press-result-card">
+                    <p class="bw-press-result-title" id="press-result-title"></p>
+                    <span class="bw-press-result-detail" id="press-result-detail"></span>
+                    <button type="button" class="bw-press-btn" id="press-again">한 판 더</button>
+                    <button type="button" class="bw-press-btn bw-press-btn-ghost" id="press-setup-again">인원 다시 고르기</button>
+                </div>
+            </div>
+        </div>
+
+        <!--/* 간격·압력·확률. 이 게임은 숨기는 게 없다. 다만 "안전 확정"도 없다. */-->
+        <div class="bw-press-meter">
+            <div class="bw-press-gauge">
+                <div class="bw-press-gauge-fill" id="press-gauge-fill"></div>
+            </div>
+            <div class="bw-press-readout">
+                <span class="bw-press-stat">압력 <b id="press-pressure">1.2</b> MPa</span>
+                <span class="bw-press-stat bw-press-stat-risk"><em class="bw-press-tag" id="press-danger">여유</em></span>
+            </div>
+        </div>
+
+        <button type="button" class="bw-press-lever" id="press-lever">레버 당기기</button>
+    </div>
+
+    <div class="bw-press-share">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
+    </div>
+
+    <section class="bw-press-help">
+        <h2>게임 방법</h2>
+        <ol>
+            <li>인원을 고르고 <strong>프레스 켜기</strong>를 누릅니다.</li>
+            <li>한 명씩 돌아가며 <strong>레버 당기기</strong>를 누릅니다.</li>
+            <li>누를 때마다 프레스가 <strong>랜덤한 만큼</strong> 내려옵니다. 언제 끝까지 내려올지는 아무도 모릅니다.</li>
+            <li><strong>순서에 유불리는 없습니다.</strong> 먼저 당기든 나중에 당기든 걸릴 확률은 똑같습니다.</li>
+            <li>프레스가 토마토에 닿으면 그때 레버를 당긴 사람이 벌칙입니다.</li>
+        </ol>
+        <p>운으로만 정해집니다. 레버를 당기는 것 말고 할 수 있는 일은 없습니다.</p>
+    </section>
+</div>
+
+<div th:replace="~{fragments/other-games :: otherGames}"></div>
+
+<div id="bw-guestbook" aria-label="방명록"></div>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
+
+
+<script th:src="@{/js/press.js}"></script>
+
+<script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
+</body>
+</html>

@@ -3,6 +3,7 @@ package com.example.game.common;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 게임 목록의 단일 진실 공급원.
@@ -35,11 +36,24 @@ public final class GameCatalog {
             String tagline,
             String lastmod
     ) {
-        /** 카드 썸네일. 600x400(3:2) WebP 로 통일돼 있다. */
+        /**
+         * 카드 썸네일. 600x400(3:2) 로 통일돼 있다.
+         * 기본은 WebP 이고, PNG_CARDS 에 든 것만 PNG 다.
+         */
         public String card() {
-            return "/img/cards" + path + ".webp";
+            return "/img/cards" + path + (PNG_CARDS.contains(path) ? ".png" : ".webp");
         }
     }
+
+    /*
+     * 카드가 PNG 인 게임.
+     *
+     * 작업 PC 에 WebP 로 굽는 도구가 없다 (ImageMagick·cwebp 둘 다 없고,
+     * 윈도우 convert.exe 는 디스크 유틸이라 쓰면 안 된다).
+     * 그림은 docs/art/card.js 가 순수 Node 로 굽는다 — 그래서 PNG 다.
+     * 나중에 도구가 생기면 WebP 로 다시 구워 여기서 지우면 된다.
+     */
+    static final Set<String> PNG_CARDS = Set.of("/roulette");
 
     /** 표시 순서 = 이 목록의 순서. 유입이 많은 게임을 위로 둔다. */
     public static final List<Game> GAMES = List.of(
@@ -47,6 +61,12 @@ public final class GameCatalog {
                     "커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체", "2026-08-30"),
             new Game("/ladder", "사다리타기 워터슬라이드", "Ladder",
                     "물이 미끄럼틀을 타고 내려가는 사다리타기 · 커피내기·벌칙뽑기", "2026-08-30"),
+            new Game("/press", "압력 프레스", "Press",
+                    "누를수록 내려온다 · 벌칙게임·복불복", "2026-08-31"),
+            // new Game("/parachute", "낙하산", "Nerve",
+            //         "늦게 펼수록 이긴다 · 혼자 기록 도전 · 담력 복불복", "2026-09-01"),
+            new Game("/roulette", "물풍선 룰렛", "Roulette",
+                    "러시안룰렛 · 돌아가며 펌프질 · 터뜨리면 물벼락", "2026-08-31"),
             new Game("/wasabi", "와사비 룰렛", "Roulette",
                     "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-08-30"),
             new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",

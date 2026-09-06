@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 600 400" role="img"
+     aria-label="물풍선 룰렛 — 펌프로 부풀리는 물풍선">
+  <!-- docs/art/card.js 가 굽는 PNG 와 같은 그림이다. 손으로 고칠 때 여기를 본다. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b2432"/>
+      <stop offset="100%" stop-color="#060910"/>
+    </linearGradient>
+    <radialGradient id="ball" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#bfe9ff"/>
+      <stop offset="48%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#075985"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="inside"><ellipse cx="268" cy="152" rx="114" ry="126"/></clipPath>
+  </defs>
+
+  <rect width="600" height="400" fill="url(#bg)"/>
+  <circle cx="268" cy="146" r="272" fill="url(#halo)"/>
+  <rect x="0" y="370" width="600" height="3" fill="#94a3b8" opacity="0.20"/>
+
+  <!-- 뒤에서 구경하는 사람들 -->
+  <g fill="#3f4d63">
+    <rect x="72" y="324" width="40" height="48" rx="15"/>
+    <rect x="149" y="331" width="34" height="41" rx="12"/>
+  </g>
+  <circle cx="92" cy="308" r="25" fill="#c9a184"/>
+  <circle cx="166" cy="317" r="21" fill="#c9a184"/>
+
+  <!-- 물풍선 -->
+  <path d="M253 276 L283 276 L268 302 Z" fill="#075985"/>
+  <ellipse cx="268" cy="152" rx="114" ry="126" fill="url(#ball)" stroke="#7dd3fc"
+           stroke-opacity="0.45" stroke-width="3"/>
+  <g clip-path="url(#inside)">
+    <rect x="154" y="134" width="228" height="150" fill="#0284c7" opacity="0.46"/>
+    <rect x="154" y="134" width="228" height="4" fill="#bae6fd" opacity="0.85"/>
+  </g>
+  <ellipse cx="225" cy="102" rx="23" ry="16" fill="#fff" opacity="0.72"/>
+  <ellipse cx="318" cy="190" rx="10" ry="8" fill="#fff" opacity="0.30"/>
+
+  <!-- 호스와 펌프 -->
+  <path d="M268 300 Q370 402 492 318" fill="none" stroke="#3b475a" stroke-width="9"
+        stroke-linecap="round"/>
+  <rect x="458" y="362" width="72" height="10" rx="4" fill="#2b3441"/>
+  <rect x="476" y="300" width="38" height="68" rx="9" fill="#94a3b8"/>
+  <rect x="476" y="300" width="16" height="68" rx="9" fill="#5b6a7d"/>
+  <rect x="490" y="282" width="11" height="20" rx="4" fill="#2b3441"/>
+  <rect x="468" y="274" width="55" height="14" rx="6" fill="#475569"/>
+
+  <!-- 펌프질하는 사람 -->
+  <ellipse cx="422" cy="374" rx="40" ry="8" opacity="0.45"/>
+  <path d="M444 330 Q466 300 495 283" fill="none" stroke="#f0c9a5" stroke-width="13"
+        stroke-linecap="round"/>
+  <rect x="396" y="316" width="52" height="56" rx="18" fill="#f97316"/>
+  <ellipse cx="422" cy="284" rx="34" ry="26" fill="#1f2937"/>
+  <circle cx="422" cy="294" r="31" fill="#f0c9a5"/>
+  <ellipse cx="422" cy="279" rx="32" ry="20" fill="#1f2937"/>
+  <ellipse cx="411" cy="293" rx="4.4" ry="5.2" fill="#111827"/>
+  <ellipse cx="433" cy="293" rx="4.4" ry="5.2" fill="#111827"/>
+  <ellipse cx="422" cy="308" rx="6" ry="7.5" fill="#6b2737"/>
+</svg>

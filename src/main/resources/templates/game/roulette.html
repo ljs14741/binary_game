@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>물풍선 룰렛 – 러시안룰렛 물총 벌칙게임 | 커피내기 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <meta name="description" content="물풍선 하나에 돌아가며 펌프질을 합니다. 커질수록 터질 확률이 올라가고, 터뜨린 사람이 물벼락 벌칙. 순서에 유불리 없는 커피내기·점심내기·벌칙뽑기용 무료 온라인 룰렛.">
+    <meta name="keywords" content="물풍선 룰렛, 러시안룰렛 게임, 러시안룰렛 온라인, 물총 룰렛, 벌칙 룰렛, 복불복 룰렛, 커피내기 룰렛, 커피내기, 점심내기, 벌칙뽑기, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="물풍선 룰렛 – 러시안룰렛 물총 벌칙게임 | Binary World">
+    <meta property="og:description" content="돌아가며 펌프질. 풍선이 커질수록 조마조마합니다. 터뜨린 사람이 물벼락!">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/roulette.png">
+    <meta property="og:url" content="https://game.binaryworld.kr/roulette">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="물풍선 룰렛 – 러시안룰렛 물총 벌칙게임 | Binary World">
+    <meta name="twitter:description" content="돌아가며 펌프질. 터뜨린 사람이 물벼락!">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/roulette.png">
+
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="theme-color" content="#0b0d10">
+    <link rel="canonical" href="https://game.binaryworld.kr/roulette">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "물풍선 룰렛",
+      "alternateName": ["러시안룰렛", "물총 룰렛", "벌칙 룰렛", "복불복 룰렛", "커피내기 룰렛"],
+      "url": "https://game.binaryworld.kr/roulette",
+      "description": "물풍선 하나에 돌아가며 펌프질을 한다. 커질수록 터질 확률이 올라가고, 터뜨린 사람이 물벼락 벌칙. 순서에 유불리가 없다.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": "물풍선 룰렛, 러시안룰렛, 물총 룰렛, 벌칙 룰렛, 커피내기, 점심내기, 벌칙뽑기"
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/roulette.css}">
+
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-0TSFJBQ41N');
+    </script>
+</head>
+<body class="bw-game-body">
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
+
+<div class="bw-roul-shell">
+    <div class="nav-back">
+        <a href="/" class="back-btn">← 게임 목록</a>
+    </div>
+
+    <h1 class="game-title">물풍선 룰렛</h1>
+    <p class="game-desc">물풍선 하나에 <strong>돌아가며 펌프질</strong>을 합니다. 커질수록 위험해지고, 터뜨린 사람이 물벼락. 커피내기·점심내기에 딱!</p>
+
+    <!--/* 총 펌프질 = 인원 × 2차례 × 3번. 자리마다 정확히 6번씩 맡아야 순번 유불리가 0 이 된다 (규격 8-2) */-->
+    <div class="bw-roul-setup" id="roulette-setup">
+        <div class="bw-roul-field">
+            <span>인원</span>
+            <div class="bw-roul-seg" role="group" aria-label="인원 수">
+                <button type="button" data-players="2">2</button>
+                <button type="button" data-players="3">3</button>
+                <button type="button" data-players="4" class="is-active">4</button>
+                <button type="button" data-players="5">5</button>
+                <button type="button" data-players="6">6</button>
+                <button type="button" data-players="7">7</button>
+                <button type="button" data-players="8">8</button>
+            </div>
+        </div>
+        <p class="bw-roul-note">순서에 <strong>유불리는 없습니다.</strong> 몇 번째로 잡든 걸릴 확률은 똑같습니다.</p>
+    </div>
+
+    <button type="button" class="bw-roul-btn" id="roulette-start" style="width:100%">풍선 건네받기</button>
+
+    <div id="roulette-play" hidden>
+        <div class="bw-roul-hud">
+            <p class="bw-roul-turn" id="roulette-turn">풍선을 건네받습니다</p>
+            <button type="button" id="roulette-mute" aria-pressed="true">소리 켜짐</button>
+        </div>
+        <p class="bw-roul-sub" id="roulette-sub"></p>
+
+        <div class="bw-roul-stage" id="roulette-stage">
+            <canvas id="roulette-canvas" aria-label="물풍선과 펌프, 둘러선 사람들" role="img"></canvas>
+
+            <div class="bw-roul-result" id="roulette-result" role="status" aria-live="polite" hidden>
+                <div class="bw-roul-result-card">
+                    <p class="bw-roul-result-title" id="roulette-result-title"></p>
+                    <span class="bw-roul-result-detail" id="roulette-result-detail"></span>
+                    <button type="button" class="bw-roul-btn" id="roulette-again">한 판 더</button>
+                    <button type="button" class="bw-roul-btn bw-roul-btn-ghost" id="roulette-setup-again">인원 다시 고르기</button>
+                </div>
+            </div>
+        </div>
+
+        <!--/* 남은 횟수를 UI 로 만들지 않는다. 풍선 크기가 말해준다. */-->
+        <div class="bw-roul-meter">
+            <em class="bw-roul-tag" id="roulette-danger">여유</em>
+        </div>
+
+        <button type="button" class="bw-roul-go" id="roulette-go">펌프질</button>
+    </div>
+
+    <div class="bw-roul-share">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
+    </div>
+
+    <section class="bw-roul-help">
+        <h2>게임 방법</h2>
+        <ol>
+            <li>물이 든 풍선 하나와 펌프를 <strong>돌려 씁니다.</strong> 판 내내 같은 풍선입니다.</li>
+            <li>내 차례가 되면 <strong>펌프질을 연달아</strong> 합니다. 한 번 시작하면 못 멈춥니다. (인원이 적을수록 여러 번 합니다)</li>
+            <li>누를 때마다 풍선이 <strong>한 단계 커집니다.</strong> 클수록 위험합니다.</li>
+            <li>펌프질 직후 풍선이 <strong>부르르 떱니다.</strong> 이때는 어느 쪽인지 알 수 없습니다.</li>
+            <li>안 터지면 <strong>다음 사람에게</strong> 넘어갑니다.</li>
+            <li>터뜨린 사람이 <strong>물벼락</strong>, 벌칙입니다.</li>
+        </ol>
+        <p>남은 횟수를 세지 않아도 됩니다. <strong>풍선 크기가 곧 확률입니다.</strong> 순서에 유불리는 없습니다.</p>
+    </section>
+</div>
+
+<div th:replace="~{fragments/other-games :: otherGames}"></div>
+
+<div id="bw-guestbook" aria-label="방명록"></div>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
+
+
+<script th:src="@{/js/roulette.js}"></script>
+
+<script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
+</body>
+</html>

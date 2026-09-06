@@ -1,0 +1,339 @@
+/*
+  러시안룰렛 — 모바일 세로 우선.
+  캔버스가 화면을 꽉 채우지 않는다. 자동 광고가 들어갈 여백이 필요하다.
+*/
+
+.bw-roul-shell {
+  width: min(560px, calc(100% - 1rem));
+  margin: 0 auto;
+  padding: 0.65rem 0 1.75rem;
+}
+
+/* ── 시작 전 설정 ── */
+.bw-roul-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+}
+
+.bw-roul-field {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bw-roul-field > span {
+  color: var(--bw-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.bw-roul-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.bw-roul-seg button {
+  flex: 1 1 auto;
+  min-width: 2.6rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-roul-seg button.is-active {
+  border-color: var(--bw-accent);
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+}
+
+.bw-roul-btn {
+  min-height: 2.9rem;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid var(--bw-accent);
+  border-radius: 0.7rem;
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-roul-btn-ghost {
+  border-color: var(--bw-border);
+  background: transparent;
+  color: var(--bw-muted);
+}
+
+/* ── 진행 중 ── */
+.bw-roul-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.bw-roul-turn {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.bw-roul-hud button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-roul-stage {
+  position: relative;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+}
+
+.bw-roul-stage.is-tight {
+  border-color: #fb7185;
+  box-shadow: 0 0 0 1px rgba(251, 113, 133, 0.4), 0 0 26px rgba(251, 113, 133, 0.28);
+}
+
+#roulette-canvas {
+  display: block;
+  width: 100%;
+}
+
+/* ── 위험도 ──
+   숫자를 쓰지 않는다. 남은 칸은 실린더 그림이 이미 말해준다.
+   세게 하면 사람은 계산을 하고, 계산은 긴장을 걷어간다.
+   깜빡이는 주기는 JS 가 심장박동 클럭에 맞춰 인라인으로 넣는다. */
+.bw-roul-meter {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.7rem;
+  background: var(--bw-surface);
+}
+
+.bw-roul-tag {
+  padding: 0.3rem 1.15rem;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  color: #34d399;
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  transition: color 0.3s ease, border-color 0.3s ease;
+  animation: bw-roul-beat 1s ease-in-out infinite;
+}
+
+@keyframes bw-roul-beat {
+  0%, 100% { opacity: 1; }
+  55% { opacity: 0.4; }
+}
+
+/* ── 차례 버튼 ──
+   자기를 쏘게 만드는 버튼을 자기가 누른다. 그래서 버튼이 그 사람 색을 띤다.
+   깜빡이는 주기는 JS 가 심장박동 클럭에 맞춰 인라인으로 넣는다. */
+.bw-roul-go {
+  display: block;
+  width: 100%;
+  min-height: 3.5rem;
+  margin-top: 0.7rem;
+  border: 2px solid var(--bw-accent);
+  border-radius: 0.8rem;
+  background: var(--bw-surface);
+  color: var(--bw-text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.bw-roul-go:active:not(:disabled) {
+  transform: translateY(2px);
+}
+
+.bw-roul-go:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 남은 칸이 적어지면 버튼이 심장처럼 뛴다. 누르기가 망설여져야 한다. */
+.bw-roul-go.is-hot {
+  animation: bw-roul-pulse 1s ease-in-out infinite;
+}
+
+@keyframes bw-roul-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5); }
+  60% { box-shadow: 0 0 0 10px rgba(251, 113, 133, 0); }
+}
+
+/* 결과 카드가 물 튀는 연출을 다 가리면 안 된다. 아래에 붙이고 위는 비워 둔다. */
+.bw-roul-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.8rem;
+  background: linear-gradient(to bottom,
+    rgba(8, 10, 14, 0) 0%,
+    rgba(8, 10, 14, 0.5) 40%,
+    rgba(8, 10, 14, 0.9) 100%);
+  animation: bw-roul-rise 0.34s ease-out;
+}
+
+@keyframes bw-roul-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.bw-roul-result[hidden] {
+  display: none;
+}
+
+.bw-roul-result-card {
+  width: min(300px, 100%);
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface-strong);
+  text-align: center;
+}
+
+.bw-roul-result-title {
+  margin: 0 0 0.35rem;
+  color: #fb7185;
+  font-family: var(--bw-font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.bw-roul-result-detail {
+  display: block;
+  margin-bottom: 0.9rem;
+  color: var(--bw-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.bw-roul-result-card button {
+  width: 100%;
+}
+
+.bw-roul-result-card button + button {
+  margin-top: 0.4rem;
+}
+
+/* ── 공유 · 안내 ── */
+.bw-roul-share {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.bw-roul-help {
+  margin-top: 1.4rem;
+  color: var(--bw-muted);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.bw-roul-help h2 {
+  margin: 0 0 0.5rem;
+  color: var(--bw-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.bw-roul-help ol {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+
+/* ── 안내 문구 ── */
+.bw-roul-note {
+  margin: 0;
+  color: var(--bw-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* 두 줄로 말한다 — 위는 누가 누구를, 아래는 지금 무엇을 해야 하는지.
+   높이를 고정해서 문구가 바뀔 때마다 화면이 들썩이지 않게 한다. */
+.bw-roul-sub {
+  min-height: 1.15rem;
+  margin: -0.25rem 0 0.5rem;
+  color: var(--bw-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* 겨눈 순간 — 총구가 화면 정면을 향한다. 화면 자체가 심장에 맞춰 뛴다.
+   주기는 JS 가 심장박동 클럭에 맞춰 인라인으로 넣는다. */
+.bw-roul-stage.is-locked {
+  border-color: #f43f5e;
+  animation: bw-roul-aimed 1s ease-in-out infinite;
+}
+
+@keyframes bw-roul-aimed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.55), 0 0 30px rgba(244, 63, 94, 0.22); }
+  60% { box-shadow: 0 0 0 10px rgba(244, 63, 94, 0), 0 0 30px rgba(244, 63, 94, 0.34); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw-roul-tag,
+  .bw-roul-go,
+  .bw-roul-stage {
+    transition: none;
+  }
+
+  .bw-roul-tag,
+  .bw-roul-stage.is-locked,
+  .bw-roul-go.is-hot,
+  .bw-roul-result {
+    animation: none;
+  }
+}
+
+/* ── 정적 구간 ──
+   쏘는 순간 심장박동이 멎는다. 소리가 멈추면 화면도 같이 멈춰야 한다 —
+   무음인데 테두리만 계속 뛰면 클럭이 어긋난 것처럼 보인다 (규격 8-4). */
+.bw-roul-tag.is-hushed,
+.bw-roul-stage.is-hushed {
+  animation: none !important;
+}
+
+.bw-roul-stage.is-locked.is-hushed {
+  border-color: #f43f5e;
+  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.55), 0 0 34px rgba(244, 63, 94, 0.28);
+}

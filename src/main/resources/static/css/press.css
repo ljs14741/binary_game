@@ -1,0 +1,340 @@
+/*
+  압력 프레스 — 모바일 세로 우선.
+  캔버스가 화면을 꽉 채우지 않는다. 자동 광고가 들어갈 여백이 필요하다.
+*/
+
+.bw-press-shell {
+  width: min(560px, calc(100% - 1rem));
+  margin: 0 auto;
+  padding: 0.65rem 0 1.75rem;
+}
+
+/* ── 시작 전 설정 ── */
+.bw-press-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+}
+
+.bw-press-field {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bw-press-field > span {
+  color: var(--bw-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.bw-press-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.bw-press-seg button {
+  flex: 1 1 auto;
+  min-width: 2.6rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-press-seg button.is-active {
+  border-color: var(--bw-accent);
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+}
+
+.bw-press-btn {
+  min-height: 2.9rem;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid var(--bw-accent);
+  border-radius: 0.7rem;
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-press-btn-ghost {
+  border-color: var(--bw-border);
+  background: transparent;
+  color: var(--bw-muted);
+}
+
+/* ── 진행 중 ── */
+.bw-press-hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.bw-press-turn {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.bw-press-hud button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-press-stage {
+  position: relative;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+}
+
+.bw-press-stage.is-risky {
+  border-color: #fb7185;
+  box-shadow: 0 0 0 1px rgba(251, 113, 133, 0.4), 0 0 26px rgba(251, 113, 133, 0.28);
+}
+
+#press-canvas {
+  display: block;
+  width: 100%;
+}
+
+/* ── 간격 게이지 ──
+   이 게임은 숨기는 게 없다. 간격·압력·확률이 항상 보여야 한다.
+   다만 "안전 확정"도 없다 — 확률이 0 이 되는 구간은 존재하지 않는다. */
+.bw-press-meter {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.7rem;
+  background: var(--bw-surface);
+}
+
+.bw-press-gauge {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.22);
+  overflow: hidden;
+}
+
+.bw-press-gauge-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: #34d399;
+  transition: width 0.35s ease, background 0.3s ease;
+}
+
+/* 숫자를 거의 다 걷어냈다. 압력과 위험도 문구만 남는다. */
+.bw-press-readout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem 0.7rem;
+  margin-top: 0.5rem;
+  color: var(--bw-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bw-press-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bw-press-stat b {
+  color: var(--bw-text);
+  font-size: 0.95rem;
+}
+
+/* 확률 숫자를 뺐다. 이제 이 문구 하나가 위험을 말한다. 크게 둔다.
+   깜빡이는 주기는 JS 가 경보 클럭에 맞춰 인라인으로 넣는다. */
+.bw-press-stat-risk {
+  flex-basis: 100%;
+  justify-content: center;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--bw-border);
+}
+
+.bw-press-tag {
+  padding: 0.3rem 1.15rem;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  transition: color 0.3s ease, border-color 0.3s ease;
+  animation: bw-press-beat 1s ease-in-out infinite;
+}
+
+@keyframes bw-press-beat {
+  0%, 100% { opacity: 1; }
+  55% { opacity: 0.4; }
+}
+
+/* ── 레버 ── */
+.bw-press-lever {
+  display: block;
+  width: 100%;
+  min-height: 3.4rem;
+  margin-top: 0.7rem;
+  border: 2px solid var(--bw-accent);
+  border-radius: 0.8rem;
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.3s ease, background 0.3s ease;
+}
+
+.bw-press-lever:active:not(:disabled) {
+  transform: translateY(2px);
+}
+
+.bw-press-lever:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 위험 구간에서는 버튼 자체가 맥박친다. 누르기가 망설여져야 한다. */
+.bw-press-lever.is-risky {
+  border-color: #fb7185;
+  background: rgba(251, 113, 133, 0.16);
+  animation: bw-press-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes bw-press-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5); }
+  60% { box-shadow: 0 0 0 9px rgba(251, 113, 133, 0); }
+}
+
+/* 결과 카드가 터지는 연출을 다 가리면 안 된다. 아래에 붙이고 위는 비워 둔다. */
+.bw-press-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.8rem;
+  background: linear-gradient(to bottom,
+    rgba(8, 10, 14, 0) 0%,
+    rgba(8, 10, 14, 0.5) 40%,
+    rgba(8, 10, 14, 0.9) 100%);
+  animation: bw-press-rise 0.34s ease-out;
+}
+
+@keyframes bw-press-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.bw-press-result[hidden] {
+  display: none;
+}
+
+.bw-press-result-card {
+  width: min(300px, 100%);
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface-strong);
+  text-align: center;
+}
+
+.bw-press-result-title {
+  margin: 0 0 0.35rem;
+  color: #fb7185;
+  font-family: var(--bw-font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.bw-press-result-detail {
+  display: block;
+  margin-bottom: 0.9rem;
+  color: var(--bw-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.bw-press-result-card button {
+  width: 100%;
+}
+
+.bw-press-result-card button + button {
+  margin-top: 0.4rem;
+}
+
+/* ── 공유 · 안내 ── */
+.bw-press-share {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.bw-press-help {
+  margin-top: 1.4rem;
+  color: var(--bw-muted);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.bw-press-help h2 {
+  margin: 0 0 0.5rem;
+  color: var(--bw-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.bw-press-help ol {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw-press-gauge-fill,
+  .bw-press-lever,
+  .bw-press-stage,
+  .bw-press-stat-risk,
+  .bw-press-tag {
+    transition: none;
+  }
+
+  .bw-press-lever.is-risky,
+  .bw-press-tag,
+  .bw-press-result {
+    animation: none;
+  }
+}

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="압력 프레스">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#151a21"/>
+      <stop offset="100%" stop-color="#0a0e14"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="600" fill="url(#bg)"/>
+
+  <!-- 유압 기둥 -->
+  <rect x="432" y="90" width="36" height="200" fill="#6b7280"/>
+  <rect x="442" y="90" width="16" height="200" fill="#9ca3af"/>
+
+  <!-- 프레스 판 -->
+  <rect x="180" y="290" width="540" height="54" rx="6" fill="#4b5563"/>
+  <rect x="180" y="290" width="540" height="14" rx="6" fill="#6b7280"/>
+  <g fill="#fb7185">
+    <rect x="196" y="334" width="26" height="10"/>
+    <rect x="246" y="334" width="26" height="10"/>
+    <rect x="296" y="334" width="26" height="10"/>
+    <rect x="346" y="334" width="26" height="10"/>
+    <rect x="396" y="334" width="26" height="10"/>
+    <rect x="446" y="334" width="26" height="10"/>
+    <rect x="496" y="334" width="26" height="10"/>
+    <rect x="546" y="334" width="26" height="10"/>
+    <rect x="596" y="334" width="26" height="10"/>
+    <rect x="646" y="334" width="26" height="10"/>
+  </g>
+
+  <!-- 토마토 -->
+  <circle cx="450" cy="440" r="56" fill="#ef4444"/>
+  <circle cx="430" cy="420" r="12" fill="#ffffff" opacity="0.35"/>
+  <path d="M430 388 l20 -12 l20 12" stroke="#22c55e" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 바닥 -->
+  <rect x="150" y="496" width="600" height="20" rx="4" fill="#374151"/>
+
+  <!-- 남은 거리 게이지 -->
+  <rect x="230" y="546" width="440" height="16" rx="8" fill="#2b3644"/>
+  <rect x="230" y="546" width="150" height="16" rx="8" fill="#fb7185"/>
+
+  <text x="450" y="60" text-anchor="middle" font-family="Segoe UI, Avenir Next, sans-serif"
+        font-size="44" font-weight="800" fill="#e8ecf1">압력 프레스</text>
+</svg>

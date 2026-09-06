@@ -41,6 +41,21 @@ public class GameController {
         return "game/kimchi";
     }
 
+    @GetMapping("/roulette")
+    public String roulette(Model model, HttpSession session) {
+        return "game/roulette";
+    }
+
+    @GetMapping("/parachute")
+    public String parachute(Model model, HttpSession session) {
+        return "game/parachute";
+    }
+
+    @GetMapping("/press")
+    public String press(Model model, HttpSession session) {
+        return "game/press";
+    }
+
     @GetMapping("/ladder")
     public String ladder(Model model, HttpSession session) {
         return "game/ladder";
