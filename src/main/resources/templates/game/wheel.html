@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!--/*
+      제목은 게임명이 아니라 **검색어**로 시작한다.
+      사람들은 "해머 돌림판" 을 검색하지 않는다. "원판돌리기" 를 검색한다.
+      게임명을 "해머 원판돌리기" 로 지어서 검색어를 통째로 품게 했다 —
+      브랜드를 버리지 않으면서 핵심어를 h1·title 맨 앞에 놓는 방법이다.
+    */-->
+    <title>원판돌리기 - 이름 넣고 돌리는 온라인 돌림판 | 해머 원판돌리기 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <meta name="description" content="이름을 직접 넣어 만드는 온라인 원판돌리기. 해머로 쳐서 돌리고, 세게 칠수록 오래 돕니다. 점심 메뉴 정하기·커피내기·벌칙뽑기·랜덤 뽑기까지 하나만 고르면 되는 순간에 쓰세요.">
+    <meta name="keywords" content="원판돌리기, 돌림판, 온라인 돌림판, 돌림판 만들기, 룰렛 돌리기, 랜덤 뽑기, 제비뽑기, 점심 메뉴 룰렛, 점심 메뉴 정하기, 저녁 메뉴 추천, 이름 뽑기, 커피내기, 벌칙뽑기, 복불복게임, 파티게임, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="원판돌리기 - 이름 넣고 돌리는 온라인 돌림판 | Binary World">
+    <meta property="og:description" content="해머로 쳐서 돌리는 원판돌리기. 점심 메뉴·커피내기·벌칙뽑기, 하나만 정하면 될 때!">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/wheel.png">
+    <meta property="og:url" content="https://game.binaryworld.kr/wheel">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="원판돌리기 - 이름 넣고 돌리는 온라인 돌림판 | Binary World">
+    <meta name="twitter:description" content="해머로 쳐서 돌리는 원판돌리기. 점심 메뉴·커피내기·벌칙뽑기, 하나만 정하면 될 때!">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/wheel.png">
+
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="theme-color" content="#0b0d10">
+    <link rel="canonical" href="https://game.binaryworld.kr/wheel">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "해머 원판돌리기",
+      "alternateName": ["원판돌리기", "돌림판", "온라인 돌림판", "돌림판 만들기", "룰렛 돌리기", "랜덤 뽑기", "제비뽑기", "점심 메뉴 룰렛"],
+      "url": "https://game.binaryworld.kr/wheel",
+      "description": "이름을 직접 넣어 만드는 온라인 원판돌리기. 해머로 쳐서 돌리고 세게 칠수록 오래 돈다. 한 번 돌려 하나를 정한다.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "HTML5, JavaScript",
+      "inLanguage": "ko",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": "원판돌리기, 돌림판, 온라인 돌림판, 랜덤 뽑기, 제비뽑기, 점심 메뉴 정하기, 커피내기, 벌칙뽑기"
+    }
+    </script>
+
+    <!--/*
+      FAQ 스키마. 순위가 같아도 검색결과에서 차지하는 면적이 커져 클릭률이 오른다.
+      질문 문구 자체가 롱테일 검색어다 — 사람들이 실제로 치는 말로 적는다.
+    */-->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "원판돌리기에 이름을 직접 넣을 수 있나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "네. 칸을 2~8개까지 늘리고 각 칸에 원하는 이름이나 메뉴를 직접 입력할 수 있습니다. 비워두면 1번, 2번처럼 번호로 자동으로 채워집니다. 최근에 쓴 목록 3벌은 저장되어 다음에 한 번에 불러올 수 있습니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "점심 메뉴 정하기에도 쓸 수 있나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "네. 김치찌개, 돈까스처럼 후보 메뉴를 칸에 넣고 한 번 돌리면 하나가 정해집니다. 커피내기, 벌칙뽑기, 청소 당번 정하기, 제비뽑기 등 하나만 고르면 되는 모든 상황에 쓸 수 있습니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "해머 세기가 결과에 영향을 주나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "아니요. 세기는 원판이 몇 바퀴 도는지(2.6~9.2바퀴)와 도는 시간(2.2~5초)만 정합니다. 어느 칸에 멈출지는 정할 수 없습니다. 타격 오차만으로 원판이 반 바퀴씩 흔들리기 때문에 노려서 맞출 수가 없고, 모든 칸의 당첨 확률은 정확히 같습니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "모바일에서도 되나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "됩니다. 휴대폰 세로 화면을 기준으로 만들었고 PC에서도 그대로 동작합니다. 화면을 누르거나 내려찍기 버튼을 누르면 되고, PC에서는 스페이스바로도 칠 수 있습니다. 설치나 로그인은 필요 없습니다."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/wheel.css}">
+
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-0TSFJBQ41N');
+    </script>
+</head>
+<body class="bw-game-body">
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
+
+<div class="bw-wheel-shell">
+    <div class="nav-back">
+        <a href="/" class="back-btn">← 게임 목록</a>
+    </div>
+
+    <!--/* h1 에 "원판돌리기" 가 통째로 들어가야 한다. 검색은 여기를 제일 세게 본다. */-->
+    <h1 class="game-title">해머 원판돌리기</h1>
+    <p class="game-desc">이름을 직접 넣어 만드는 <strong>온라인 돌림판</strong>입니다. 해머로 쳐서 돌리고, 세게 칠수록 오래 돌아요. 점심 메뉴 정하기·커피내기·벌칙뽑기·랜덤 뽑기에 딱!</p>
+
+    <div class="bw-wheel-setup" id="wheel-setup">
+        <div class="bw-wheel-count">
+            <span>칸 수</span>
+            <div class="bw-wheel-stepper">
+                <button type="button" id="wheel-less" aria-label="칸 줄이기">−</button>
+                <b id="wheel-slot-count">4</b>
+                <button type="button" id="wheel-more" aria-label="칸 늘리기">+</button>
+            </div>
+        </div>
+
+        <!--/* 빈 칸은 1번·2번으로 채운다. 여덟 개를 다 타이핑해야 시작되면 아무도 안 한다. */-->
+        <div class="bw-wheel-slots" id="wheel-slots"></div>
+
+        <div class="bw-wheel-recent-wrap" id="wheel-recent-wrap" hidden>
+            <span>최근</span>
+            <div id="wheel-recent" style="display:flex;flex-wrap:wrap;gap:0.4rem"></div>
+        </div>
+    </div>
+
+    <button type="button" class="bw-wheel-btn" id="wheel-start">원판 만들기</button>
+
+    <div id="wheel-play" hidden>
+        <div class="bw-wheel-hud">
+            <p>게이지를 보고 세기를 정하세요</p>
+            <button type="button" id="wheel-mute" aria-pressed="true">소리 켜짐</button>
+        </div>
+
+        <div class="bw-wheel-stage" id="wheel-stage">
+            <canvas id="wheel-canvas" aria-label="해머 돌림판 화면" role="img"></canvas>
+
+            <div class="bw-wheel-result" id="wheel-result" role="status" aria-live="polite" hidden>
+                <div class="bw-wheel-result-card">
+                    <span class="bw-wheel-result-kicker">당첨</span>
+                    <p class="bw-wheel-result-title" id="wheel-result-title"></p>
+                    <button type="button" class="bw-wheel-btn" id="wheel-again">다시 돌리기</button>
+                    <button type="button" class="bw-wheel-btn bw-wheel-btn-ghost" id="wheel-setup-again">목록 고치기</button>
+                </div>
+            </div>
+        </div>
+
+        <!--/* 게이지는 캔버스가 아니라 DOM 이다. 확실히 보여야 한다. */-->
+        <div class="bw-wheel-gauge" id="wheel-gauge">
+            <div class="bw-wheel-gauge-head">
+                <span>해머 세기</span>
+                <b id="wheel-gauge-num">0</b>
+            </div>
+            <div class="bw-wheel-gauge-track">
+                <div class="bw-wheel-gauge-perfect"></div>
+                <div class="bw-wheel-gauge-fill" id="wheel-gauge-fill"></div>
+            </div>
+        </div>
+
+        <button type="button" class="bw-wheel-hit" id="wheel-hit">내려찍기</button>
+        <p class="bw-wheel-hint">화면을 누르거나 스페이스바를 눌러도 됩니다</p>
+    </div>
+
+    <div class="bw-wheel-share">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
+    </div>
+
+    <section class="bw-wheel-help">
+        <h2>게임 방법</h2>
+        <ol>
+            <li><strong>돌림판에 넣을 것을 적습니다.</strong> 사람 이름이든 점심 메뉴든 상관없습니다. 비워두면 1번·2번으로 들어갑니다.</li>
+            <li>게이지가 0에서 100 사이를 왕복합니다. <strong>내려찍기</strong>를 누르면 그 세기로 해머가 원판을 칩니다.</li>
+            <li><strong>세게 칠수록 원판이 오래 돕니다.</strong> 하지만 어디에 멈출지는 정할 수 없고, 모든 칸의 확률은 똑같습니다.</li>
+            <li>바늘이 가리킨 하나가 <strong>당첨</strong>입니다. 한 번 돌리면 끝입니다.</li>
+        </ol>
+    </section>
+</div>
+
+<div th:replace="~{fragments/other-games :: otherGames}"></div>
+
+<div id="bw-guestbook" aria-label="방명록"></div>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
+
+
+<script th:src="@{/js/wheel.js}"></script>
+
+<script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
+</body>
+</html>

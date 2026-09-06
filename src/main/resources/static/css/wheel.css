@@ -1,0 +1,444 @@
+/*
+  해머 돌림판 — 모바일 세로 우선, PC 도 같은 레이아웃으로 넓어진다.
+  캔버스가 화면을 꽉 채우지 않는다. 자동 광고가 들어갈 여백이 필요하다 (규격 3장).
+*/
+
+.bw-wheel-shell {
+  width: min(560px, calc(100% - 1rem));
+  margin: 0 auto;
+  padding: 0.65rem 0 1.75rem;
+}
+
+/* ⛔ 이 한 줄이 없어서 결과 카드가 화면을 통째로 덮고 있었다.
+   display:flex 가 [hidden] 의 display:none 을 이겨서, 클릭이 전부 카드에 먹히고
+   게이지도 가려졌다. 다른 게임 CSS 에는 전부 있는 규칙이다. */
+.bw-wheel-shell [hidden] {
+  display: none !important;
+}
+
+/* ── 시작 전 설정 — 칸 수와 이름, 그게 전부다 ── */
+.bw-wheel-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+}
+
+.bw-wheel-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.bw-wheel-count > span {
+  color: var(--bw-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.bw-wheel-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.bw-wheel-stepper button {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--bw-text);
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.bw-wheel-stepper button:hover:not(:disabled) {
+  border-color: var(--bw-accent);
+  background: var(--bw-accent-soft);
+}
+
+.bw-wheel-stepper button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.bw-wheel-stepper b {
+  min-width: 1.7rem;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+/* 이름 입력 칸 */
+.bw-wheel-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.bw-wheel-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* 원판의 어느 칸인지 색으로 바로 이어준다 */
+.bw-wheel-dot {
+  position: absolute;
+  left: 0.6rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.bw-wheel-slot input {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.5rem 0.7rem 0.5rem 1.9rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--bw-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.bw-wheel-slot input:focus {
+  outline: none;
+  border-color: var(--bw-accent);
+  background: var(--bw-accent-soft);
+}
+
+.bw-wheel-slot input::placeholder {
+  color: var(--bw-muted);
+  opacity: 0.6;
+  font-weight: 500;
+}
+
+/* 최근 목록 */
+.bw-wheel-recent-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.bw-wheel-recent-wrap > span {
+  color: var(--bw-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bw-wheel-chip {
+  max-width: 100%;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.bw-wheel-chip:hover {
+  border-color: var(--bw-accent);
+  color: var(--bw-text);
+}
+
+/* ── 버튼 ── */
+.bw-wheel-btn {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid var(--bw-accent);
+  border-radius: 0.7rem;
+  background: var(--bw-accent-soft);
+  color: var(--bw-text);
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.bw-wheel-btn:hover {
+  filter: brightness(1.15);
+}
+
+.bw-wheel-btn-ghost {
+  margin-top: 0.45rem;
+  border-color: var(--bw-border);
+  background: transparent;
+  color: var(--bw-muted);
+  font-weight: 700;
+}
+
+/* ── 게임 화면 ── */
+.bw-wheel-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0.85rem 0 0.5rem;
+}
+
+.bw-wheel-hud p {
+  margin: 0;
+  color: var(--bw-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.bw-wheel-hud button {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--bw-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.bw-wheel-stage {
+  position: relative;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  overflow: hidden;
+  background: #0b1220;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.bw-wheel-stage canvas {
+  display: block;
+  width: 100%;
+}
+
+/* ── 해머 게이지 ──
+   캔버스가 아니라 DOM 이다. 확실히 보여야 하고, CSS 로 화려하게 만들기도 쉽다. */
+.bw-wheel-gauge {
+  margin-top: 0.7rem;
+}
+
+.bw-wheel-gauge-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.bw-wheel-gauge-head span {
+  color: var(--bw-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.bw-wheel-gauge-head b {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--bw-text);
+  transition: color 0.12s;
+}
+
+.bw-wheel-gauge.is-perfect .bw-wheel-gauge-head b {
+  color: #fbbf24;
+  text-shadow: 0 0 14px rgba(251, 191, 36, 0.75);
+}
+
+.bw-wheel-gauge-track {
+  position: relative;
+  height: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+/* 만점 구간 — 노려볼 자리가 있어야 게이지가 게임이 된다 */
+.bw-wheel-gauge-perfect {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(251, 191, 36, 0.45) 0 6px,
+    rgba(251, 191, 36, 0.18) 6px 12px
+  );
+}
+
+.bw-wheel-gauge-fill {
+  position: relative;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8 0%, #34d399 40%, #fbbf24 72%, #f87171 100%);
+  background-size: 12.5rem 100%;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+}
+
+/* 게이지 머리에 밝은 띠 — 지금 어디인지 눈이 바로 잡는다 */
+.bw-wheel-gauge-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+}
+
+.bw-wheel-gauge.is-perfect .bw-wheel-gauge-fill {
+  box-shadow: 0 0 22px rgba(251, 191, 36, 0.85);
+}
+
+/* ── 내려찍기 버튼 ── */
+.bw-wheel-hit {
+  width: 100%;
+  min-height: 3.4rem;
+  margin-top: 0.7rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  color: #1c1207;
+  font-size: 1.08rem;
+  font-weight: 800;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #7c3d06, 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.bw-wheel-hit:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.bw-wheel-hit:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #7c3d06, 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+.bw-wheel-hit:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--bw-muted);
+  box-shadow: none;
+  cursor: default;
+}
+
+.bw-wheel-hint {
+  margin: 0.5rem 0 0;
+  color: var(--bw-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* ── 결과 카드 ──
+   연출이 끝난 뒤에 뜬다. 화면 아래에 붙여 원판을 가리지 않는다 (규격 8-7). */
+.bw-wheel-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.9rem;
+  background: linear-gradient(to bottom, rgba(9, 12, 18, 0) 40%, rgba(9, 12, 18, 0.94) 80%);
+}
+
+.bw-wheel-result-card {
+  width: 100%;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 0.85rem;
+  background: rgba(17, 22, 32, 0.97);
+  text-align: center;
+}
+
+.bw-wheel-result-kicker {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--bw-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.bw-wheel-result-title {
+  margin: 0 0 0.8rem;
+  color: #fbbf24;
+  font-size: 1.7rem;
+  font-weight: 800;
+  word-break: keep-all;
+  text-shadow: 0 0 22px rgba(251, 191, 36, 0.45);
+}
+
+/* ── 공유 ── */
+.bw-wheel-share {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1.1rem 0 0.4rem;
+}
+
+/* ── 게임 방법 ── */
+.bw-wheel-help {
+  margin-top: 1.2rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px solid var(--bw-border);
+  border-radius: 0.9rem;
+  background: var(--bw-surface);
+}
+
+.bw-wheel-help h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.bw-wheel-help ol {
+  margin: 0 0 0.7rem;
+  padding-left: 1.15rem;
+  color: var(--bw-muted);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.bw-wheel-help p {
+  margin: 0;
+  color: var(--bw-muted);
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
+
+@media (min-width: 460px) {
+  .bw-wheel-slots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw-wheel-hit:active:not(:disabled) {
+    transform: none;
+  }
+}
