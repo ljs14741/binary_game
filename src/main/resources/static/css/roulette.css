@@ -138,10 +138,15 @@
   background: var(--bw-surface);
 }
 
+/* 글자색은 JS 가 위험도에 따라 인라인으로 넣는다 (#a3e635 · #34d399 · #fbbf24 …).
+   전부 밝은 색이라 라이트 모드의 밝은 배경 위에서는 대비가 1.6~2.5:1 까지 떨어져
+   글자가 거의 안 읽혔다. 알약 안쪽을 어둡게 깔아서 어느 테마에서든
+   "밝은 글자 + 어두운 바탕" 이 되게 한다. 모양은 그대로다. */
 .bw-roul-tag {
   padding: 0.3rem 1.15rem;
   border: 2px solid currentColor;
   border-radius: 999px;
+  background: rgba(9, 12, 18, 0.88);
   color: #34d399;
   font-size: 1rem;
   font-style: normal;
@@ -229,7 +234,7 @@
 
 .bw-roul-result-title {
   margin: 0 0 0.35rem;
-  color: #fb7185;
+  color: #e11d48;
   font-family: var(--bw-font-display);
   font-size: 1.25rem;
   font-weight: 800;

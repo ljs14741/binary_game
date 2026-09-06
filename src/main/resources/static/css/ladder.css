@@ -193,14 +193,22 @@
   text-align: center;
 }
 
+/* 슬롯 배경이 var(--bw-surface) 라 라이트 모드에서는 밝다.
+   밝은 초록 글자를 그대로 두면 대비가 1.9:1 이라 읽히지 않는다.
+   색을 채운 배지로 바꾸면 흰 글자가 되어 두 테마 모두에서 확실하다. */
 .bw-ladder-slot-tag {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.3rem;
+  background: #047857;
   font-size: 0.75rem;
   font-weight: 800;
-  color: #34d399;
+  color: #fff;
 }
 
 .bw-ladder-slot.is-bomb .bw-ladder-slot-tag {
-  color: #fb7185;
+  background: #be123c;
+  color: #fff;
 }
 
 .bw-ladder-slot-who {
