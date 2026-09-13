@@ -240,14 +240,15 @@
 }
 
 /* 결과 카드가 터지는 연출을 다 가리면 안 된다. 아래에 붙이고 위는 비워 둔다. */
+/* 결과 카드는 위쪽에 띄운다. 터진 뒤 얼굴과 수박 잔해가 화면 아래에 있어서, 아래에 두면 정작 봐야 할 걸 가린다 */
 .bw-press-result {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
   padding: 0.8rem;
-  background: linear-gradient(to bottom,
+  background: linear-gradient(to top,
     rgba(8, 10, 14, 0) 0%,
     rgba(8, 10, 14, 0.5) 40%,
     rgba(8, 10, 14, 0.9) 100%);
@@ -255,7 +256,7 @@
 }
 
 @keyframes bw-press-rise {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: none; }
 }
 
