@@ -53,7 +53,7 @@ public final class GameCatalog {
      * 그림은 docs/art/card.js 가 순수 Node 로 굽는다 — 그래서 PNG 다.
      * 나중에 도구가 생기면 WebP 로 다시 구워 여기서 지우면 된다.
      */
-    static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel");
+    static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel", "/press");
 
     /** 표시 순서 = 이 목록의 순서. 유입이 많은 게임을 위로 둔다. */
     public static final List<Game> GAMES = List.of(
@@ -63,8 +63,8 @@ public final class GameCatalog {
                     "물이 미끄럼틀을 타고 내려가는 사다리타기 · 커피내기·벌칙뽑기", "2026-08-30"),
             new Game("/wheel", "해머 원판돌리기", "Wheel",
                     "이름 넣고 돌리는 온라인 돌림판 · 점심메뉴·커피내기·랜덤뽑기", "2026-09-07"),
-            new Game("/press", "압력 프레스", "Press",
-                    "누를수록 내려온다 · 벌칙게임·복불복", "2026-08-31"),
+            new Game("/press", "턱압프레스", "Press",
+                    "당길수록 턱이 내려온다 · 벌칙게임·복불복 룰렛", "2026-08-31"),
             // new Game("/parachute", "낙하산", "Nerve",
             //         "늦게 펼수록 이긴다 · 혼자 기록 도전 · 담력 복불복", "2026-09-01"),
             new Game("/roulette", "물풍선 룰렛", "Roulette",

@@ -1,45 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="압력 프레스">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="턱압프레스">
+  <!-- 벡터 원본. 실제 카드·og 이미지는 docs/art/press-card.js 로 굽는다. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#151a21"/>
-      <stop offset="100%" stop-color="#0a0e14"/>
+      <stop offset="0%" stop-color="#1a2029"/>
+      <stop offset="100%" stop-color="#080b10"/>
     </linearGradient>
   </defs>
-
   <rect width="900" height="600" fill="url(#bg)"/>
 
-  <!-- 유압 기둥 -->
-  <rect x="432" y="90" width="36" height="200" fill="#6b7280"/>
-  <rect x="442" y="90" width="16" height="200" fill="#9ca3af"/>
+  <!-- 레일 -->
+  <rect x="27" y="0" width="42" height="600" rx="6" fill="#3a4452"/>
+  <rect x="831" y="0" width="42" height="600" rx="6" fill="#3a4452"/>
 
-  <!-- 프레스 판 -->
-  <rect x="180" y="290" width="540" height="54" rx="6" fill="#4b5563"/>
-  <rect x="180" y="290" width="540" height="14" rx="6" fill="#6b7280"/>
-  <g fill="#fb7185">
-    <rect x="196" y="334" width="26" height="10"/>
-    <rect x="246" y="334" width="26" height="10"/>
-    <rect x="296" y="334" width="26" height="10"/>
-    <rect x="346" y="334" width="26" height="10"/>
-    <rect x="396" y="334" width="26" height="10"/>
-    <rect x="446" y="334" width="26" height="10"/>
-    <rect x="496" y="334" width="26" height="10"/>
-    <rect x="546" y="334" width="26" height="10"/>
-    <rect x="596" y="334" width="26" height="10"/>
-    <rect x="646" y="334" width="26" height="10"/>
+  <!-- 받침대 -->
+  <path d="M225 528 H675 L750 588 H150 Z" fill="#252c35"/>
+  <rect x="210" y="519" width="480" height="15" rx="4" fill="#48525f"/>
+
+  <!-- 수박 -->
+  <ellipse cx="450" cy="450" rx="117" ry="87" fill="#16a34a"/>
+  <g stroke="#0f3d1f" stroke-width="16" fill="none" stroke-linecap="round">
+    <path d="M370 380 q20 70 -10 140"/><path d="M420 368 q20 80 -10 160"/><path d="M470 365 q20 80 -10 165"/><path d="M520 372 q20 70 -10 150"/>
   </g>
+  <circle cx="414" cy="444" r="18" fill="#fff"/><circle cx="486" cy="444" r="18" fill="#fff"/>
+  <circle cx="414" cy="437" r="9" fill="#1b1b22"/><circle cx="486" cy="437" r="9" fill="#1b1b22"/>
+  <ellipse cx="450" cy="483" rx="12" ry="16" fill="#7f1d1d"/>
 
-  <!-- 토마토 -->
-  <circle cx="450" cy="440" r="56" fill="#ef4444"/>
-  <circle cx="430" cy="420" r="12" fill="#ffffff" opacity="0.35"/>
-  <path d="M430 388 l20 -12 l20 12" stroke="#22c55e" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 팔 -->
+  <g stroke="#1a1a1e" stroke-width="51" stroke-linecap="round" fill="none">
+    <path d="M327 45 L240 502"/><path d="M573 45 L660 502"/>
+  </g>
+  <ellipse cx="240" cy="513" rx="36" ry="21" fill="#efb48e"/>
+  <ellipse cx="660" cy="513" rx="36" ry="21" fill="#efb48e"/>
 
-  <!-- 바닥 -->
-  <rect x="150" y="496" width="600" height="20" rx="4" fill="#374151"/>
+  <!-- 몸통 · 목 -->
+  <path d="M300 -15 H600 L606 60 L540 105 L495 123 H405 L360 105 L294 60 Z" fill="#1d1d22"/>
+  <rect x="405" y="90" width="90" height="60" rx="6" fill="#e9b48a"/>
 
-  <!-- 남은 거리 게이지 -->
-  <rect x="230" y="546" width="440" height="16" rx="8" fill="#2b3644"/>
-  <rect x="230" y="546" width="150" height="16" rx="8" fill="#fb7185"/>
-
-  <text x="450" y="60" text-anchor="middle" font-family="Segoe UI, Avenir Next, sans-serif"
-        font-size="44" font-weight="800" fill="#e8ecf1">압력 프레스</text>
+  <!-- 머리 — 턱이 이마보다 넓다 -->
+  <path d="M351 135 L390 120 H510 L549 135 L576 243 V333 L561 348 H339 L324 333 V243 Z" fill="#f0b98e"/>
+  <!-- 두건 -->
+  <path d="M321 114 H579 V288 H555 V213 L522 159 L450 153 L378 159 L345 213 V288 H321 Z" fill="#141416"/>
+  <!-- 표정 -->
+  <g stroke="#2b2422" stroke-width="12" stroke-linecap="round">
+    <path d="M426 216 L369 195"/><path d="M474 216 L531 195"/>
+  </g>
+  <ellipse cx="399" cy="243" rx="22" ry="9" fill="#fff"/><ellipse cx="501" cy="243" rx="22" ry="9" fill="#fff"/>
+  <ellipse cx="402" cy="246" rx="9" ry="7" fill="#1b1b22"/><ellipse cx="498" cy="246" rx="9" ry="7" fill="#1b1b22"/>
+  <rect x="393" y="300" width="114" height="24" rx="12" fill="#5a1a1a"/>
+  <rect x="397" y="304" width="106" height="16" rx="8" fill="#fbfbf6"/>
+  <circle cx="375" cy="270" r="12" fill="#ef4444" opacity="0.35"/><circle cx="525" cy="270" r="12" fill="#ef4444" opacity="0.35"/>
+  <ellipse cx="564" cy="231" rx="7" ry="12" fill="#7dc8ff"/>
 </svg>

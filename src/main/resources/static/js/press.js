@@ -1,5 +1,5 @@
 /*
- * 압력 프레스 — 누를수록 내려온다
+ * 턱압프레스 — 당길수록 턱이 내려온다
  *
  * 기획서: docs/plans/press.md (개정 이력·시뮬레이션 수치는 전부 거기 있다)
  *
@@ -8,7 +8,7 @@
  * 화면에 확률 숫자는 안 쓴다. 문구·색·경보 템포로만 위험을 전한다.
  *
  * 조심할 것 둘
- * 1. 프레스가 내려갈 목표 위치를 미리 그리면 결과가 먼저 보인다.
+ * 1. 턱이 내려갈 목표 위치를 미리 그리면 결과가 먼저 보인다.
  *    애니메이션 중에는 현재 위치만 그린다.
  * 2. 화면과 소리는 경보 클럭(pulsePhase) 하나를 공유한다. 따로 굴리면 어긋난다.
  */
@@ -25,7 +25,7 @@
     var PULSE_MAX = 3.8;                          // 마지막 레버에서의 경보 주기(Hz)
 
     // ── 연출 타이밍 ─────────────────────────────────────────
-    var CHARGE_MS = 500;      // 유압 충전. 프레스가 떨린다
+    var CHARGE_MS = 500;      // 유압 충전. 턱이 떨린다
     var JOLT_MS = 130;        // 덜컹 — 페이크로 한 번 튄다
     var HOLD_MS = 190;        // 정적. 이 순간이 제일 조인다
     var DROP_BASE_MS = 230;   // 하강 기본 시간
@@ -36,6 +36,19 @@
     var CLOSE_CALL_MS = 620;  // 아슬아슬하게 살았을 때
     var RESULT_MS = 2000;     // 터지는 연출을 다 보여준 뒤 카드를 띄운다
     var CLOSE_CALL_LEFT = 2;  // 남은 회차가 이 이하로 살아남으면 아슬아슬 연출
+
+    // ── 접촉 (찌그러뜨리기만 하고 안 터짐) ──────────────────
+    // 안 걸린 회차 중 일부는 턱이 끝까지 내려와 수박을 찌그러뜨린다. 뜸을 들인 뒤 터지지 않는다.
+    // **그 뒤로는 올라오지 않는다.** 다음 사람은 이미 눌린 수박 위에서 이어받고, 레버마다
+    // 턱이 조금씩 더 파고든다. 걸린 회차도 똑같이 파고들고 같은 길이의 뜸을 들인 뒤에 터지므로,
+    // 뜸이 끝나기 전에는 두 갈래를 구분할 방법이 없다 (= 결과가 새지 않는다).
+    var FAKE_BASE = 0.16;     // 안 걸린 회차가 첫 접촉이 될 기본 확률
+    var FAKE_PER_RISK = 0.5;  // 위험할수록 접촉이 잦다. 후반이 더 조여야 한다
+    var SQUASH_MS = 560;      // 파고든 뒤 뜸. 터지든 버티든 이 길이는 같다
+    var PUSH_MS = 480;        // 접촉 상태에서 레버를 당겼을 때 더 파고드는 시간
+    var CRUSH_MAX = 0.95;     // 찌그러짐(0~1)은 여기까지만 간다. 터지는 건 확률이지 깊이가 아니다
+
+    var MELON_WIDE = 1.3;                         // 수박 가로/세로 비
 
     var COLORS = ['#38bdf8', '#f97316', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#22d3ee', '#c084fc'];
 
@@ -57,7 +70,7 @@
         return 1 / pressesLeft;
     }
 
-    /** n 회차를 마친 뒤 프레스가 있어야 할 기준 간격. 남은 회차에 비례한다. */
+    /** n 회차를 마친 뒤 턱이 있어야 할 기준 간격. 남은 회차에 비례한다. */
     function baseGap(done, total) {
         if (total <= 0) { return 0; }
         return GAP_FULL * Math.max(0, total - done) / total;
@@ -71,9 +84,27 @@
         return Math.max(0.6, Math.min(to, from * 0.94));
     }
 
+    /**
+     * 안 걸린 회차가 첫 접촉(찌그러뜨리기만)이 될 확률. 위험할수록 잦다. 이미 접촉했으면 안 쓴다.
+     * 안 걸렸다는 조건 위에서만 굴리므로 당첨 확률에는 영향이 없다.
+     * 4명 기준 0.22 → 0.23 → 0.24 → 0.26 → 0.29 → 0.33 → 0.41. 마지막 회차는 늘 걸리므로 해당 없음.
+     */
+    function fakeChance(risk) {
+        return Math.min(0.6, FAKE_BASE + risk * FAKE_PER_RISK);
+    }
+
+    /**
+     * 다음 찌그러짐. 남은 여유(CRUSH_MAX - 지금)의 30~55% 를 먹는다.
+     * 걸린 회차도 같은 식으로 굴린다 — 깊이로는 결과를 못 읽어야 한다.
+     */
+    function rollCrush(from) {
+        return Math.min(CRUSH_MAX, from + (CRUSH_MAX - from) * (0.3 + Math.random() * 0.25));
+    }
+
     /** 위험도 문구. 숫자만 있으면 차갑다. */
     function dangerLabel(p) {
-        if (p >= 1) { return '확정'; }
+        // 마지막 회차는 실제로 100% 지만 '확정'이라고 쓰지 않는다. 답을 알려주는 문구는 긴장을 걷어간다.
+        if (p >= 1) { return '초위험'; }
         if (p < 0.15) { return '여유'; }
         if (p < 0.22) { return '슬슬'; }
         if (p < 0.40) { return '조심'; }
@@ -124,10 +155,16 @@
         total: 8,           // 이 판의 총 레버 횟수 = 인원 × 2
         presses: 0,         // 지금까지 당긴 횟수
         turn: 0,            // 0-based 참가자 번호
-        phase: 'setup',     // setup|ready|charge|jolt|hold|drop|settle|closecall|result|over
+        phase: 'setup',     // setup|ready|charge|jolt|hold|drop|push|squash|settle|closecall|result|over
         loser: null,
         dropMs: 400,
-        doomed: false       // 이번 클릭에 걸리는가. 로직 전용 — 화면에 절대 새지 않는다
+        doomed: false,      // 이번 클릭에 걸리는가. 로직 전용 — 화면에 절대 새지 않는다
+        fake: false,        // 이번 클릭이 첫 접촉(찌그러뜨리기만)인가. 역시 화면에 새지 않는다
+        contact: false,     // 턱이 수박에 닿은 채인가. 한번 닿으면 판이 끝날 때까지 안 올라온다
+        crush: 0,           // 찌그러진 정도 0~1. 접촉 뒤 레버마다 조금씩 커진다
+        crushFrom: 0,       // 이번 파고들기의 출발점
+        crushTo: 0,         // 이번 파고들기의 도착점 (뜸 전엔 화면에 미리 쓰지 않는다)
+        gapAfter: GAP_FULL  // 접촉 회차에서 게이지가 갈 간격
     };
 
     var canvas, ctx, dpr = 1, view = { w: 320, h: 380 };
@@ -149,6 +186,10 @@
         state.presses = 0;
         state.loser = null;
         state.doomed = false;
+        state.fake = false;
+        state.contact = false;
+        state.crush = 0; state.crushFrom = 0; state.crushTo = 0;
+        state.gapAfter = GAP_FULL;
         state.phase = 'ready';
         dust = []; juice = []; steam = []; confetti = [];
         shake = 0;
@@ -179,7 +220,8 @@
     /** 지금 화면이 가리켜야 할 "이미 끝난 회차 수". 하강 중에는 진행 중인 레버를 뺀다. */
     function shownDone() {
         var mid = state.phase === 'charge' || state.phase === 'jolt' ||
-                  state.phase === 'hold' || state.phase === 'drop';
+                  state.phase === 'hold' || state.phase === 'drop' ||
+                  state.phase === 'squash' || state.phase === 'push';
         return Math.max(0, state.presses - (mid ? 1 : 0));
     }
 
@@ -203,7 +245,13 @@
         var risk = hitChance(state.total - state.presses);
         state.presses += 1;
         state.doomed = Math.random() < risk;
-        state.gapTo = state.doomed ? 0 : rollGap(state.presses, state.total, state.gapFrom);
+        state.gapAfter = state.doomed ? 0 : rollGap(state.presses, state.total, state.gapFrom);
+        // 안 걸렸어도 일부는 끝까지 내려가 찌그러뜨린다. 걸린 회차와 하강 거리·시간이 같아진다.
+        state.fake = !state.doomed && !state.contact && Math.random() < fakeChance(risk);
+        state.gapTo = (state.doomed || state.fake || state.contact) ? 0 : state.gapAfter;
+        // 얼마나 더 파고들지도 여기서 정한다. 걸리든 안 걸리든 같은 식으로 굴린다
+        state.crushFrom = state.crush;
+        state.crushTo = rollCrush(state.crush);
 
         // 거리에 비례시키되 위험할수록 브레이크를 길게 끈다.
         // 후반에는 간격이 찔끔씩만 줄어서, 거리만으로 시간을 잡으면 툭툭 끊긴다.
@@ -228,11 +276,26 @@
                 setPhase('hold', HOLD_MS);
                 break;
             case 'hold':
+                if (state.contact) {
+                    // 이미 닿아 있다 — 내려올 거리가 없으니 바로 더 파고든다
+                    setPhase('push', PUSH_MS);
+                    sfx.grunt(PUSH_MS + SQUASH_MS);
+                    sfx.strain(PUSH_MS + SQUASH_MS);
+                    break;
+                }
                 setPhase('drop', state.dropMs);
                 sfx.hydraulic(state.dropMs);
                 break;
+            case 'push':
+                setPhase('squash', SQUASH_MS);
+                shake = 120;
+                burstDust(0.25);
+                break;
             case 'drop':
                 landed();
+                break;
+            case 'squash':
+                afterSquash();
                 break;
             case 'settle':
                 afterSettle();
@@ -247,8 +310,28 @@
     }
 
     function landed() {
-        state.gap = state.gapTo;
+        // 끝까지 내려왔다 — 터지든 버티든 먼저 찌그러뜨리고 뜸을 들인다. 여기선 아직 아무것도 모른다.
+        if (state.doomed || state.fake) {
+            setPhase('squash', SQUASH_MS);
+            shake = 160;
+            sfx.thud();
+            sfx.grunt(SQUASH_MS);
+            sfx.strain(SQUASH_MS);
+            burstDust(0.35);
+            syncHud();
+            return;
+        }
 
+        state.gap = state.gapTo;
+        setPhase('settle', SETTLE_MS);
+        shake = 150;
+        sfx.thud();
+        burstDust(0.45);
+        syncHud();
+    }
+
+    /** 뜸이 끝났다. 이제야 갈린다. */
+    function afterSquash() {
         if (state.doomed) {
             state.gap = 0;
             state.loser = state.turn + 1;
@@ -262,10 +345,13 @@
             return;
         }
 
+        // 버텼다 — 수박은 찌그러진 채 남고, 턱은 그대로다. 다음 사람이 이 위에서 이어받는다
+        state.contact = true;
+        state.crush = state.crushTo;
+        state.gap = state.gapAfter;
         setPhase('settle', SETTLE_MS);
-        shake = 150;
-        sfx.thud();
-        burstDust(0.45);
+        shake = 90;
+        sfx.creak();
         syncHud();
     }
 
@@ -343,19 +429,21 @@
         return Math.max(0, 1 - pulsePhase * 3.2);
     }
     // ── 파티클 ──────────────────────────────────────────────
+    /** 수박이 터진다 — 붉은 과육이 제일 많고, 검은 씨와 초록 껍질 조각이 섞여 튄다. */
     function burstJuice() {
         var g = geom();
-        var i, a, sp;
-        for (i = 0; i < 110; i++) {
+        var i, a, sp, roll;
+        for (i = 0; i < 130; i++) {
             a = Math.random() * Math.PI - Math.PI;
             sp = 90 + Math.random() * 430;
+            roll = Math.random();
             juice.push({
-                x: g.cx + (Math.random() - 0.5) * g.tomatoR * 2.1,
-                y: g.tomatoCy,
+                x: g.cx + (Math.random() - 0.5) * g.melonR * MELON_WIDE * 2.1,
+                y: g.melonCy,
                 vx: Math.cos(a) * sp * 1.5,
                 vy: Math.sin(a) * sp * 0.55 - 60,
-                r: 2 + Math.random() * 5,
-                seed: Math.random() < 0.12,
+                r: roll < 0.1 ? 4 + Math.random() * 6 : 2 + Math.random() * 5,
+                kind: roll < 0.1 ? 'rind' : (roll < 0.25 ? 'seed' : 'flesh'),
                 life: 0.7 + Math.random() * 0.8
             });
         }
@@ -366,7 +454,7 @@
         for (var i = 0; i < Math.round(26 * power) + 8; i++) {
             var side = Math.random() < 0.5 ? -1 : 1;
             dust.push({
-                x: g.cx + side * (g.tomatoR + Math.random() * view.w * 0.28),
+                x: g.cx + side * (g.melonR + Math.random() * view.w * 0.28),
                 y: g.floorTop - 2,
                 vx: side * (30 + Math.random() * 150) * power,
                 vy: -(20 + Math.random() * 90) * power,
@@ -383,7 +471,7 @@
             var side = i % 2 === 0 ? -1 : 1;
             steam.push({
                 x: g.cx + side * 26,
-                y: by - g.plateH - 6,
+                y: by - g.plateH - 2,
                 vx: side * (40 + Math.random() * 70),
                 vy: -8 - Math.random() * 24,
                 r: 4 + Math.random() * 6,
@@ -453,9 +541,10 @@
         var railW = Math.max(16, view.w * 0.062);
         var anvilH = 26;
         var floorTop = view.h - anvilH - 10;
-        var tomatoR = Math.max(21, Math.min(36, view.w * 0.095));
-        var tomatoTop = floorTop - tomatoR * 2;
-        var plateH = 24;
+        var melonR = Math.max(23, Math.min(40, view.w * 0.105));   // 세로 반지름. 가로는 MELON_WIDE 배
+        var melonTop = floorTop - melonR * 2;
+        var plateH = Math.round(Math.max(72, Math.min(110, view.h * 0.27)));   // 얼굴 높이. 턱 밑이 접촉면이다
+        var topY = beamH + plateH * 0.42;                                       // 시작 위치. 목·어깨가 보이게 조금 내려 둔다
         return {
             cx: view.w / 2,
             beamH: beamH,
@@ -466,12 +555,12 @@
             innerR: view.w - railW * 1.35,
             anvilH: anvilH,
             floorTop: floorTop,
-            tomatoR: tomatoR,
-            tomatoTop: tomatoTop,
-            tomatoCy: tomatoTop + tomatoR,
+            melonR: melonR,
+            melonTop: melonTop,
+            melonCy: melonTop + melonR,
             plateH: plateH,
-            topY: beamH,
-            travel: tomatoTop - (beamH + plateH)
+            topY: topY,
+            travel: melonTop - (topY + plateH)
         };
     }
 
@@ -482,12 +571,14 @@
         return 0.385 + 0.615 * (1 - Math.pow(1 - u, 3.4));
     }
 
-    /** 지금 프레스 바닥이 있어야 할 y. 목표 위치는 절대 미리 그리지 않는다. */
+    /** 지금 턱 밑(접촉면)이 있어야 할 y. 목표 위치는 절대 미리 그리지 않는다. */
     function plateBottomY() {
         var g = geom();
         var shown = state.gap;
 
-        if (state.phase === 'drop') {
+        if (state.contact || state.phase === 'squash' || state.phase === 'push') {
+            shown = 0;
+        } else if (state.phase === 'drop') {
             shown = state.gapFrom + (state.gapTo - state.gapFrom) * dropEase(phaseT());
         } else if (state.phase === 'charge') {
             shown = state.gapFrom + Math.sin(warnPhase * 46) * 0.22;
@@ -496,7 +587,32 @@
         }
 
         var ratio = Math.min(1, Math.max(0, shown / GAP_FULL));
-        return g.topY + g.plateH + g.travel * (1 - ratio);
+        return g.topY + g.plateH + g.travel * (1 - ratio) + pressDepth(g);
+    }
+
+    /**
+     * 턱이 수박을 파고든 깊이(px). 접촉 뒤에만 0 보다 크다.
+     * 찌그러뜨리는 동안 점점 깊어지며 떨리고, 버텼으면 올라오면서 빠르게 풀린다.
+     */
+    function pressDepth(g) {
+        var max = g.melonR * 0.32;
+        var crush = state.crush;
+        var tremble = 0;
+        if (state.phase === 'squash') {
+            var t = phaseT();
+            // 첫 접촉이면 0 에서 파고들고, 이미 닿아 있었으면 push 에서 도착한 깊이를 유지한다
+            crush = state.contact ? state.crushTo : state.crushTo * Math.min(1, t / 0.4);
+            tremble = t > 0.4 ? 1.6 : 0;
+        } else if (state.phase === 'push') {
+            var u = phaseT();
+            crush = state.crushFrom + (state.crushTo - state.crushFrom) * (1 - Math.pow(1 - u, 2.4));
+        } else if (state.phase === 'charge' && state.contact) {
+            tremble = 0.7;
+        } else if (state.phase === 'result' || state.phase === 'over') {
+            crush = 1;
+        }
+        if (reduceMotion) { tremble = 0; }
+        return max * crush + Math.sin(warnPhase * 58) * tremble;
     }
 
     function theme() {
@@ -561,10 +677,10 @@
 
         drawAnvil(t, g);
         drawGroundShadow(t, g);
-        drawTomato(g, risk);
+        drawMelon(g, risk);
         drawContactShadow(t, g);
         drawRails(t, g);
-        drawPress(t, g, risk);
+        drawHead(t, g, risk);
         drawBeam(t, g, risk);
         drawParticles();
 
@@ -632,17 +748,8 @@
         ctx.fillStyle = 'rgba(0,0,0,0.32)';
         ctx.fillRect(0, g.beamH - 3, view.w, 3);
 
-        // 유압 실린더 배럴
-        var bw = 46, bh = 26;
-        ctx.fillStyle = metalH(g.cx - bw / 2, bw, t);
-        roundRect(g.cx - bw / 2, g.beamH - 4, bw, bh, 4);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(g.cx - bw / 2, g.beamH + bh - 6);
-        ctx.lineTo(g.cx + bw / 2, g.beamH + bh - 6);
-        ctx.stroke();
+        // 몸통이 지나가는 자리. 예전엔 여기 유압 실린더가 있었다
+        var bw = 46;
 
         // 경고등 두 개 — 좌우가 번갈아 켜진다. 삐뽀삐뽀.
         var on = state.phase !== 'over' && state.phase !== 'setup';
@@ -663,89 +770,343 @@
         });
     }
 
-    function drawPress(t, g, risk) {
+    /*
+     * 턱 — 프레스 판 자리에 얼굴이 내려온다. 접촉면은 턱 밑바닥이다.
+     * 특정인을 닮게 그리지 않는다 (이름·사진·닮은꼴 전부 금지, 근거는 docs/plans/press.md).
+     * 표정은 risk 로만 조인다: 눈이 가늘어지고, 눈썹이 몰리고, 이를 악물고, 땀이 흐른다.
+     * 얼굴 좌표는 전부 by(턱 밑) 기준이라 내려오는 동안 그대로 따라온다.
+     */
+    function drawHead(t, g, risk) {
         var by = plateBottomY();
-        var top = by - g.plateH;
-        var rodTop = g.beamH + 20;
-        var rodW = 20;
+        // 터진 뒤 — 얼굴 전체가 일그러진다. 충격 직후에 제일 심하고 서서히 풀린다
+        var crushed = state.gap <= 0 && (state.phase === 'result' || state.phase === 'over');
+        var wince = crushed ? (state.phase === 'over' ? 0.55 : 0.55 + 0.45 * (1 - phaseT())) : 0;
+        var H = g.plateH;
+        var top = by - H;
+        var cx = g.cx;
+        var hw = Math.min((g.innerR - g.innerL) * 0.66, H * 1.28);   // 턱 폭 = 얼굴에서 제일 넓다
+        var fw = hw * 0.78;                                          // 이마 폭
+        var pushing = (state.phase === 'squash' || state.phase === 'push') ? 0.9
+                    : (state.contact ? 0.45 + state.crush * 0.3 : 0);   // 닿아 있는 동안은 계속 힘을 주고 있다
+        var strain = Math.max(risk, wince, pushing);                 // 표정의 세기
 
-        // 유압 로드
-        ctx.fillStyle = metalH(g.cx - rodW / 2, rodW, t);
-        ctx.fillRect(g.cx - rodW / 2, rodTop, rodW, Math.max(0, top - rodTop + 2));
+        ctx.save();
+        if (wince > 0) {
+            ctx.translate(cx, by);
+            ctx.scale(1 + wince * 0.1, 1 - wince * 0.12);
+            ctx.rotate((Math.random() - 0.5) * wince * 0.04);
+            ctx.translate(-cx, -by);
+        }
 
-        // 벨로우즈 주름 — 늘어난 만큼 성기게 벌어진다
-        var rodLen = Math.max(1, top - rodTop);
-        ctx.strokeStyle = 'rgba(0,0,0,0.34)';
-        ctx.lineWidth = 2;
-        for (var i = 1; i <= 7; i++) {
-            var fy = rodTop + rodLen * (i / 8);
+        // 몸통 — 검은 쫄쫄이. 머리 위로 목·어깨가 이어지고, 위쪽은 화면 밖으로 잘려 나간다.
+        // 몸이 통째로 내려오는 그림이라 "기계"가 아니라 "사람이 턱으로 누른다"로 읽힌다
+        var neckW = hw * 0.42, neckH = H * 0.22;
+        var shW = hw * 1.42;                                         // 어깨 폭
+        var shY = top - neckH;                                       // 어깨선
+        var suit = ctx.createLinearGradient(cx - shW / 2, 0, cx + shW / 2, 0);
+        suit.addColorStop(0, '#0b0b0d');
+        suit.addColorStop(0.35, '#26262b');
+        suit.addColorStop(0.5, '#33333a');
+        suit.addColorStop(0.65, '#26262b');
+        suit.addColorStop(1, '#0b0b0d');
+        ctx.fillStyle = suit;
+        // 팔 — 어깨에서 받침대까지. 손은 바닥을 짚고 있어 머리가 내려와도 자리가 안 바뀐다.
+        // 엎드려서 턱으로 누르는 자세는 이 팔 둘이 만든다
+        var handX = Math.min(g.innerR - hw * 0.2, g.melonR * MELON_WIDE + hw * 0.5);
+        var armW = Math.max(10, hw * 0.24);
+        ctx.strokeStyle = '#1a1a1e';
+        ctx.lineWidth = armW;
+        ctx.lineCap = 'round';
+        [-1, 1].forEach(function (sd) {
+            var sx = cx + sd * shW * 0.4, sy = shY - H * 0.1;
+            var hx = cx + sd * handX, hy = g.floorTop - armW * 0.5;
             ctx.beginPath();
-            ctx.moveTo(g.cx - rodW / 2 - 3, fy);
-            ctx.lineTo(g.cx + rodW / 2 + 3, fy);
+            ctx.moveTo(sx, sy);
+            // 팔꿈치가 바깥으로 살짝 굽는다
+            ctx.quadraticCurveTo(cx + sd * (handX + hw * 0.06), sy + (hy - sy) * 0.45, hx, hy);
+            ctx.stroke();
+        });
+        // 손 — 살색. 힘줄수록 붉다
+        ctx.fillStyle = strain > 0.4 ? '#e59a72' : '#efb48e';
+        [-1, 1].forEach(function (sd) {
+            ctx.beginPath();
+            ctx.ellipse(cx + sd * handX, g.floorTop - 4, armW * 0.62, armW * 0.42, 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 등이 위로 이어지다 화면 밖으로 나간다. 어깨는 둥글게, 목 쪽으로 파인다
+        ctx.fillStyle = suit;
+        ctx.beginPath();
+        ctx.moveTo(cx - shW * 0.44, -H);
+        ctx.lineTo(cx + shW * 0.44, -H);
+        ctx.lineTo(cx + shW * 0.46, shY - H * 0.5);
+        ctx.quadraticCurveTo(cx + shW / 2, shY - H * 0.08, cx + shW * 0.36, shY);
+        ctx.quadraticCurveTo(cx + shW * 0.2, shY + H * 0.05, cx + neckW / 2, top + H * 0.12);
+        ctx.lineTo(cx - neckW / 2, top + H * 0.12);
+        ctx.quadraticCurveTo(cx - shW * 0.2, shY + H * 0.05, cx - shW * 0.36, shY);
+        ctx.quadraticCurveTo(cx - shW / 2, shY - H * 0.08, cx - shW * 0.46, shY - H * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        // 등 가운데 솔기
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, -H);
+        ctx.lineTo(cx, shY - H * 0.05);
+        ctx.stroke();
+        // 목 — 살색. 힘줄이 선다
+        ctx.fillStyle = '#e9b48a';
+        ctx.fillRect(cx - neckW / 2, shY - 2, neckW, neckH + H * 0.12);
+        ctx.strokeStyle = 'rgba(120,60,30,' + (0.25 + strain * 0.5).toFixed(3) + ')';
+        ctx.lineWidth = 1.5;
+        [-0.3, 0.3].forEach(function (k) {
+            ctx.beginPath();
+            ctx.moveTo(cx + k * neckW, shY);
+            ctx.lineTo(cx + k * neckW * 0.8, top + H * 0.1);
+            ctx.stroke();
+        });
+
+        // 얼굴 윤곽 — 턱이 이마보다 넓은 역사다리꼴. 턱 밑은 판처럼 평평하다
+        function headPath() {
+            var cr = Math.min(12, H * 0.14);
+            ctx.beginPath();
+            ctx.moveTo(cx - hw / 2 + cr, by);
+            ctx.lineTo(cx + hw / 2 - cr, by);
+            ctx.quadraticCurveTo(cx + hw / 2, by, cx + hw / 2, by - cr);
+            ctx.lineTo(cx + hw / 2, by - H * 0.46);
+            ctx.bezierCurveTo(cx + hw / 2, by - H * 0.72, cx + fw / 2, by - H * 0.78, cx + fw / 2 * 0.92, top + H * 0.08);
+            ctx.quadraticCurveTo(cx, top - H * 0.04, cx - fw / 2 * 0.92, top + H * 0.08);
+            ctx.bezierCurveTo(cx - fw / 2, by - H * 0.78, cx - hw / 2, by - H * 0.72, cx - hw / 2, by - H * 0.46);
+            ctx.lineTo(cx - hw / 2, by - cr);
+            ctx.quadraticCurveTo(cx - hw / 2, by, cx - hw / 2 + cr, by);
+            ctx.closePath();
+        }
+
+        ctx.save();
+        headPath();
+        ctx.clip();
+
+        // 피부 — 힘줄수록 붉어진다
+        var skin = ctx.createLinearGradient(0, top, 0, by);
+        skin.addColorStop(0, '#f7d0ae');
+        skin.addColorStop(0.55, '#f0b98e');
+        skin.addColorStop(1, '#d99668');
+        ctx.fillStyle = skin;
+        ctx.fillRect(cx - hw, top - 4, hw * 2, H + 8);
+        if (strain > 0.15) {
+            ctx.fillStyle = 'rgba(220,60,60,' + ((strain - 0.15) * 0.42).toFixed(3) + ')';
+            ctx.fillRect(cx - hw, top - 4, hw * 2, H + 8);
+        }
+
+        // 쫄쫄이 두건 — 얼굴만 뚫려 있다. 이마 위와 양옆을 검은 천이 감싼다
+        ctx.fillStyle = '#141416';
+        ctx.beginPath();
+        ctx.moveTo(cx - hw, top - 8);
+        ctx.lineTo(cx + hw, top - 8);
+        ctx.lineTo(cx + hw, by - H * 0.16);
+        ctx.lineTo(cx + hw / 2 - hw * 0.06, by - H * 0.16);
+        ctx.lineTo(cx + hw / 2 - hw * 0.06, by - H * 0.46);
+        ctx.bezierCurveTo(cx + hw / 2 - hw * 0.06, by - H * 0.7, cx + fw * 0.44, top + H * 0.2, cx, top + H * 0.2);
+        ctx.bezierCurveTo(cx - fw * 0.44, top + H * 0.2, cx - hw / 2 + hw * 0.06, by - H * 0.7, cx - hw / 2 + hw * 0.06, by - H * 0.46);
+        ctx.lineTo(cx - hw / 2 + hw * 0.06, by - H * 0.16);
+        ctx.lineTo(cx - hw, by - H * 0.16);
+        ctx.closePath();
+        ctx.fill();
+        // 천 가장자리 — 얼굴 구멍 테두리
+        ctx.strokeStyle = 'rgba(70,70,80,0.9)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + hw / 2 - hw * 0.06, by - H * 0.46);
+        ctx.bezierCurveTo(cx + hw / 2 - hw * 0.06, by - H * 0.7, cx + fw * 0.44, top + H * 0.2, cx, top + H * 0.2);
+        ctx.bezierCurveTo(cx - fw * 0.44, top + H * 0.2, cx - hw / 2 + hw * 0.06, by - H * 0.7, cx - hw / 2 + hw * 0.06, by - H * 0.46);
+        ctx.stroke();
+
+        // 볼 홍조 — 위험할수록 진하다
+        var cheekY = by - H * 0.36;
+        [-1, 1].forEach(function (s) {
+            var ccx = cx + s * hw * 0.3;
+            var rg = ctx.createRadialGradient(ccx, cheekY, 1, ccx, cheekY, hw * 0.16);
+            rg.addColorStop(0, 'rgba(239,68,68,' + (0.12 + strain * 0.42).toFixed(3) + ')');
+            rg.addColorStop(1, 'rgba(239,68,68,0)');
+            ctx.fillStyle = rg;
+            ctx.fillRect(ccx - hw * 0.16, cheekY - hw * 0.16, hw * 0.32, hw * 0.32);
+        });
+
+        // 턱 밑 그늘 — 턱이 툭 튀어나온 느낌은 이 그늘이 만든다
+        var jawShade = ctx.createLinearGradient(0, by - H * 0.24, 0, by);
+        jawShade.addColorStop(0, 'rgba(120,60,30,0)');
+        jawShade.addColorStop(1, 'rgba(120,60,30,0.38)');
+        ctx.fillStyle = jawShade;
+        ctx.fillRect(cx - hw, by - H * 0.24, hw * 2, H * 0.24);
+        // 수염 자국 — 턱을 넓게 읽히게 한다
+        ctx.fillStyle = 'rgba(40,30,25,0.22)';
+        for (var sx = -hw * 0.44; sx <= hw * 0.44; sx += hw * 0.075) {
+            for (var sy = by - H * 0.2; sy < by - 3; sy += H * 0.055) {
+                var jit = Math.sin(sx * 7.1 + sy * 3.3) * 1.2;
+                ctx.beginPath();
+                ctx.arc(cx + sx + jit, sy + jit * 0.6, 1.1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        // 턱 보조개
+        ctx.strokeStyle = 'rgba(120,60,30,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, by - H * 0.11);
+        ctx.lineTo(cx, by - H * 0.03);
+        ctx.stroke();
+
+        // 눈썹 — 힘줄수록 안쪽이 내려와 미간이 모인다
+        var browY = top + H * 0.34;
+        ctx.strokeStyle = '#2b2422';
+        ctx.lineWidth = Math.max(3, H * 0.05);
+        ctx.lineCap = 'round';
+        [-1, 1].forEach(function (s) {
+            ctx.beginPath();
+            ctx.moveTo(cx + s * hw * 0.09, browY + strain * H * 0.07);
+            ctx.lineTo(cx + s * hw * 0.32, browY - H * 0.03);
+            ctx.stroke();
+        });
+        // 미간 주름
+        if (strain > 0.3) {
+            ctx.strokeStyle = 'rgba(120,60,30,' + ((strain - 0.3) * 1.1).toFixed(3) + ')';
+            ctx.lineWidth = 1.5;
+            [-1, 1].forEach(function (s) {
+                ctx.beginPath();
+                ctx.moveTo(cx + s * hw * 0.04, browY - H * 0.02);
+                ctx.lineTo(cx + s * hw * 0.03, browY + H * 0.08);
+                ctx.stroke();
+            });
+        }
+
+        // 눈 — 아래(수박)를 내려다본다. 힘줄수록 가늘어지고, 터지면 꽉 감는다
+        var eyeY = top + H * 0.46;
+        var eyeRx = hw * 0.085, eyeRy = Math.max(1.4, hw * 0.058 * (1 - strain * 0.6));
+        [-1, 1].forEach(function (s) {
+            var ex = cx + s * hw * 0.2;
+            if (wince > 0) {
+                ctx.strokeStyle = '#2b2422';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(ex - eyeRx, eyeY - eyeRx * 0.5);
+                ctx.lineTo(ex + s * eyeRx * 0.1, eyeY + eyeRx * 0.2);
+                ctx.lineTo(ex + eyeRx, eyeY - eyeRx * 0.5);
+                ctx.stroke();
+                return;
+            }
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(ex, eyeY, eyeRx, eyeRy, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1b1b22';
+            ctx.beginPath();
+            ctx.ellipse(ex - s * eyeRx * 0.15, eyeY + eyeRy * 0.35, eyeRx * 0.42, Math.max(1.2, eyeRy * 0.8), 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 코 — 콧구멍 둘
+        ctx.fillStyle = 'rgba(120,60,30,0.55)';
+        [-1, 1].forEach(function (s) {
+            ctx.beginPath();
+            ctx.ellipse(cx + s * hw * 0.05, top + H * 0.6, hw * 0.022, hw * 0.014, 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 입 — 이를 악물고 있다. 힘줄수록 옆으로 벌어지며 이가 더 드러난다
+        var mouthY = top + H * 0.75;
+        var mw = hw * (0.3 + strain * 0.18), mh = H * (0.06 + strain * 0.05 + wince * 0.12);
+        ctx.fillStyle = '#5a1a1a';
+        roundRect(cx - mw / 2, mouthY - mh / 2, mw, mh, mh / 2);
+        ctx.fill();
+        ctx.save();
+        roundRect(cx - mw / 2 + 1.5, mouthY - mh / 2 + 1.5, mw - 3, mh - 3, (mh - 3) / 2);
+        ctx.clip();
+        ctx.fillStyle = '#fbfbf6';
+        ctx.fillRect(cx - mw / 2, mouthY - mh / 2, mw, mh);
+        ctx.strokeStyle = 'rgba(60,40,40,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - mw / 2, mouthY);
+        ctx.lineTo(cx + mw / 2, mouthY);
+        for (var tx = -mw / 2 + mw / 7; tx < mw / 2; tx += mw / 7) {
+            ctx.moveTo(cx + tx, mouthY - mh / 2);
+            ctx.lineTo(cx + tx, mouthY + mh / 2);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 이마 핏줄 — 위험 구간부터
+        if (strain >= 0.4) {
+            ctx.strokeStyle = 'rgba(110,70,140,' + (Math.min(1, (strain - 0.4) * 1.6) * 0.75).toFixed(3) + ')';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx + hw * 0.34, top + H * 0.22);
+            ctx.lineTo(cx + hw * 0.38, top + H * 0.28);
+            ctx.lineTo(cx + hw * 0.33, top + H * 0.33);
+            ctx.lineTo(cx + hw * 0.37, top + H * 0.39);
             ctx.stroke();
         }
 
-        // 프레스 판 본체
-        var pw = g.innerR - g.innerL;
-        ctx.fillStyle = metalV(top, g.plateH, t);
-        ctx.fillRect(g.innerL, top, pw, g.plateH);
-        ctx.fillStyle = 'rgba(255,255,255,0.22)';
-        ctx.fillRect(g.innerL, top, pw, 3);
-
-        // 가이드 슈 — 레일을 물고 내려온다
-        ctx.fillStyle = t.mDark;
-        ctx.fillRect(g.railL, top + 2, g.railW, g.plateH - 4);
-        ctx.fillRect(g.railR, top + 2, g.railW, g.plateH - 4);
-
-        // 리벳
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        for (var x = g.innerL + 18; x < g.innerR - 10; x += 34) {
-            ctx.beginPath();
-            ctx.arc(x, top + 8, 2.2, 0, Math.PI * 2);
-            ctx.fill();
+        // 땀 — 관자놀이에서 흘러내린다. 경보 클럭과 같은 시계를 쓴다
+        if (strain > 0.2 && state.phase !== 'over') {
+            var n = strain >= 0.4 ? 3 : 1;
+            for (var k = 0; k < n; k++) {
+                var side = k % 2 ? -1 : 1;
+                var run = ((warnPhase * (0.5 + strain * 0.8) + k * 0.37) % 1);
+                var dyy = top + H * 0.28 + run * H * 0.45;
+                var dxx = cx + side * hw * (0.4 - k * 0.05);
+                ctx.fillStyle = 'rgba(125,200,255,0.85)';
+                ctx.beginPath();
+                ctx.moveTo(dxx, dyy - 5);
+                ctx.quadraticCurveTo(dxx + 3.2, dyy, dxx, dyy + 3);
+                ctx.quadraticCurveTo(dxx - 3.2, dyy, dxx, dyy - 5);
+                ctx.fill();
+            }
         }
 
-        // 하단 경고 사선 — 산업 기계의 시각적 서명
-        var sh = 7, sy = by - sh;
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(g.innerL, sy, pw, sh);
-        ctx.clip();
-        ctx.fillStyle = risk >= 0.40 ? '#ef4444' : '#f5c518';
-        ctx.fillRect(g.innerL, sy, pw, sh);
-        ctx.fillStyle = 'rgba(20,20,24,0.92)';
-        for (var s = g.innerL - sh; s < g.innerR + sh; s += 16) {
-            ctx.beginPath();
-            ctx.moveTo(s, by);
-            ctx.lineTo(s + sh, sy);
-            ctx.lineTo(s + sh + 8, sy);
-            ctx.lineTo(s + 8, by);
-            ctx.closePath();
-            ctx.fill();
+        // 터진 뒤 — 턱에 튄 과즙
+        if (state.gap <= 0 && (state.phase === 'result' || state.phase === 'over')) {
+            ctx.fillStyle = 'rgba(220,38,38,0.9)';
+            [[-0.3, 0.06, 0.09], [0.12, 0.1, 0.12], [0.36, 0.05, 0.07], [-0.05, 0.22, 0.06], [0.24, 0.3, 0.05]].forEach(function (b) {
+                ctx.beginPath();
+                ctx.ellipse(cx + b[0] * hw, by - b[1] * H, hw * b[2], hw * b[2] * 0.7, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            });
         }
+
         ctx.restore();
 
+        // 윤곽선
+        headPath();
+        ctx.strokeStyle = 'rgba(60,30,20,0.55)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 턱 밑 접촉면 그림자
         ctx.fillStyle = 'rgba(0,0,0,0.35)';
-        ctx.fillRect(g.innerL, by, pw, 2);
+        ctx.fillRect(cx - hw / 2 + 6, by, hw - 12, 2);
+
+        ctx.restore();
     }
 
     /** 프레스가 가까울수록 짙고 좁아진다. 거리감은 그림자가 만든다. */
     function drawContactShadow(t, g) {
         if (state.gap <= 0 && state.phase !== 'drop') { return; }
         var by = plateBottomY();
-        var d = Math.max(0, g.tomatoTop - by);
+        var d = Math.max(0, g.melonTop - by);
         var near = 1 - Math.min(1, d / 150);
         if (near <= 0.02) { return; }
 
-        var rx = g.tomatoR * (1.5 - near * 0.55);
-        var ry = g.tomatoR * (0.42 - near * 0.16);
+        var rx = g.melonR * MELON_WIDE * (1.4 - near * 0.5);
+        var ry = g.melonR * (0.42 - near * 0.16);
         var rg = ctx.createRadialGradient(0, 0, 1, 0, 0, rx);
         rg.addColorStop(0, t.shadow);
         rg.addColorStop(1, 'rgba(0,0,0,0)');
 
         ctx.save();
         ctx.globalAlpha = near * 0.6;
-        ctx.translate(g.cx, g.tomatoTop + 4);
+        ctx.translate(g.cx, g.melonTop + 4);
         ctx.scale(1, ry / rx);
         ctx.fillStyle = rg;
         ctx.beginPath();
@@ -788,15 +1149,25 @@
         });
     }
 
-    function drawTomato(g, risk) {
-        if (state.gap <= 0 && (state.phase === 'result' || state.phase === 'over')) { return; }
+    /*
+     * 수박 — 당하는 쪽의 얼굴. 위험할수록 눈이 커지고 위를 올려다본다.
+     * 옆으로 긴 타원이라 턱이 닿는 접촉면이 넓고, 눌리면 더 납작해진다.
+     */
+    function drawMelon(g, risk) {
+        if (state.gap <= 0 && (state.phase === 'result' || state.phase === 'over')) {
+            drawMelonWreck(g);
+            return;
+        }
 
         var by = plateBottomY();
-        var d = Math.max(0, g.tomatoTop - by);
+        var d = Math.max(0, g.melonTop - by);
         var near = 1 - Math.min(1, d / 120);
-        var squash = 1 - near * 0.14;
-        var r = g.tomatoR;
-        var cx = g.cx, cy = g.tomatoCy;
+        var r = g.melonR;
+        var depth = Math.max(0, by - g.melonTop);                  // 턱이 파고든 깊이
+        var crush = Math.min(1, depth / (r * 0.32));               // 0~1. 찌그러진 정도
+        var squash = 1 - near * 0.14 - crush * 0.2;
+        var rx = r * MELON_WIDE;
+        var cx = g.cx, cy = g.melonCy;
 
         // 겁먹은 떨림
         if (!reduceMotion && risk > 0.22) {
@@ -808,30 +1179,72 @@
         ctx.translate(cx, cy + r * (1 - squash));
         ctx.scale(1 + (1 - squash) * 0.7, squash);
 
-        var rg = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.15, 0, 0, r * 1.15);
-        rg.addColorStop(0, '#fb7185');
-        rg.addColorStop(0.45, '#ef4444');
-        rg.addColorStop(1, '#a41c1c');
+        // 껍질 — 진녹색 바탕
+        var rg = ctx.createRadialGradient(-rx * 0.3, -r * 0.35, r * 0.2, 0, 0, rx * 1.1);
+        rg.addColorStop(0, '#4ade80');
+        rg.addColorStop(0.5, '#16a34a');
+        rg.addColorStop(1, '#14532d');
         ctx.fillStyle = rg;
         ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rx, r, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // 줄무늬 — 세로로 굽은 띠. 타원 안에서만 그린다
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, r, 0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(20,60,30,0.75)';
+        ctx.lineWidth = r * 0.16;
+        ctx.lineCap = 'round';
+        for (var i = -2; i <= 2; i++) {
+            var sx = i * rx * 0.36;
+            ctx.beginPath();
+            ctx.moveTo(sx - r * 0.12, -r * 1.1);
+            ctx.bezierCurveTo(sx + r * 0.22, -r * 0.4, sx - r * 0.22, r * 0.4, sx + r * 0.12, r * 1.1);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // 금 — 찌그러질수록 껍질에 금이 번진다. 터질지 버틸지는 이걸로 알 수 없다
+        if (crush > 0.05) {
+            ctx.strokeStyle = 'rgba(15,40,20,' + (0.5 + crush * 0.5).toFixed(3) + ')';
+            ctx.lineWidth = 1.6 + crush * 1.2;
+            ctx.lineCap = 'round';
+            [[-0.55, -0.6, -0.2, 0.1, -0.45, 0.55], [0.5, -0.5, 0.25, 0.05, 0.6, 0.5], [0.05, -0.9, -0.1, -0.4, 0.15, -0.1]].forEach(function (c, i) {
+                var len = Math.min(1, crush * (1.6 - i * 0.3));
+                if (len <= 0) { return; }
+                ctx.beginPath();
+                ctx.moveTo(c[0] * rx, c[1] * r);
+                ctx.lineTo(c[0] * rx + (c[2] - c[0]) * rx * len, c[1] * r + (c[3] - c[1]) * r * len);
+                if (len > 0.6) { ctx.lineTo(c[2] * rx + (c[4] - c[2]) * rx * (len - 0.6) / 0.4, c[3] * r + (c[5] - c[3]) * r * (len - 0.6) / 0.4); }
+                ctx.stroke();
+            });
+            // 눌린 자리에서 과즙이 살짝 배어 나온다
+            ctx.fillStyle = 'rgba(225,29,72,' + (crush * 0.85).toFixed(3) + ')';
+            [-1, 1].forEach(function (sd) {
+                ctx.beginPath();
+                ctx.ellipse(sd * rx * 0.55, -r * 0.55, r * 0.09 * crush + 0.5, r * 0.16 * crush + 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
 
         // 광택
         ctx.save();
-        ctx.translate(-r * 0.34, -r * 0.38);
-        ctx.rotate(-0.5);
-        ctx.scale(1, 0.62);
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.translate(-rx * 0.4, -r * 0.42);
+        ctx.rotate(-0.4);
+        ctx.scale(1.4, 0.55);
+        ctx.fillStyle = 'rgba(255,255,255,0.32)';
         ctx.beginPath();
         ctx.arc(0, 0, r * 0.26, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // 눈 — 위험할수록 커지고 위를 올려다본다
-        var eyeR = r * (0.17 + risk * 0.07);
-        var lookUp = -eyeR * (0.15 + risk * 0.4);
-        [-r * 0.33, r * 0.33].forEach(function (ex) {
+        // 눈 — 위험할수록 커지고 위를 올려다본다. 찌그러질 땐 최대치
+        var fear = Math.max(risk, crush);
+        var eyeR = r * (0.17 + fear * 0.07);
+        var lookUp = -eyeR * (0.15 + fear * 0.4);
+        [-rx * 0.28, rx * 0.28].forEach(function (ex) {
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(ex, -r * 0.05, eyeR, 0, Math.PI * 2);
@@ -845,28 +1258,47 @@
         // 입 — 위험하면 벌어진다
         ctx.fillStyle = '#7f1d1d';
         ctx.beginPath();
-        ctx.ellipse(0, r * 0.42, r * (0.1 + risk * 0.1), r * (0.06 + risk * 0.14), 0, 0, Math.PI * 2);
+        ctx.ellipse(0, r * 0.42, r * (0.1 + fear * 0.12), r * (0.06 + fear * 0.16), 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // 꼭지 — 다섯 갈래
+        // 꼭지 — 짧게 말린 줄기
         ctx.save();
-        ctx.translate(cx, cy - r * 0.94 + r * (1 - squash) * 1.2);
-        ctx.fillStyle = '#16a34a';
-        for (var i = 0; i < 5; i++) {
-            ctx.save();
-            ctx.rotate((i / 5) * Math.PI * 2);
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(-r * 0.16, -r * 0.1);
-            ctx.lineTo(0, -r * 0.42);
-            ctx.lineTo(r * 0.16, -r * 0.1);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-        }
+        ctx.translate(cx, cy - r * 0.96 + r * (1 - squash) * 1.2);
+        ctx.strokeStyle = '#3f6212';
+        ctx.lineWidth = Math.max(2.5, r * 0.11);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 2);
+        ctx.quadraticCurveTo(r * 0.05, -r * 0.22, r * 0.26, -r * 0.3);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    /** 터지고 남은 것 — 납작해진 껍질 위로 붉은 과육이 퍼져 있다. 파티클이 사라져도 이건 남는다. */
+    function drawMelonWreck(g) {
+        var r = g.melonR, rx = r * MELON_WIDE;
+        var cy = g.floorTop - 3;
+        ctx.save();
+        ctx.translate(g.cx, cy);
         ctx.fillStyle = '#15803d';
-        ctx.fillRect(-2, -r * 0.34, 4, r * 0.3);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx * 1.55, r * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#e11d48';
+        ctx.beginPath();
+        ctx.ellipse(0, -1, rx * 1.3, r * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fda4af';
+        ctx.beginPath();
+        ctx.ellipse(-rx * 0.3, -3, rx * 0.5, r * 0.07, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1c1917';
+        [-0.9, -0.5, -0.1, 0.35, 0.7, 1.1].forEach(function (k, i) {
+            ctx.beginPath();
+            ctx.ellipse(k * rx, (i % 2 ? -2 : 1), 2.2, 1.4, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        });
         ctx.restore();
     }
 
@@ -891,7 +1323,7 @@
         for (i = 0; i < juice.length; i++) {
             p = juice[i];
             ctx.globalAlpha = Math.min(1, p.life);
-            ctx.fillStyle = p.seed ? '#fde68a' : (i % 5 === 0 ? '#fca5a5' : '#dc2626');
+            ctx.fillStyle = p.kind === 'seed' ? '#1c1917' : (p.kind === 'rind' ? '#15803d' : (i % 5 === 0 ? '#fda4af' : '#e11d48'));
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
             ctx.fill();
@@ -949,7 +1381,7 @@
             o.connect(gn); gn.connect(a.destination);
             o.start(t0); o.stop(t0 + dur + 0.02);
         }
-        function noise(dur, vol, shape) {
+        function noise(dur, vol, shape, cutoff) {
             if (muted) { return; }
             var a = ac(); if (!a) { return; }
             var n = Math.max(1, Math.floor(a.sampleRate * dur));
@@ -957,13 +1389,13 @@
             var d = buf.getChannelData(0);
             for (var i = 0; i < n; i++) {
                 var k = i / n;
-                var env = shape === 'up' ? k : (shape === 'flat' ? 0.7 : (1 - k));
+                var env = shape === 'up' ? k : (shape === 'flat' ? 0.7 : (shape === 'wet' ? (1 - k) * (1 - k) : (1 - k)));
                 d[i] = (Math.random() * 2 - 1) * env;
             }
             var src = a.createBufferSource(), gn = a.createGain(), f = a.createBiquadFilter();
             src.buffer = buf;
             f.type = 'lowpass';
-            f.frequency.setValueAtTime(shape === 'up' ? 900 : 2400, a.currentTime);
+            f.frequency.setValueAtTime(cutoff || (shape === 'up' ? 900 : 2400), a.currentTime);
             gn.gain.setValueAtTime(vol || 0.2, a.currentTime);
             src.connect(f); f.connect(gn); gn.connect(a.destination);
             src.start();
@@ -990,15 +1422,54 @@
             },
             thud: function () { noise(0.16, 0.2); tone(96, 0.18, 'sine', 0.14, 52); },
             creak: function () { tone(300, 0.5, 'sawtooth', 0.045, 170); },
+            // 찌그러뜨리는 동안 — 껍질이 삐걱대며 버티는 소리. 음이 올라가며 조인다
+            /**
+             * 으으으윽 — 목소리. 톱니파를 목구멍(밴드패스)으로 걸러 낮게 울리고,
+             * 떨림(비브라토)을 얹어 힘주는 소리로 만든다. 음이 천천히 올라가며 조인다.
+             */
+            grunt: function (ms) {
+                if (muted) { return; }
+                var a = ac(); if (!a) { return; }
+                var t0 = a.currentTime, s = ms / 1000;
+                var o = a.createOscillator(), lfo = a.createOscillator(), lg = a.createGain();
+                var f = a.createBiquadFilter(), gn = a.createGain();
+                o.type = 'sawtooth';
+                o.frequency.setValueAtTime(98, t0);
+                o.frequency.linearRampToValueAtTime(150, t0 + s);
+                lfo.type = 'sine';
+                lfo.frequency.setValueAtTime(7, t0);
+                lfo.frequency.linearRampToValueAtTime(11, t0 + s);
+                lg.gain.setValueAtTime(6, t0);
+                lfo.connect(lg); lg.connect(o.frequency);
+                f.type = 'bandpass';
+                f.frequency.setValueAtTime(420, t0);           // "으" 의 목구멍
+                f.frequency.linearRampToValueAtTime(560, t0 + s);
+                f.Q.setValueAtTime(3.5, t0);
+                gn.gain.setValueAtTime(0.0001, t0);
+                gn.gain.exponentialRampToValueAtTime(0.16, t0 + 0.08);
+                gn.gain.setValueAtTime(0.16, t0 + s * 0.8);
+                gn.gain.exponentialRampToValueAtTime(0.0001, t0 + s);
+                o.connect(f); f.connect(gn); gn.connect(a.destination);
+                o.start(t0); lfo.start(t0);
+                o.stop(t0 + s + 0.02); lfo.stop(t0 + s + 0.02);
+            },
+            strain: function (ms) {
+                var s = ms / 1000;
+                tone(120, s, 'sawtooth', 0.06, 210);
+                noise(s, 0.05, 'up', 1800);
+                tone(1500, 0.08, 'square', 0.02, 900, s * 0.55);
+            },
             relief: function () { tone(520, 0.1, 'sine', 0.04); tone(760, 0.1, 'sine', 0.03, null, 0.07); },
             heart: function () {
                 tone(58, 0.11, 'sine', 0.11, 40);
                 tone(52, 0.1, 'sine', 0.07, 36, 0.15);
             },
+            // 수박이 깨진다 — 껍질이 쩍(마른 고음) → 과육이 철퍽(젖은 저음) → 바닥 울림
             smash: function () {
-                noise(0.7, 0.36);
-                tone(72, 0.6, 'sawtooth', 0.22, 34);
-                tone(180, 0.3, 'square', 0.08, 60, 0.03);
+                noise(0.07, 0.5, null, 7000);
+                noise(0.9, 0.34, 'wet', 1100);
+                tone(60, 0.55, 'sine', 0.26, 28);
+                tone(140, 0.25, 'square', 0.06, 50, 0.04);
             },
             /**
              * 한 박. 경보 클럭이 부른다.
@@ -1142,6 +1613,7 @@
             baseGap: baseGap,
             rollGap: rollGap,
             dangerLabel: dangerLabel,
+            fakeChance: fakeChance,
             pressureOf: pressureOf,
             simulate: simulate,
             GAP_FULL: GAP_FULL,
@@ -1152,7 +1624,7 @@
 
     // ── 공유 ────────────────────────────────────────────────
     var SHARE_URL = 'https://game.binaryworld.kr/press';
-    var SHARE_TITLE = '압력 프레스';
+    var SHARE_TITLE = '턱압프레스';
     var SHARE_DESC = '한 번만 더 당겨보세요. 커피내기·점심내기·벌칙뽑기 복불복 게임!';
 
     window.shareTwitter = function shareTwitter() {

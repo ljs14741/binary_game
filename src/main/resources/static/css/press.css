@@ -323,6 +323,15 @@
   padding-left: 1.1rem;
 }
 
+/* 출처 고지 — 밈 언급과 "공식 아님" 을 한 줄로. 눈에 띄되 본문보다 한 톤 낮게 */
+.bw-press-origin {
+  margin: 0.8rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--bw-muted);
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bw-press-gauge-fill,
   .bw-press-lever,

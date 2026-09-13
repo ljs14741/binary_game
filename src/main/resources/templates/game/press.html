@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>압력 프레스 – 누를수록 내려온다 | 벌칙게임·복불복 | Binary World</title>
+    <title>턱압프레스 – 조진세 턱압프레스가 생각나는 수박 복불복 룰렛 | 벌칙게임 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <meta name="description" content="레버를 당길 때마다 프레스가 내려옵니다. 안전한 순간은 없습니다. 간격과 걸릴 확률이 다 보여서 조여드는 게 눈에 읽히는 복불복 게임. 커피내기·점심내기·벌칙뽑기에 딱.">
-    <meta name="keywords" content="압력 프레스, 벌칙게임, 복불복게임, 내기게임, 랜덤 벌칙 뽑기, 커피내기, 점심내기, 벌칙뽑기, 파티게임, Binary World">
+    <meta name="description" content="조진세의 턱압프레스가 생각나는 벌칙 게임. 레버를 당길 때마다 검은 쫄쫄이 사나이의 턱이 유압프레스처럼 내려와 수박을 찌그러뜨립니다. 언제 터질지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱.">
+    <meta name="keywords" content="턱압프레스, 조진세 턱압프레스, 턱으로 수박 깨기, 수박 복불복, 턱압 프레스, 유압프레스 게임, 압력프레스 게임, 프레스 게임, 프레스 룰렛, 벌칙게임, 복불복게임, 내기게임, 랜덤 벌칙 뽑기, 커피내기, 점심내기, 벌칙뽑기, 파티게임, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="압력 프레스 – 누를수록 내려온다 | Binary World">
-    <meta property="og:description" content="안전한 순간은 없습니다. 조여드는 게 눈에 보이는 복불복 게임.">
+    <meta property="og:title" content="턱압프레스 – 당길수록 턱이 내려온다 | Binary World">
+    <meta property="og:description" content="턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 복불복 룰렛.">
     <meta property="og:image" content="https://game.binaryworld.kr/img/press.png">
     <meta property="og:url" content="https://game.binaryworld.kr/press">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="압력 프레스 – 누를수록 내려온다 | Binary World">
-    <meta name="twitter:description" content="안전한 순간은 없습니다. 조여드는 게 눈에 보이는 복불복 게임.">
+    <meta name="twitter:title" content="턱압프레스 – 당길수록 턱이 내려온다 | Binary World">
+    <meta name="twitter:description" content="턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 복불복 룰렛.">
     <meta name="twitter:image" content="https://game.binaryworld.kr/img/press.png">
 
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
@@ -31,10 +31,10 @@
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "압력 프레스",
-      "alternateName": ["프레스 복불복", "벌칙게임", "복불복게임"],
+      "name": "턱압프레스",
+      "alternateName": ["턱압 프레스", "턱압프레스 룰렛", "압력 프레스", "유압프레스 게임", "프레스 룰렛", "벌칙게임", "복불복게임"],
       "url": "https://game.binaryworld.kr/press",
-      "description": "누를 때마다 프레스가 내려온다. 안전 확정 구간이 없어 첫 레버부터 끝까지 긴장이 유지되는 복불복 게임.",
+      "description": "조진세 턱압프레스에서 영감을 받아 만든 수박 복불복 룰렛. 레버를 당길 때마다 턱이 유압프레스처럼 내려와 수박을 찌그러뜨리고, 안전 확정 구간이 없어 첫 레버부터 끝까지 긴장이 유지된다.",
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
@@ -72,8 +72,8 @@
         <a href="/" class="back-btn">← 게임 목록</a>
     </div>
 
-    <h1 class="game-title">압력 프레스</h1>
-    <p class="game-desc">레버를 당길 때마다 프레스가 내려옵니다. 언제 끝까지 내려올지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+    <h1 class="game-title">턱압프레스</h1>
+    <p class="game-desc">레버를 당길 때마다 턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
 
     <div class="bw-press-setup" id="press-setup">
         <div class="bw-press-field">
@@ -99,7 +99,7 @@
         </div>
 
         <div class="bw-press-stage" id="press-stage">
-            <canvas id="press-canvas" aria-label="프레스 화면" role="img"></canvas>
+            <canvas id="press-canvas" aria-label="턱압프레스 화면" role="img"></canvas>
 
             <div class="bw-press-result" id="press-result" role="status" aria-live="polite" hidden>
                 <div class="bw-press-result-card">
@@ -117,7 +117,7 @@
                 <div class="bw-press-gauge-fill" id="press-gauge-fill"></div>
             </div>
             <div class="bw-press-readout">
-                <span class="bw-press-stat">압력 <b id="press-pressure">1.2</b> MPa</span>
+                <span class="bw-press-stat">턱압 <b id="press-pressure">1.2</b> MPa</span>
                 <span class="bw-press-stat bw-press-stat-risk"><em class="bw-press-tag" id="press-danger">여유</em></span>
             </div>
         </div>
@@ -136,11 +136,12 @@
         <ol>
             <li>인원을 고르고 <strong>프레스 켜기</strong>를 누릅니다.</li>
             <li>한 명씩 돌아가며 <strong>레버 당기기</strong>를 누릅니다.</li>
-            <li>누를 때마다 프레스가 <strong>랜덤한 만큼</strong> 내려옵니다. 언제 끝까지 내려올지는 아무도 모릅니다.</li>
+            <li>누를 때마다 턱이 <strong>랜덤한 만큼</strong> 내려옵니다. 언제 끝까지 내려올지는 아무도 모릅니다.</li>
             <li><strong>순서에 유불리는 없습니다.</strong> 먼저 당기든 나중에 당기든 걸릴 확률은 똑같습니다.</li>
-            <li>프레스가 토마토에 닿으면 그때 레버를 당긴 사람이 벌칙입니다.</li>
+            <li>턱이 수박에 닿으면 그때 레버를 당긴 사람이 벌칙입니다.</li>
         </ol>
         <p>운으로만 정해집니다. 레버를 당기는 것 말고 할 수 있는 일은 없습니다.</p>
+        <p class="bw-press-origin">조진세 <strong>턱압프레스</strong>에서 영감을 받아 만든 게임입니다. 유압프레스·압력프레스로 뭘 눌러 부수는 영상을 좋아한다면 이 게임도 맞을 겁니다.</p>
     </section>
 </div>
 
