@@ -10,7 +10,8 @@ import { CameraFx } from '../engine/CameraFx.js';
 import { Feedback } from '../engine/Feedback.js';
 import { buildRoom } from '../stages/common.js';
 import { BRICK_W, BRICK_H, GLASS_W, GLASS_H, CHIM_W, CHIM_H, PLANK_W, PLANK_H } from '../art/textures.js';
-import { DPR } from '../art/dpr.js';
+import { DPR, logical, hud } from '../art/dpr.js';
+import { keyHint } from './keys.js';
 import { P, css } from '../art/palette.js';
 
 const KINDS = [
@@ -39,6 +40,19 @@ export class Toy extends Phaser.Scene {
     this.cameras.main.setZoom(DPR).centerOn(this.current.left + 60, this.floorY - 300);
     this.fx.setBanner('마음껏 부숴!', css(P.accent));
     this.time.delayedCall(1500, () => this.fx.setBanner(''));
+
+    // 조작법 안내. 판정 없는 모드라 처음 잠깐만 띄우고 사라진다 (제목·스테이지와 같은 그림).
+    {
+      const { W, H } = logical(this);
+      const p = hud(this, W / 2, H - 130);
+      this.keyHintUi = keyHint(this, p.x, p.y, { scale: 0.9 }).setScrollFactor(0).setDepth(60).setAlpha(0);
+      this.tweens.add({ targets: this.keyHintUi, alpha: 1, duration: 300, delay: 300 });
+      this.time.delayedCall(4500, () => {
+        if (!this.keyHintUi) return;
+        const k = this.keyHintUi; this.keyHintUi = null;
+        this.tweens.add({ targets: k, alpha: 0, y: k.y + 20, duration: 500, onComplete: () => k.destroy() });
+      });
+    }
 
     input.enabled = true;
     input.onTap = () => this.onTap();
