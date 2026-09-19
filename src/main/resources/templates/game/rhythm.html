@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>뿌셔뿌셔 리듬게임 – 박자에 맞춰 벽·창문·굴뚝을 다 부수는 무료 웹 리듬게임 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="리듬을 듣고 똑같이 따라 쳐서 벽, 창문, 굴뚝을 부수는 무료 리듬게임. 버튼 하나(스페이스바·터치)로 즐기는 미니게임. 설치 없이 PC와 모바일 브라우저에서 바로 플레이.">
+    <meta name="keywords" content="뿌셔뿌셔 리듬게임, 리듬게임, 무료 리듬게임, 웹 리듬게임, 온라인 리듬게임, 모바일 리듬게임, 리듬 세상, 리듬천국, 버튼 하나 게임, 박자 게임, 캐주얼 게임, 미니게임, Binary World">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="뿌셔뿌셔 리듬게임 – 박자에 맞춰 다 부숴라 | Binary World">
+    <meta property="og:description" content="리듬을 듣고 똑같이 따라 쳐서 벽·창문·굴뚝을 부순다. 버튼 하나, 설치 없음.">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/rhythm.png">
+    <meta property="og:url" content="https://game.binaryworld.kr/rhythm">
+    <meta property="og:locale" content="ko_KR">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="뿌셔뿌셔 리듬게임 – 박자에 맞춰 다 부숴라 | Binary World">
+    <meta name="twitter:description" content="리듬을 듣고 똑같이 따라 쳐서 벽·창문·굴뚝을 부순다. 버튼 하나, 설치 없음.">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/rhythm.png">
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="theme-color" content="#0b0d10">
+    <link rel="canonical" href="https://game.binaryworld.kr/rhythm">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": "뿌셔뿌셔 리듬게임",
+      "alternateName": ["뿌셔뿌셔", "리듬게임", "무료 리듬게임", "웹 리듬게임", "박자 게임"],
+      "url": "https://game.binaryworld.kr/rhythm",
+      "image": "https://game.binaryworld.kr/img/rhythm.png",
+      "description": "리듬을 듣고 똑같이 따라 쳐서 벽, 창문, 굴뚝을 부수는 무료 웹 리듬게임. 버튼 하나로 즐기며, 하트 3개가 목숨이다.",
+      "genre": ["Rhythm", "Casual"],
+      "gamePlatform": ["Web Browser", "Mobile"],
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "ko",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": "리듬게임, 무료 리듬게임, 웹 리듬게임, 모바일 리듬게임, 박자 게임"
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/rhythm.css}">
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-0TSFJBQ41N');
+    </script>
+    <!--/*
+      게임 소스(/js/rhythm/)는 빌드 없이 ES 모듈 그대로 서빙한다.
+      소스의 `import Phaser from 'phaser'` 는 아래 import map 이 phaser-shim.js 로 보내고,
+      shim 은 phaser-3.90.min.js 가 전역에 올린 window.Phaser 를 내보낸다.
+      3.90 은 이 게임 전용이다 — 구형 게임들이 쓰는 phaser.min.js(3.80.1) 와 별개.
+    */-->
+    <script type="importmap">
+    { "imports": { "phaser": "/js/rhythm/phaser-shim.js" } }
+    </script>
+</head>
+<body class="bw-game-body">
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
+<div class="bw-rhythm-shell">
+    <div class="nav-back">
+        <a href="/" class="back-btn">← 게임 목록</a>
+    </div>
+    <h1 class="game-title">뿌셔뿌셔 리듬게임</h1>
+    <p class="game-desc">호루라기가 들려주는 리듬을 <strong>다음 마디에 똑같이</strong> 따라 치세요. 맞추면 벽·창문·굴뚝이 부서집니다. 스페이스바 또는 화면 터치, 버튼 하나면 됩니다.</p>
+
+    <!--/*
+      게임 박스. Phaser 는 #game 안에 캔버스를 만들고 FIT 으로 박스를 채운다.
+      #hud 의 버튼·오버레이는 게임 소스(main.js, StageScene.js)가 id 로 찾으므로 id 를 바꾸지 않는다.
+      전체화면 버튼은 이 박스만 키운다.
+    */-->
+    <div class="bw-rhythm-stage" id="bw-rhythm-stage">
+        <div id="game" aria-label="뿌셔뿌셔 리듬게임 화면" role="img"></div>
+        <div id="rotate">폰을 세로로 돌려주세요</div>
+        <div id="hud">
+            <button id="btn-full" type="button" aria-label="전체화면">⛶</button>
+            <button id="btn-pause" type="button" aria-label="일시정지">II</button>
+            <div id="pause-overlay">
+                <h2>일시정지</h2>
+                <button id="btn-resume" type="button">계속하기</button>
+                <button id="btn-quit" type="button" class="sub">그만두기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bw-rhythm-share">
+        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
+        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
+        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
+    </div>
+
+    <!--/* 검색엔진이 읽을 본문. 캔버스 안 글자는 검색이 못 읽는다. */-->
+    <section class="bw-rhythm-help">
+        <h2>뿌셔뿌셔 리듬게임</h2>
+        <p>호루라기가 리듬을 들려주면, 다음 마디에 로봇 <strong>비트</strong>가 똑같이 따라 치며 벽과 창문과 굴뚝을 부수는 리듬게임입니다. 귀로 듣고 손으로 치면 됩니다.</p>
+        <h2>조작법</h2>
+        <ol>
+            <li>PC는 <strong>스페이스바</strong>(또는 엔터·F·J·D·K), 모바일은 <strong>화면 터치</strong>.</li>
+            <li>호루라기 신호를 잘 듣고 <strong>다음 마디에 같은 타이밍</strong>으로 치세요.</li>
+            <li><strong>하트 3개</strong>가 목숨입니다. 너무 이르거나 늦으면 하나씩 잃고, 0개가 되면 실패.</li>
+            <li>정확도 70·85·95%로 <strong>동·은·금 메달</strong>. 메달을 따야 다음 스테이지가 열립니다.</li>
+        </ol>
+        <h2>스테이지</h2>
+        <p>벽 부수기, 창문 깨기, 굴뚝 무너뜨리기, 판자 뜯기, 그리고 전부 섞은 <strong>리믹스</strong>. 하드모드는 더 빠르고 하트가 1개뿐입니다.</p>
+        <p><strong>히든 스테이지</strong>도 하나 숨어 있어요. 판정도 목숨도 없이 마음껏 부수기만 하는 <strong>"스트레스 뿌셔뿌셔!"</strong> — 월드맵 맨 위에 있습니다.</p>
+        <p>박자가 자꾸 어긋나면 제목 화면의 <strong>박자 보정</strong>을 한 번 해보세요. 기기마다 다른 소리 지연을 맞춰 줍니다.</p>
+    </section>
+</div>
+<div th:replace="~{fragments/other-games :: otherGames}"></div>
+<div id="bw-guestbook" aria-label="방명록"></div>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
+<script th:src="@{/js/phaser-3.90.min.js}"></script>
+<script type="module" th:src="@{/js/rhythm/main.js}"></script>
+<script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
+</body>
+</html>

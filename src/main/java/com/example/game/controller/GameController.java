@@ -24,6 +24,11 @@ public class GameController {
 
     private final GameService gameService;
 
+    @GetMapping("/rhythm")
+    public String rhythm(Model model, HttpSession session) {
+        return "game/rhythm";
+    }
+
     @GetMapping("/dodge")
     public String dodge(Model model, HttpSession session) {
         ZoneId seoul = ZoneId.of("Asia/Seoul");

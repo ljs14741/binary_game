@@ -1,0 +1,72 @@
+/* 월드맵 — 스테이지 카드 목록: 메달, 최고점, 잠금. 하드 토글, 보정, 소리. */
+import Phaser from 'phaser';
+import { FONT, P, css } from '../art/palette.js';
+import { AudioEngine as audio } from '../core/audio.js';
+import { settings, records, saveMuted, saveHard } from '../meta/settings.js';
+import { input } from '../core/inputSingleton.js';
+import { STAGES, isUnlocked } from '../stages/index.js';
+import { button } from './ui.js';
+import { TOY_MODE } from '../meta/brand.js';
+import { setupCamera, DPR } from '../art/dpr.js';
+
+export class WorldMap extends Phaser.Scene {
+  constructor() { super('WorldMap'); }
+  create() {
+    const { W, H } = setupCamera(this);
+    this._starting = false;
+    input.enabled = false;
+    this.add.tileSprite(W / 2, H / 2, W, H, 'wallpaper').setTint(0x6f6580).setTileScale(1 / DPR);
+    this.add.text(W / 2, 60, '월드 1 · 벽돌집', { fontFamily: FONT, fontSize: '34px', fontStyle: '900', color: css(P.accent), stroke: css(P.uiDark), strokeThickness: 8 }).setOrigin(0.5);
+    const medals = STAGES.filter(s => !s.remix).filter(s => { const r = records[s.id] || records[s.id + '-hard']; return r && r.medal; }).length;
+    this.add.text(W / 2, 100, `메달 ${medals} / ${STAGES.length - 1}  ·  ${settings.hard ? '하드모드' : '노멀'}`, { fontFamily: FONT, fontSize: '16px', fontStyle: '700', color: '#fff', stroke: css(P.uiDark), strokeThickness: 4 }).setOrigin(0.5);
+
+    const cardW = Math.min(W - 40, 460), cardH = 84, gap = 10, top = 130;
+    // 맨 위: 장난감 모드 (누구나)
+    {
+      const y = top + cardH / 2;
+      const bg = this.add.rectangle(W / 2, y, cardW, cardH, 0xfff1c9, 0.95).setStrokeStyle(4, P.uiDark);
+      this.add.text(W / 2 - cardW / 2 + 18, y - 16, TOY_MODE, { fontFamily: FONT, fontSize: '22px', fontStyle: '900', color: css(P.uiDark) }).setOrigin(0, 0.5);
+      this.add.text(W / 2 - cardW / 2 + 18, y + 16, '판정 없이 마음껏 부수기', { fontFamily: FONT, fontSize: '14px', fontStyle: '700', color: '#5a5566' }).setOrigin(0, 0.5);
+      this.add.image(W / 2 + cardW / 2 - 40, y, 'megaphone').setScale(0.7);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => bg.setFillStyle(0xffe08a));
+      bg.on('pointerup', () => { if (this._starting) return; this._starting = true; audio.unlock().then(() => { audio.stopLoop(); this.scene.start('Toy'); }); });
+      bg.on('pointerout', () => bg.setFillStyle(0xfff1c9, 0.95));
+    }
+    STAGES.forEach((s, i) => {
+      const y = top + (i + 1) * (cardH + gap) + cardH / 2;
+      const unlocked = isUnlocked(s, records);
+      const rec = records[settings.hard ? s.id + '-hard' : s.id];
+      const bg = this.add.rectangle(W / 2, y, cardW, cardH, unlocked ? 0xffffff : 0x8d8798, unlocked ? 0.92 : 0.6).setStrokeStyle(4, P.uiDark);
+      this.add.text(W / 2 - cardW / 2 + 18, y - 18, `${s.label}  ${s.chart.title}`, { fontFamily: FONT, fontSize: '22px', fontStyle: '900', color: css(P.uiDark) }).setOrigin(0, 0.5);
+      this.add.text(W / 2 - cardW / 2 + 18, y + 16, unlocked ? `${s.learn} · BPM ${settings.hard && s.chart.hard ? s.chart.hard.bpm : s.chart.bpm}${rec ? ` · 최고 ${rec.score.toLocaleString()}점` : ''}` : (s.unlock.prev ? '앞 스테이지에서 메달을 따면 열려요' : '네 스테이지 모두 메달을 따면 열려요'),
+        { fontFamily: FONT, fontSize: '14px', fontStyle: '700', color: '#5a5566' }).setOrigin(0, 0.5);
+      if (unlocked) {
+        this.add.image(W / 2 + cardW / 2 - 40, y, rec && rec.medal ? 'medal-' + rec.medal : 'medal-none');
+        bg.setInteractive({ useHandCursor: true });
+        bg.on('pointerdown', () => bg.setFillStyle(0xfff1c9));
+        bg.on('pointerup', () => this.start(s));
+        bg.on('pointerout', () => bg.setFillStyle(0xffffff, 0.92));
+      } else {
+        this.add.image(W / 2 + cardW / 2 - 40, y, 'lock').setAlpha(0.8);
+      }
+    });
+
+    const by = top + (STAGES.length + 1) * (cardH + gap) + 26;
+    this.hardBtn = button(this, W / 2, by, hardLabel(), () => { saveHard(!settings.hard); this.scene.restart(); }, { w: cardW, h: 50, size: 17 });
+    button(this, W / 2 - cardW / 4 - 4, by + 62, '타이밍 보정', () => { audio.unlock(); audio.stopLoop(); this.scene.start('Calib'); }, { w: cardW / 2 - 8, h: 48, size: 17 });
+    this.muteBtn = button(this, W / 2 + cardW / 4 + 4, by + 62, settings.muted ? '소리 끔' : '소리 켬', () => { saveMuted(!settings.muted); audio.setMuted(settings.muted); this.muteBtn.setLabel(settings.muted ? '소리 끔' : '소리 켬'); }, { w: cardW / 2 - 8, h: 48, size: 17 });
+    button(this, W / 2, by + 118, '처음으로', () => this.scene.start('Title'), { w: cardW, h: 42, size: 15 });
+
+    if (audio.ctx && audio.ctx.state === 'running') audio.startLoop(120);
+  }
+  start(s) {
+    if (this._starting) return; this._starting = true;
+    audio.unlock().then(() => {
+      audio.stopLoop();
+      settings.inputOffset = settings.calibOffset != null ? settings.calibOffset : audio.latency();
+      this.scene.start(s.key);
+    });
+  }
+}
+function hardLabel() { return settings.hard ? '하드모드 ON  (BPM +20% · 목숨 1개 · 힌트 없음)' : '하드모드 OFF'; }

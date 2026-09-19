@@ -17,8 +17,9 @@ import java.util.List;
 @ControllerAdvice(assignableTypes = {MainController.class, GameController.class})
 public class GameCatalogAdvice {
 
-    /** 게임 하단 "다른 게임" 스트립에 몇 개까지 보여줄지. 가로 스크롤이라 그리드 때보다 여유가 있다. */
-    private static final int OTHER_GAMES_LIMIT = 8;
+    /** 게임 하단 "다른 게임" 스트립에 몇 개까지 보여줄지. 가로 스크롤이라 그리드 때보다 여유가 있다.
+     *  게임이 11개라 8개로 자르면 매번 2개가 랜덤으로 빠져 "원판돌리기가 안 나온다"는 말이 나왔다. 지금은 전부 보여준다. */
+    private static final int OTHER_GAMES_LIMIT = 16;
 
     /** 메인 화면 카드 목록. */
     @ModelAttribute("games")
