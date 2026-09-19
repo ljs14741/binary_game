@@ -216,16 +216,22 @@
   cursor: pointer;
 }
 
+/* 배경색은 캔버스가 그리는 무대의 바깥쪽 색과 맞춘다 —
+   첫 프레임 전이나 리사이즈 순간에 다른 색이 비치지 않게. */
 .bw-wheel-stage {
   position: relative;
   border: 1px solid var(--bw-border);
   border-radius: 0.9rem;
   overflow: hidden;
-  background: #0b1220;
+  background: #0a0f1f;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
+}
+
+[data-theme="light"] .bw-wheel-stage {
+  background: #c4cfdb;
 }
 
 .bw-wheel-stage canvas {
@@ -362,51 +368,152 @@
 }
 
 /* ── 결과 카드 ──
-   연출이 끝난 뒤에 뜬다. 화면 아래에 붙여 원판을 가리지 않는다 (규격 8-7). */
+   연출이 끝난 뒤에 뜬다. 화면 아래에 붙인다 — 바늘이 12시에 있으니 위쪽 칸(=당첨 칸)이
+   그대로 보여야 한다. 프레스·룰렛은 위에 띄우지만 이 게임은 반대다 (규격 8-7).
+   팔레트는 원판과 같다: 남색 몰딩 + 금색 테 + 당첨 칸 색(--pick, JS 가 넣는다).
+   카드가 두 테마에서 항상 어둡기 때문에 글자색도 테마 변수가 아니라 고정 흰색이다 —
+   흰색/#1c2647 은 13:1, 금색/#1c2647 은 9:1, 검정/금색 버튼은 10:1 이다. */
 .bw-wheel-result {
+  --pick: #f7c948;
   position: absolute;
   inset: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 0.9rem;
-  background: linear-gradient(to bottom, rgba(9, 12, 18, 0) 40%, rgba(9, 12, 18, 0.94) 80%);
+  padding: 0.75rem;
+  background: linear-gradient(to bottom, rgba(8, 11, 22, 0) 38%, rgba(8, 11, 22, 0.88) 78%);
+  animation: bw-wheel-veil 0.3s ease-out;
 }
 
-/* ⛔ 배경을 어둡게 고정해놓고 글자에는 테마 변수를 쓰면 안 된다.
-   라이트 모드의 --bw-text 는 #151513(거의 검정)이라 어두운 카드 위에서 사라진다.
-   실제로 "다시 돌리기" 버튼이 안 보였다.
-   다른 게임(press·roulette·ladder·parachute)은 전부 surface-strong 을 쓴다. 맞춘다. */
+@keyframes bw-wheel-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .bw-wheel-result-card {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.6rem;
   width: 100%;
-  padding: 0.9rem 1rem 1rem;
-  border: 1px solid rgba(217, 119, 6, 0.45);
-  border-radius: 0.85rem;
-  background: var(--bw-surface-strong);
-  text-align: center;
+  padding: 0.8rem 0.9rem 0.85rem;
+  border: 2px solid #c98d12;
+  border-radius: 0.95rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, #24305a 0%, #141b38 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 243, 184, 0.35),
+    0 0 0 3px rgba(20, 27, 56, 0.9),
+    0 10px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  animation: bw-wheel-card 0.42s cubic-bezier(0.22, 1.2, 0.36, 1);
 }
 
-/* "당첨" 은 배지로 만든다. 배경이 금색이고 글자가 어두우니 두 테마에서 다 잘 보인다. */
+@keyframes bw-wheel-card {
+  from { opacity: 0; transform: translateY(18px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 당첨 칸 색 — 왼쪽 세로 띠 + 그 색의 은은한 번짐. "어느 칸이 나왔다" 가 색으로 이어진다 */
+.bw-wheel-result-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--pick);
+  box-shadow: 0 0 22px 4px var(--pick);
+  opacity: 0.95;
+}
+
+/* 한 번 지나가는 빛 — 금장에 조명이 스치는 느낌 */
+.bw-wheel-result-card::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -30%;
+  width: 40%;
+  height: 180%;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0) 0%, rgba(255, 243, 184, 0.28) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: translateX(-120%) rotate(8deg);
+  animation: bw-wheel-shine 0.9s ease-out 0.35s forwards;
+  pointer-events: none;
+}
+
+@keyframes bw-wheel-shine {
+  to { transform: translateX(420%) rotate(8deg); }
+}
+
+/* "당첨" 배지 — 금색 알약. 금 위의 검정 글자라 두 테마에서 같다 */
 .bw-wheel-result-kicker {
-  display: inline-block;
-  margin-bottom: 0.45rem;
-  padding: 0.16rem 0.6rem;
+  flex: 0 0 auto;
+  margin: 0 0 0 0.5rem;
+  padding: 0.22rem 0.6rem;
   border-radius: 999px;
-  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
-  color: #2a1a05;
-  font-size: 0.74rem;
+  border: 1px solid #fff3b8;
+  background: linear-gradient(180deg, #fff3b8 0%, #f7c948 45%, #c98d12 100%);
+  color: #1e2130;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
+  box-shadow: 0 2px 0 #7a4f08;
 }
 
-/* 당첨된 이름. 금색은 흰 카드에서 대비가 모자라 테마 색을 쓴다 —
-   화려함은 위의 금색 배지와 카드 테두리가 맡는다. */
+/* 당첨된 이름 — 주인공. 배지 옆에서 크게, 흰색에 살짝 금빛 테 */
 .bw-wheel-result-title {
-  margin: 0 0 0.8rem;
-  color: var(--bw-text);
-  font-size: 1.7rem;
+  flex: 1 1 55%;          /* 배지와 합쳐 한 줄을 다 차지해야 버튼이 둘째 줄로 내려간다 */
+  min-width: 0;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.55rem, 8vw, 2.1rem);
   font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
   word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 18px rgba(247, 201, 72, 0.35);
+  transform-origin: left center;
+  animation: bw-wheel-name 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.12s both;
+}
+
+@keyframes bw-wheel-name {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 버튼 두 개를 한 줄에. 다시 돌리기가 제일 크다 (규격 7-5) */
+.bw-wheel-result-card .bw-wheel-btn {
+  flex: 1 1 40%;
+  width: auto;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.65rem;
+  font-size: 0.95rem;
+}
+
+.bw-wheel-result-card #wheel-again {
+  flex-grow: 1.5;
+  border: 1px solid #fff3b8;
+  background: linear-gradient(180deg, #fff3b8 0%, #f7c948 40%, #d9a020 100%);
+  color: #1e2130;
+  box-shadow: 0 3px 0 #7a4f08, 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+.bw-wheel-result-card #wheel-again:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #7a4f08;
+}
+
+.bw-wheel-result-card .bw-wheel-btn-ghost {
+  border: 1px solid rgba(255, 243, 184, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff3b8;
+}
+
+.bw-wheel-result-card .bw-wheel-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ── 공유 ── */
@@ -456,5 +563,12 @@
 @media (prefers-reduced-motion: reduce) {
   .bw-wheel-hit:active:not(:disabled) {
     transform: none;
+  }
+
+  .bw-wheel-result,
+  .bw-wheel-result-card,
+  .bw-wheel-result-title,
+  .bw-wheel-result-card::after {
+    animation: none;
   }
 }
