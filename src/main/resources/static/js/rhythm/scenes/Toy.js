@@ -8,7 +8,6 @@ import { Bot } from '../engine/Bot.js';
 import { Breakable, settleDebris, MAX_DYNAMIC } from '../engine/Breakable.js';
 import { CameraFx } from '../engine/CameraFx.js';
 import { Feedback } from '../engine/Feedback.js';
-import { buildRoom } from '../stages/common.js';
 import { BRICK_W, BRICK_H, GLASS_W, GLASS_H, CHIM_W, CHIM_H, PLANK_W, PLANK_H } from '../art/textures.js';
 import { DPR, logical, hud } from '../art/dpr.js';
 import { keyHint } from './keys.js';
@@ -28,7 +27,12 @@ export class Toy extends Phaser.Scene {
   create() {
     this.debris = []; this.taps = 0; this.kindIdx = 0; this.nextLeft = 560; this.queue = [];
     this.matter.world.setGravity(0, 1.6);
-    buildRoom(this, 200000, 760, 0xc9b6d8);
+    // 배경: 예전엔 200000px 짜리 tileSprite 하나였는데 모바일에서 메모리 초과로 페이지가 죽었다.
+    // 화면보다 조금 큰 배경만 만들고 update() 에서 카메라를 따라다니게 한다 (무늬는 월드에 고정된 것처럼 흘린다).
+    this.floorY = 760; this.worldWidth = 200000;
+    this.roomWall = this.add.tileSprite(0, this.floorY / 2 - 300, 2400, this.floorY + 800, 'wallpaper').setDepth(0).setTint(0xc9b6d8).setTileScale(1 / DPR);
+    this.roomFloor = this.add.tileSprite(0, this.floorY + 140, 2400, 280, 'floor').setDepth(1).setTileScale(1 / DPR);
+    this.roomLine = this.add.rectangle(0, this.floorY, 2400, 6, P.floorLine).setDepth(2);
     this.matter.add.rectangle(100000, this.floorY + 40, 200000, 80, { isStatic: true, friction: 0.8 });
     this.cameras.main.setBounds(-200, -400, 200400, this.floorY + 600);
     this.fx = new Feedback(this);
@@ -38,6 +42,8 @@ export class Toy extends Phaser.Scene {
     for (let i = 0; i < 3; i++) this.spawn();
     this.current = this.queue[0];
     this.cameras.main.setZoom(DPR).centerOn(this.current.left + 60, this.floorY - 300);
+    this.cameras.main.preRender();  // worldView 를 즉시 갱신해 첫 프레임부터 배경이 제자리에 오게
+    this.syncRoom();
     this.fx.setBanner('마음껏 부숴!', css(P.accent));
     this.time.delayedCall(1500, () => this.fx.setBanner(''));
 
@@ -107,8 +113,21 @@ export class Toy extends Phaser.Scene {
 
   trimDebris() { while (this.debris.length > MAX_DYNAMIC) { const b = this.debris.shift(); if (b.body) b.setStatic(true); } }
 
+  syncRoom() {
+    const wv = this.cameras.main.worldView;
+    const cx = wv.centerX;
+    for (const bg of [this.roomWall, this.roomFloor]) {
+      bg.x = cx;
+      // 무늬가 스프라이트를 따라오지 않고 월드에 박혀 있게: 왼쪽 끝 월드좌표만큼 텍셀을 앞당긴다 (tileScale = 1/DPR).
+      bg.tilePositionX = (cx - bg.width / 2) * DPR;
+    }
+    this.roomLine.x = cx;
+  }
+
   update(time, delta) {
     settleDebris(this, Math.min(delta / 1000, 0.05));
+    this.trimDebris();
+    this.syncRoom();
     this.bot.update();
     const t = this.current;
     if (t && t.material !== 'wood') {
