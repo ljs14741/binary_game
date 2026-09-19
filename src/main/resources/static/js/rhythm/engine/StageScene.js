@@ -5,7 +5,7 @@ import Phaser from 'phaser';
 import { Conductor } from '../core/conductor.js';
 import { Judge, labelFor } from '../core/judge.js';
 import { AudioEngine as audio, chordFor } from '../core/audio.js';
-import { settings, saveRecord } from '../meta/settings.js';
+import { settings, saveRecord, countPlay } from '../meta/settings.js';
 import { input } from '../core/inputSingleton.js';
 import { Bot } from './Bot.js';
 import { CameraFx } from './CameraFx.js';
@@ -13,6 +13,7 @@ import { Feedback } from './Feedback.js';
 import { settleDebris, MAX_DYNAMIC } from './Breakable.js';
 import { P, css } from '../art/palette.js';
 import { DPR, logical, hud } from '../art/dpr.js';
+import { keyHint } from '../scenes/keys.js';
 
 const SMASH = { perfect: 3, good: 2, miss: 1, whiff: 0, free: 0 };
 const SMASH_BIG = { perfect: 2, good: 1, miss: 0, whiff: 0, free: 0 };   // 판자처럼 큰 조각 (조각 수 = 노트×2)
@@ -55,6 +56,14 @@ export class StageScene extends Phaser.Scene {
 
     this.fx.setBanner('준비!');
     this.fx.setLives(this.judge.lives, this.judge.maxLives);
+    // 처음 3판: 시범 듣는 동안 화면 아래에 조작법. 내 차례("부숴!")가 오면 걷는다.
+    // 3판이면 충분히 손에 익고, 그 뒤로는 화면을 비워 둔다. 제목 화면엔 늘 있다.
+    if (countPlay() <= 3) {
+      const { W, H } = logical(this);
+      const p = hud(this, W / 2, H - 150);
+      this.keyHintUi = keyHint(this, p.x, p.y, { scale: 0.9 }).setScrollFactor(0).setDepth(60).setAlpha(0);
+      this.tweens.add({ targets: this.keyHintUi, alpha: 1, duration: 300, delay: 400 });
+    }
     audio.stopLoop();
     this.conductor.start(0.6);
   }
@@ -123,6 +132,7 @@ export class StageScene extends Phaser.Scene {
       this.bot.listen(); this.bot.setFace('focus', 2);
     } else if (ph.name === 'response') {
       this.fx.setBanner('부숴!', css(P.accent));
+      if (this.keyHintUi) { const k = this.keyHintUi; this.keyHintUi = null; this.tweens.add({ targets: k, alpha: 0, y: k.y + 20, duration: 400, onComplete: () => k.destroy() }); }
     } else if (ph.name === 'outro') {
       this.fx.setBanner('다 뿌셨다!');
       this.bot.setFace(this.judge.accuracy() >= 0.7 ? 'proud' : 'ouch', 3);

@@ -7,6 +7,7 @@ import { Bot } from '../engine/Bot.js';
 import { button } from './ui.js';
 import { BRAND, SUBTITLE, HERO } from '../meta/brand.js';
 import { setupCamera, DPR } from '../art/dpr.js';
+import { keyHint } from './keys.js';
 
 export class Title extends Phaser.Scene {
   constructor() { super('Title'); }
@@ -27,7 +28,8 @@ export class Title extends Phaser.Scene {
     button(this, W / 2, H - 280, '시작하기', () => this.start(), { primary: true, w: 360, h: 72, size: 26 });
     button(this, W / 2 - 95, H - 200, '타이밍 보정', () => { audio.unlock(); audio.stopLoop(); this.scene.start('Calib'); }, { w: 170, h: 56, size: 20 });
     this.muteBtn = button(this, W / 2 + 95, H - 200, muteLabel(), () => { saveMuted(!settings.muted); audio.setMuted(settings.muted); audio.unlock(); this.muteBtn.setLabel(muteLabel()); }, { w: 170, h: 56, size: 20 });
-    this.add.text(W / 2, H - 40, 'PC: 스페이스바 · 모바일: 화면 터치', { fontFamily: FONT, fontSize: '16px', color: '#fff', stroke: css(P.uiDark), strokeThickness: 4 }).setOrigin(0.5);
+    // 조작법. 글 한 줄이 아니라 키캡 그림으로 — D F J K 를 모르고 스페이스만 치는 사람이 많았다
+    keyHint(this, W / 2, H - 118);
 
     // 브라우저 정책: 첫 제스처 전엔 소리를 못 낸다. 이미 열려 있으면 바로, 아니면 첫 터치/키에 BGM 시작.
     const bgm = () => audio.unlock().then(() => { if (this.scene.isActive()) audio.startLoop(120); });
