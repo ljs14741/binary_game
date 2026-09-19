@@ -20,8 +20,14 @@
 .bw-rhythm-stage {
   position: relative;
   width: 100%;
-  height: min(78vh, 780px);
-  min-height: 420px;
+  /* 높이: 위아래로 스크롤을 잡을 여백을 항상 남긴다.
+     vh 는 iOS 사파리에서 주소창 포함 큰 화면 기준이라 실제보다 커서 박스가 화면을 꽉 채웠다.
+     dvh(보이는 높이)로 바꾸고 값도 낮춰, 아이폰처럼 세로 짧은 폰에서 박스 밖 스크롤 띠를 확보한다.
+     박스는 touch-action:none 이라 그 위를 끌어선 페이지가 안 내려가므로, 이 여백이 유일한 스크롤 손잡이다. */
+  height: min(72vh, 720px);
+  height: min(72dvh, 720px);
+  min-height: 380px;
+  margin: 0.75rem 0 1rem;
   overflow: hidden;
   border: 1px solid var(--bw-border);
   border-radius: 1rem;
@@ -38,6 +44,7 @@
   width: 100%;
   height: 100%;
   min-height: 0;
+  margin: 0;
   border: 0;
   border-radius: 0;
 }
@@ -187,6 +194,8 @@
 
 @media (min-width: 640px) {
   .bw-rhythm-stage {
-    height: min(82vh, 860px);
+    /* 넓은 화면(태블릿·PC)은 세로 여유가 있어 더 크게. 여기도 dvh 로. */
+    height: min(80vh, 820px);
+    height: min(80dvh, 820px);
   }
 }
