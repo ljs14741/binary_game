@@ -26,6 +26,31 @@
 (function () {
     'use strict';
 
+    // 화면 문구. 템플릿(roulette.html)이 messages*.properties 에서 읽어 window.ROULETTE_I18N 으로 넘긴다.
+    // 없으면(검증 하네스 등) 한국어 기본값. 문구를 고칠 땐 properties 를 고친다.
+    var T = Object.assign({
+        dangerSure: '확정', danger0: '여유', danger1: '슬슬', danger2: '조심', danger3: '위험',
+        resultTitle: '{0}번 물벼락!',
+        resultDetail: '응 너야~ ㅋㅋ 벌칙 확정입니다.',
+        capSafe: '휴, 살았다~',
+        capBurst: '응 너야~ ㅋㅋ',
+        introTitle: '풍선을 건네받습니다',
+        introSub: '언젠가는 터집니다',
+        turn: '{0}번 차례',
+        readySub: '한 번 시작하면 못 멈춥니다',
+        pumpSub: '치이익—',
+        tenseSub: '어느 쪽일까요',
+        swellTitle: '어어—',
+        safeTitle: '{0}번, 넘겼습니다',
+        safeSub: '휴— 다음 사람에게 넘어갑니다',
+        burstTitle: '{0}번 물벼락!',
+        burstSub: '응 너야~ ㅋㅋ 벌칙 확정',
+        go: '{0}번 — 펌프질',
+        soundOn: '소리 켜짐',
+        soundOff: '소리 꺼짐'
+    }, (typeof window !== 'undefined' && window.ROULETTE_I18N) || {});
+    function fmt(t, v) { return t.replace('{0}', String(v)); }
+
     // ── 규칙 ────────────────────────────────────────────────
     /*
      * 차례 수 = 인원 × 2. 4명이면 최대 8차례다.
@@ -112,11 +137,11 @@
 
     /** 위험도 문구. 숫자는 안 보여주고 이걸로만 말한다. */
     function dangerLabel(p) {
-        if (p >= 1) { return '확정'; }
-        if (p <= 0.17) { return '여유'; }
-        if (p <= 0.26) { return '슬슬'; }
-        if (p <= 0.40) { return '조심'; }
-        return '위험';
+        if (p >= 1) { return T.dangerSure; }
+        if (p <= 0.17) { return T.danger0; }
+        if (p <= 0.26) { return T.danger1; }
+        if (p <= 0.40) { return T.danger2; }
+        return T.danger3;
     }
 
     function dangerColor(p) {
@@ -311,9 +336,9 @@
     function showResult() {
         state.phase = 'over';
         var n = state.loser + 1;
-        el.resultTitle.textContent = n + '번 물벼락!';
+        el.resultTitle.textContent = fmt(T.resultTitle, n);
         el.resultTitle.style.color = COLORS[state.loser % COLORS.length];
-        el.resultDetail.textContent = '응 너야~ ㅋㅋ 벌칙 확정입니다.';
+        el.resultDetail.textContent = T.resultDetail;
         el.result.hidden = false;
         syncHud();
     }
@@ -1296,13 +1321,13 @@
     function captionNow() {
         var ph = state.phase, t = phaseT();
         if (ph === 'safe' && t >= 0.42) {
-            return { text: '휴, 살았다~', color: '#4ade80', at: (t - 0.42) / 0.13 };
+            return { text: T.capSafe, color: '#4ade80', at: (t - 0.42) / 0.13 };
         }
         if (ph === 'over') {
-            return { text: '응 너야~ ㅋㅋ', color: '#fb7185', at: 3 };
+            return { text: T.capBurst, color: '#fb7185', at: 3 };
         }
         if (ph === 'burst' && t >= 0.30) {
-            return { text: '응 너야~ ㅋㅋ', color: '#fb7185', at: (t - 0.30) / 0.11 };
+            return { text: T.capBurst, color: '#fb7185', at: (t - 0.30) / 0.11 };
         }
         return null;
     }
@@ -1564,29 +1589,29 @@
          */
         var title = '', sub = '', c = meC;
         if (ph === 'intro') {
-            title = '풍선을 건네받습니다';
-            sub = '언젠가는 터집니다';
+            title = T.introTitle;
+            sub = T.introSub;
             c = 'var(--bw-text)';
         } else if (ph === 'ready') {
-            title = (me + 1) + '번 차례';
-            sub = '한 번 시작하면 못 멈춥니다';
+            title = fmt(T.turn, me + 1);
+            sub = T.readySub;
         } else if (ph === 'pump') {
-            title = (me + 1) + '번 차례';
-            sub = '치이익—';
+            title = fmt(T.turn, me + 1);
+            sub = T.pumpSub;
         } else if (ph === 'tense') {
-            title = (me + 1) + '번 차례';
-            sub = '어느 쪽일까요';
+            title = fmt(T.turn, me + 1);
+            sub = T.tenseSub;
             c = 'var(--bw-text)';
         } else if (ph === 'swell') {
-            title = '어어—';
+            title = T.swellTitle;
             sub = '…';
             c = 'var(--bw-text)';
         } else if (ph === 'safe') {
-            title = (me + 1) + '번, 넘겼습니다';
-            sub = '휴— 다음 사람에게 넘어갑니다';
+            title = fmt(T.safeTitle, me + 1);
+            sub = T.safeSub;
         } else if (ph === 'burst' || ph === 'over') {
-            title = (me + 1) + '번 물벼락!';
-            sub = '응 너야~ ㅋㅋ 벌칙 확정';
+            title = fmt(T.burstTitle, me + 1);
+            sub = T.burstSub;
         }
         el.turn.textContent = title;
         el.turn.style.color = c;
@@ -1594,7 +1619,7 @@
 
         var ready = ph === 'ready';
         el.go.disabled = !ready;
-        el.go.textContent = ready ? (me + 1) + '번 — 펌프질' : '…';
+        el.go.textContent = ready ? fmt(T.go, me + 1) : '…';
         el.go.style.borderColor = ready ? meC : '';
         el.go.style.color = ready ? meC : '';
         el.go.classList.toggle('is-hot', ready && risk >= 0.40);
@@ -1666,7 +1691,7 @@
             var m = !sfx.isMuted();
             sfx.setMuted(m);
             if (!m) { sfx.wake(); }
-            el.mute.textContent = m ? '소리 꺼짐' : '소리 켜짐';
+            el.mute.textContent = m ? T.soundOff : T.soundOn;
             el.mute.setAttribute('aria-pressed', String(!m));
         });
 

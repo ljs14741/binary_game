@@ -82,7 +82,7 @@ public final class GameCatalog {
             // new Game("/parachute", "낙하산", "Nerve",
             //         "늦게 펼수록 이긴다 · 혼자 기록 도전 · 담력 복불복", "2026-09-01"),
             new Game("/roulette", "물풍선 룰렛", "Roulette",
-                    "러시안룰렛 · 돌아가며 펌프질 · 터뜨리면 물벼락", "2026-08-31"),
+                    "러시안룰렛 · 돌아가며 펌프질 · 터뜨리면 물벼락", "2026-09-21", Set.of("en", "ja")),
             new Game("/wasabi", "와사비 룰렛", "Roulette",
                     "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-09-20", Set.of("en", "ja")),
             new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",
