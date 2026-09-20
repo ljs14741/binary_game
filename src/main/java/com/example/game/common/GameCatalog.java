@@ -86,7 +86,7 @@ public final class GameCatalog {
             new Game("/wasabi", "와사비 룰렛", "Roulette",
                     "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-09-20", Set.of("en", "ja")),
             new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",
-                    "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", "2026-08-30"),
+                    "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", "2026-09-21", Set.of("en", "ja")),
             new Game("/horserace", "말달리자 경마내기게임", "Race",
                     "말 하나 골라놓고 끝까지 조마조마 · 경마내기", "2026-09-21", Set.of("en", "ja")),
             new Game("/dodge", "총알 피하기", "Arcade",

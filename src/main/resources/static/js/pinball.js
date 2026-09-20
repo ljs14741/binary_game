@@ -1,3 +1,22 @@
+// 캔버스에 그리는 문구. 템플릿(pinball.html)이 messages*.properties 에서 읽어 window.PINBALL_I18N 으로 넘긴다.
+// 없으면 한국어 기본값. 문구를 고칠 땐 이 파일이 아니라 properties 를 고친다.
+const T = Object.assign({
+    setupTitle: "🎮 게임 참가 설정",
+    players:    "참가자 수",
+    enterNames: "✍ 닉네임 입력하기",
+    start:      "🚀 게임 시작",
+    nameTitle:  "닉네임 입력 (최대 {0}자) - 변경 없이 시작 가능",
+    dupNames:   "동일한 닉네임으로는 시작할 수 없습니다.",
+    error:      "오류가 발생했습니다.",
+    winPre:     "1등은",        // "1등은 [닉네임]님" — 영어는 "Winner: [닉네임]!" 처럼 앞뒤가 바뀐다
+    winSuf:     "님",
+    congrats:   "축하드립니다~!",
+    rankTitle:  "📜 순위",
+    rank:       "{0}등",
+    restart:    "🔁 다시하기"
+}, window.PINBALL_I18N || {});
+function fmt(t, v) { return t.replace('{0}', String(v)); }
+
 const config = {
     type: Phaser.AUTO,
     width: 1000,
@@ -469,14 +488,14 @@ function createGameSetupUI(scene) {
 
     // 타이틀
     uiElements.titleText?.destroy();
-    uiElements.titleText = scene.add.text(centerX, 84, "🎮 게임 참가 설정", {
+    uiElements.titleText = scene.add.text(centerX, 84, T.setupTitle, {
         fontSize: '28px', fontFamily: UI_FONT, color: UI.text, fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0);
     scene.uiLayer?.add(uiElements.titleText); // ⭐ 레이어에 올리기
 
     // 참가자 레이블
     uiElements.participantLabel?.destroy();
-    uiElements.participantLabel = scene.add.text(centerX - 120, 155, "참가자 수", {
+    uiElements.participantLabel = scene.add.text(centerX - 120, 155, T.players, {
         fontSize: '18px', fontFamily: UI_FONT, color: UI.subText
     }).setOrigin(0.5).setScrollFactor(0);
     scene.uiLayer?.add(uiElements.participantLabel); // ⭐
@@ -503,13 +522,13 @@ function createGameSetupUI(scene) {
     // 닉네임 입력 열기 버튼 (내부에서 레이어에 올림)
     uiElements.nicknameButton?.destroy();
     uiElements.nicknameButton = createStyledButton(
-        scene, centerX, 214, "✍ 닉네임 입력하기", () => generateNicknameInputs(scene), 280, UI.accent
+        scene, centerX, 214, T.enterNames, () => generateNicknameInputs(scene), 280, UI.accent
     );
 
     // 시작 버튼 (하단 정렬, 내부에서 레이어에 올림)
     uiElements.startGameButton?.destroy();
     uiElements.startGameButton = createStyledButton(
-        scene, centerX, 0, "🚀 게임 시작", () => startGame(scene), 320, 0xf43f5e
+        scene, centerX, 0, T.start, () => startGame(scene), 320, 0xf43f5e
     );
     uiElements.startGameButton.setVisible(false);
 
@@ -520,7 +539,7 @@ function createGameSetupUI(scene) {
 
     uiElements.nameTitle?.destroy();
     uiElements.nameTitle = scene.add.text(centerX, 0,
-        `닉네임 입력 (최대 ${nickMaxLength}자) - 변경 없이 시작 가능`, {
+        fmt(T.nameTitle, nickMaxLength), {
             fontSize: '16px', fontFamily: UI_FONT, color: UI.subText
         }
     ).setOrigin(0.5, 1).setScrollFactor(0).setVisible(false);
@@ -1058,7 +1077,7 @@ function startGame(scene) {
     if (dupIdx.length > 0) {
         // ⛔️ 시작 중단 + 하이라이트 + 에러 토스트
         highlightDuplicateNicknameIndices(dupIdx);
-        showErrorToast(scene, "동일한 닉네임으로는 시작할 수 없습니다.");
+        showErrorToast(scene, T.dupNames);
         scene._starting = false;
         return;
     }
@@ -1257,7 +1276,7 @@ function highlightDuplicateNicknameIndices(indices) {
     }
 }
 
-function showErrorToast(scene, msg = "오류가 발생했습니다.") {
+function showErrorToast(scene, msg = T.error) {
     // 기존 토스트가 있으면 재사용
     if (uiElements.errorToast?.cont && !uiElements.errorToast.cont.destroyed) {
         uiElements.errorToast.txt.setText(msg);
@@ -1985,12 +2004,12 @@ function showAllFinishedMessage(scene) {
         shadow: { color:'#000', blur:6, fill:true, offsetY:2 } };
     const styleName  = { ...styleWhite, color: nameCss, fontFamily: "Arial Black, system-ui" };
 
-    const pre  = scene.add.text(0, 0, '1등은 ', styleWhite).setOrigin(0, 0.5).setScrollFactor(0);
+    const pre  = scene.add.text(0, 0, T.winPre + ' ', styleWhite).setOrigin(0, 0.5).setScrollFactor(0);
     const name = scene.add.text(0, 0, winName, styleName ).setOrigin(0, 0.5).setScrollFactor(0);
-    const suf  = scene.add.text(0, 0, '님',   styleWhite).setOrigin(0, 0.5).setScrollFactor(0);
+    const suf  = scene.add.text(0, 0, T.winSuf,   styleWhite).setOrigin(0, 0.5).setScrollFactor(0);
 
     // 2줄: "축하드립니다~!"
-    const sub = scene.add.text(0, 0, '축하드립니다~!', {
+    const sub = scene.add.text(0, 0, T.congrats, {
         ...styleWhite, fontSize: `${Math.round(fontPx * 0.9)}px`
     }).setOrigin(0.5, 0.5).setScrollFactor(0);
 
@@ -2057,7 +2076,7 @@ function createLeaderboard(scene) {
     scene._lbNameMaxW = 160;
 
     // 제목 텍스트
-    const title = scene.add.text(scene._lbRightX, 8, "📜 순위", {
+    const title = scene.add.text(scene._lbRightX, 8, T.rankTitle, {
         fontSize: '16px',
         fontFamily: UI_FONT,
         color: '#e2e8f0',
@@ -2163,7 +2182,7 @@ function updateLeaderboard(scene) {
         ellipsize(line.nameTx, nameStr, nameMaxW);
 
         // "N등"
-        line.rankTx.setText(`${rank}등`).setColor(rankColor(rank));
+        line.rankTx.setText(fmt(T.rank, rank)).setColor(rankColor(rank));
 
         // 오른쪽 정렬: [아이콘] [닉네임] [N등]
         const xRank = rightX;
@@ -2198,7 +2217,7 @@ function createRestartCTA(scene, opts = {}) {
     const btnH = opts.h || 64;           // ← 호출부에서 96, 110 등으로 키우면 박스/클릭영역 같이 커짐
     const x = opts.x ?? (14 + btnW / 2);
     const y = opts.y ?? (config.height - 14 - btnH / 2);
-    const label = opts.label || "🔁 다시하기";
+    const label = opts.label || T.restart;
     const onClick = opts.onClick || (() => softRestart(scene));
 
     const hud = scene.add.layer().setDepth(9000);
@@ -2367,15 +2386,15 @@ function showRaceEndUI(scene) {
     };
 
     // 1줄: "1등은 " + 닉네임(색상) + "님"
-    const tLeft  = scene.add.text(0, 0, "1등은 ", { ...baseStyle, fontSize: `${F1_INIT}px` })
+    const tLeft  = scene.add.text(0, 0, T.winPre, { ...baseStyle, fontSize: `${F1_INIT}px` })
         .setOrigin(0.5, 1).setScrollFactor(0);
     const tName  = scene.add.text(0, 0, name, { ...baseStyle, fontSize: `${FNAME}px`, color: nameColor })
         .setOrigin(0.5, 1).setScrollFactor(0);
-    const tRight = scene.add.text(0, 0, "님",    { ...baseStyle, fontSize: `${F1_INIT}px` })
+    const tRight = scene.add.text(0, 0, T.winSuf, { ...baseStyle, fontSize: `${F1_INIT}px` })
         .setOrigin(0.5, 1).setScrollFactor(0);
 
     // 2줄: "축하드립니다~!"
-    const tSecond = scene.add.text(0, 0, "축하드립니다~!", {
+    const tSecond = scene.add.text(0, 0, T.congrats, {
         ...baseStyle, fontSize: `${F2_INIT}px`, fontStyle: "800"
     }).setOrigin(0.5, 0).setScrollFactor(0);
 
@@ -2525,7 +2544,7 @@ function showWinnerUI(scene, winnerName) {
         w: 260, h: 96,
         x: 14 + 260 / 2,
         y: config.height - 14 - 96 / 2,
-        label: "🔁 다시하기",
+        label: T.restart,
         onClick: () => softRestart(scene)
     });
     playFullScreenConfetti(scene, 3000);
