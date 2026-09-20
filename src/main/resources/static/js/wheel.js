@@ -27,6 +27,21 @@
 (function () {
     'use strict';
 
+    // 화면 문구. 템플릿(wheel.html)이 messages*.properties 에서 읽어 window.WHEEL_I18N 으로 넘긴다.
+    // 없으면(검증 하네스 등) 한국어 기본값. 문구를 고칠 땐 properties 를 고친다.
+    var T = Object.assign({
+        slotDefault: '{0}번',
+        slotAria: '{0}번 칸',
+        recentMore: '외 {0}',
+        hit: '내려찍기',
+        skip: '건너뛰기',
+        spinning: '돌아가는 중',
+        perfect: '혼신의 일격!',
+        soundOn: '소리 켜짐',
+        soundOff: '소리 꺼짐'
+    }, (typeof window !== 'undefined' && window.WHEEL_I18N) || {});
+    function fmt(t, v) { return t.replace('{0}', String(v)); }
+
     // ── 물리 ────────────────────────────────────────────────
     /*
      * 세기 0 에서도 2.6바퀴는 돈다. 이게 조준을 막는 첫 번째 장치다.
@@ -114,7 +129,7 @@
         for (i = 0; i < count; i++) {
             s = (raw && raw[i] != null) ? String(raw[i]).trim() : '';
             if (s.length > 12) { s = s.slice(0, 12); }
-            out.push(s || ((i + 1) + '번'));
+            out.push(s || fmt(T.slotDefault, i + 1));
         }
         return out;
     }
@@ -299,7 +314,7 @@
             var b = document.createElement('button');
             b.type = 'button';
             b.className = 'bw-wheel-chip';
-            b.textContent = names.slice(0, 3).join(', ') + (names.length > 3 ? ' 외 ' + (names.length - 3) : '');
+            b.textContent = names.slice(0, 3).join(', ') + (names.length > 3 ? ' ' + fmt(T.recentMore, names.length - 3) : '');
             b.addEventListener('click', function () { applyNames(names); });
             el.recent.appendChild(b);
         });
@@ -325,8 +340,8 @@
             inp.type = 'text';
             inp.maxLength = 12;
             inp.value = prev[i] || '';
-            inp.placeholder = (i + 1) + '번';
-            inp.setAttribute('aria-label', (i + 1) + '번 칸');
+            inp.placeholder = fmt(T.slotDefault, i + 1);
+            inp.setAttribute('aria-label', fmt(T.slotAria, i + 1));
             wrap.appendChild(inp);
 
             el.slots.appendChild(wrap);
@@ -416,13 +431,13 @@
     function syncButton() {
         if (!state || !el.hit) { return; }
         if (state.phase === 'ready') {
-            el.hit.textContent = '내려찍기';
+            el.hit.textContent = T.hit;
             el.hit.disabled = false;
         } else if (state.phase === 'spin') {
-            el.hit.textContent = '건너뛰기';
+            el.hit.textContent = T.skip;
             el.hit.disabled = false;
         } else {
-            el.hit.textContent = '돌아가는 중';
+            el.hit.textContent = T.spinning;
             el.hit.disabled = true;
         }
     }
@@ -1493,11 +1508,11 @@
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.lineJoin = 'round';
             ctx.lineWidth = fs * 0.32; ctx.strokeStyle = INK;
-            ctx.strokeText('혼신의 일격!', 0, 0);
+            ctx.strokeText(T.perfect, 0, 0);
             var tg = ctx.createLinearGradient(0, -fs * 0.5, 0, fs * 0.5);
             tg.addColorStop(0, GOLD.hi); tg.addColorStop(0.55, GOLD.base); tg.addColorStop(1, GOLD.lo);
             ctx.fillStyle = tg;
-            ctx.fillText('혼신의 일격!', 0, 0);
+            ctx.fillText(T.perfect, 0, 0);
             ctx.restore();
         }
     }
@@ -1569,7 +1584,7 @@
         el.mute.addEventListener('click', function () {
             var m = !sfx.isMuted();
             sfx.setMuted(m);
-            el.mute.textContent = m ? '소리 꺼짐' : '소리 켜짐';
+            el.mute.textContent = m ? T.soundOff : T.soundOn;
             el.mute.setAttribute('aria-pressed', String(!m));
         });
 
