@@ -517,13 +517,6 @@
 }
 
 /* ── 공유 ── */
-.bw-wheel-share {
-  display: flex;
-  justify-content: center;
-  gap: 0.6rem;
-  margin: 1.1rem 0 0.4rem;
-}
-
 /* ── 게임 방법 ── */
 .bw-wheel-help {
   margin-top: 1.2rem;

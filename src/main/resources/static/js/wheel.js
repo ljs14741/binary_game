@@ -71,7 +71,6 @@
     var SEG = ['#4f8cff', '#ff5c6c', '#ffb830', '#3dd68c',
                '#b478ff', '#2fd2e8', '#ff8a3d', '#ff6ac8'];
 
-
     // ══════════════════════════════════════════════════════════
     //  순수 계산부 — Node 로 검증한다 (규격 6-9)
     // ══════════════════════════════════════════════════════════
@@ -143,38 +142,6 @@
         };
         return;
     }
-
-
-    // ══════════════════════════════════════════════════════════
-    //  공유
-    // ══════════════════════════════════════════════════════════
-    var SHARE_URL = 'https://game.binaryworld.kr/wheel';
-    var SHARE_TITLE = '해머 원판돌리기';
-    var SHARE_DESC = '이름을 직접 넣어 만드는 온라인 돌림판. 세게 칠수록 오래 도는 원판돌리기!';
-
-    window.shareTwitter = function shareTwitter() {
-        window.open('https://twitter.com/intent/tweet?text=' +
-            encodeURIComponent(SHARE_TITLE + ' - 점심메뉴·커피내기·랜덤뽑기') +
-            '&url=' + encodeURIComponent(SHARE_URL));
-    };
-    window.shareFacebook = function shareFacebook() {
-        window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(SHARE_URL));
-    };
-    window.setupKakaoShareButton = function setupKakaoShareButton() {
-        if (!window.Kakao || !document.querySelector('#btnKakao')) { return; }
-        if (!Kakao.isInitialized()) { Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da'); }
-        Kakao.Share.createDefaultButton({
-            container: '#btnKakao',
-            objectType: 'feed',
-            content: {
-                title: SHARE_TITLE,
-                description: SHARE_DESC,
-                imageUrl: 'https://game.binaryworld.kr/img/wheel.png',
-                link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL }
-            }
-        });
-    };
-
 
     // ══════════════════════════════════════════════════════════
     //  소리
@@ -288,7 +255,6 @@
         };
     }());
 
-
     // ══════════════════════════════════════════════════════════
     //  DOM
     // ══════════════════════════════════════════════════════════
@@ -300,7 +266,6 @@
     var state = null;
     var raf = 0, running = false, lastNow = 0;
     var slotCount = 4;
-
 
     // ══════════════════════════════════════════════════════════
     //  최근 목록
@@ -339,7 +304,6 @@
             el.recent.appendChild(b);
         });
     }
-
 
     // ══════════════════════════════════════════════════════════
     //  설정 화면 — 칸 수와 이름. 그게 전부다
@@ -386,7 +350,6 @@
         var ins = el.slots.querySelectorAll('input'), i;
         for (i = 0; i < ins.length; i++) { ins[i].value = names[i] || ''; }
     }
-
 
     // ══════════════════════════════════════════════════════════
     //  게임 — 한 번 돌리면 끝난다
@@ -613,7 +576,6 @@
         startGame();
     }
 
-
     // ══════════════════════════════════════════════════════════
     //  루프
     // ══════════════════════════════════════════════════════════
@@ -731,7 +693,6 @@
             if (p.life <= 0 || p.y > view.h + 30) { state.confetti.splice(i, 1); }
         }
     }
-
 
     // ══════════════════════════════════════════════════════════
     //  그리기
@@ -1547,7 +1508,6 @@
         ctx.fillRect(0, 0, view.w, view.h);
     }
 
-
     // ══════════════════════════════════════════════════════════
     //  초기화
     // ══════════════════════════════════════════════════════════
@@ -1615,7 +1575,6 @@
 
         window.addEventListener('resize', function () { if (state) { resize(); } });
 
-        if (window.setupKakaoShareButton) { window.setupKakaoShareButton(); }
     }
 
     if (document.readyState === 'loading') {

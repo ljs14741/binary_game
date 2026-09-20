@@ -72,7 +72,6 @@
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
     <script th:src="@{/js/theme.js}"></script>
 
-    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
@@ -113,11 +112,7 @@
 
         <div id="game-container"></div>
 
-        <div class="icon-container">
-            <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
-            <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
-            <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
-        </div>
+        <div th:replace="~{fragments/share :: shareBar}"></div>
 
         <section class="leaderboards">
             <!-- 명예의 전당 Top10 -->
@@ -337,42 +332,6 @@
 
     // 방명록 //
 // 방명록 끝 //
-
-    function shareTwitter() {
-        var sendText = "총알피하기 게임";
-        var sendUrl = "https://game.binaryworld.kr/dodge";
-        window.open("https://twitter.com/intent/tweet?text=" + sendText + "&url=" + sendUrl);
-    }
-
-    function shareFacebook() {
-        var sendUrl = "https://game.binaryworld.kr/dodge";
-        window.open("http://www.facebook.com/sharer/sharer.php?u=" + sendUrl);
-    }
-
-    function setupKakaoShareButton() {
-        if (!window.Kakao) return;
-        if (!document.querySelector('#btnKakao')) return;
-
-        if (!Kakao.isInitialized()) {
-            Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
-        }
-
-        Kakao.Share.createDefaultButton({
-            container: '#btnKakao',
-            objectType: 'feed',
-            content: {
-                title: '총알피하기 게임',
-                description: '친구들과 경쟁해보세요~',
-                imageUrl: 'https://game.binaryworld.kr/img/radish.png',
-                link: {
-                    mobileWebUrl: 'https://game.binaryworld.kr/dodge',
-                    webUrl: 'https://game.binaryworld.kr/dodge'
-                }
-            }
-        });
-    }
-
-    setupKakaoShareButton();
 
 </script>
 

@@ -60,36 +60,6 @@ header {
     color: #ccc;
 }
 
-.icon-container {
-    margin-top: 20px;
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-.link-icon {
-    width: 40px;
-    height: 40px;
-    display: inline-block;
-    background-size: cover;
-    position: relative;
-    font-size: 14px;
-    font-weight: 500;
-    color: #fff;
-}
-
-.link-icon.twitter {
-    background-image: url(../img/icon-twitter.png);
-}
-
-.link-icon.facebook {
-    background-image: url(../img/icon-facebook.png);
-}
-
-.link-icon.kakao {
-    background-image: url(../img/icon-kakao.png);
-}
-
 @media (max-width: 768px) {
     .container {
         padding: 20px 10px;
@@ -110,15 +80,6 @@ header {
         flex-direction: column;
         gap: 6px;
         font-size: 0.9rem;
-    }
-
-    .icon-container {
-        flex-wrap: wrap;
-    }
-
-    .link-icon {
-        width: 32px;
-        height: 32px;
     }
 
     .description {

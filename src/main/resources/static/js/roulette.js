@@ -66,7 +66,6 @@
     var COLORS = ['#38bdf8', '#f97316', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#22d3ee', '#c084fc'];
     var HAIR = ['#1f2937', '#3f2a1d', '#111827', '#4b3621', '#1f2937', '#2d1b12', '#111827', '#3f2a1d'];
 
-
     // ── 순수 계산부 (Node 로 검증한다) ──────────────────────
 
     /** 이 인원일 때 한 차례에 펌프질 몇 번 하는가. */
@@ -1699,34 +1698,6 @@
         return;
     }
 
-    // ── 공유 ────────────────────────────────────────────────
-    var SHARE_URL = 'https://game.binaryworld.kr/roulette';
-    var SHARE_TITLE = '물풍선 룰렛';
-    var SHARE_DESC = '돌아가며 펌프질. 풍선이 커질수록 조마조마합니다. 터뜨린 사람이 물벼락!';
-
-    window.shareTwitter = function shareTwitter() {
-        window.open('https://twitter.com/intent/tweet?text=' +
-            encodeURIComponent(SHARE_TITLE + ' - 커피내기·점심내기·벌칙뽑기') +
-            '&url=' + encodeURIComponent(SHARE_URL));
-    };
-    window.shareFacebook = function shareFacebook() {
-        window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(SHARE_URL));
-    };
-    window.setupKakaoShareButton = function setupKakaoShareButton() {
-        if (!window.Kakao || !document.querySelector('#btnKakao')) { return; }
-        if (!Kakao.isInitialized()) { Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da'); }
-        Kakao.Share.createDefaultButton({
-            container: '#btnKakao',
-            objectType: 'feed',
-            content: {
-                title: SHARE_TITLE,
-                description: SHARE_DESC,
-                imageUrl: 'https://game.binaryworld.kr/img/roulette.png',
-                link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL }
-            }
-        });
-    };
-
     document.addEventListener('DOMContentLoaded', function () {
         canvas = document.getElementById('roulette-canvas');
         if (!canvas) { return; }
@@ -1750,6 +1721,5 @@
 
         bind();
         resize();
-        setupKakaoShareButton();
     });
 })();

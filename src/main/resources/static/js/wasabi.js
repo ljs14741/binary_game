@@ -419,47 +419,4 @@
   }
   syncThemeAttr();
   buildBoard();
-
-  window.shareTwitter = function shareTwitter() {
-    const sendText = "와사비 룰렛 - 커피내기·점심내기·벌칙뽑기";
-    const sendUrl = "https://game.binaryworld.kr/wasabi";
-    window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(sendText)}&url=${encodeURIComponent(sendUrl)}`
-    );
-  };
-
-  window.shareFacebook = function shareFacebook() {
-    const sendUrl = "https://game.binaryworld.kr/wasabi";
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(sendUrl)}`);
-  };
-
-  window.setupKakaoShareButton = function setupKakaoShareButton() {
-    if (!window.Kakao || !document.querySelector("#btnKakao")) return;
-    if (!Kakao.isInitialized()) {
-      Kakao.init("8b68c737be6b8e9a8007c61ee6f9b8da");
-    }
-    Kakao.Share.createDefaultButton({
-      container: "#btnKakao",
-      objectType: "feed",
-      content: {
-        title: "와사비 룰렛",
-        description: "커피내기·점심내기·벌칙뽑기! 초밥 접시 중 와사비를 피하세요.",
-        imageUrl: "https://game.binaryworld.kr/img/wasabi.jpg",
-        link: {
-          mobileWebUrl: "https://game.binaryworld.kr/wasabi",
-          webUrl: "https://game.binaryworld.kr/wasabi",
-        },
-      },
-    });
-  };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      if (typeof window.setupKakaoShareButton === "function") {
-        window.setupKakaoShareButton();
-      }
-    });
-  } else if (typeof window.setupKakaoShareButton === "function") {
-    window.setupKakaoShareButton();
-  }
 })();

@@ -77,7 +77,6 @@
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/pinball.css}">
 
-    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
@@ -112,11 +111,7 @@
 
         <div id="game-container"></div>
 
-        <div class="icon-container">
-            <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();"></a>
-            <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();"></a>
-            <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
-        </div>
+        <div th:replace="~{fragments/share :: shareBar}"></div>
 
         <div class="description">
             <h2>게임 방법</h2>
@@ -237,41 +232,6 @@
     // 방명록 //
 // 방명록 끝 //
 
-    function shareTwitter() {
-        const sendText = "핀볼룰렛 랜덤공뽑기 - 커피내기·점심내기·벌칙뽑기";
-        const sendUrl = "https://game.binaryworld.kr/pinball";
-        window.open("https://twitter.com/intent/tweet?text=" + sendText + "&url=" + sendUrl);
-    }
-
-    function shareFacebook() {
-        const sendUrl = "https://game.binaryworld.kr/pinball";
-        window.open("http://www.facebook.com/sharer/sharer.php?u=" + sendUrl);
-    }
-
-    function setupKakaoShareButton() {
-        if (!window.Kakao) return;
-        if (!document.querySelector('#btnKakao')) return;
-
-        if (!Kakao.isInitialized()) {
-            Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da');
-        }
-
-        Kakao.Share.createDefaultButton({
-            container: '#btnKakao',
-            objectType: 'feed',
-            content: {
-                title: '핀볼룰렛 랜덤공뽑기',
-                description: '랜덤공뽑기·핀볼뽑기로 커피내기·점심내기·벌칙뽑기!',
-                imageUrl: 'https://game.binaryworld.kr/img/pinball.png',
-                link: {
-                    mobileWebUrl: 'https://game.binaryworld.kr/pinball',
-                    webUrl: 'https://game.binaryworld.kr/pinball'
-                }
-            }
-        });
-    }
-
-    setupKakaoShareButton();
 
 </script>
 

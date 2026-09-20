@@ -51,7 +51,6 @@
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/rhythm.css}">
-    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
     <!-- Google tag (gtag.js) -->
@@ -100,11 +99,7 @@
         </div>
     </div>
 
-    <div class="bw-rhythm-share">
-        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
-        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
-        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
-    </div>
+    <div th:replace="~{fragments/share :: shareBar}"></div>
 
     <!--/* 검색엔진이 읽을 본문. 캔버스 안 글자는 검색이 못 읽는다. */-->
     <section class="bw-rhythm-help">

@@ -17,7 +17,6 @@ import { DPR, BASE_H } from './art/dpr.js';
 import { HIT_KEYS } from './core/input.js';
 
 import './art/phaserPatches.js';
-import './share.js';
 
 loadSettings();
 audio.muted = settings.muted;

@@ -106,7 +106,6 @@
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/wheel.css}">
 
-    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
     <!-- Google tag (gtag.js) -->
@@ -186,11 +185,7 @@
         <p class="bw-wheel-hint">화면을 누르거나 스페이스바를 눌러도 됩니다</p>
     </div>
 
-    <div class="bw-wheel-share">
-        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
-        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
-        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
-    </div>
+    <div th:replace="~{fragments/share :: shareBar}"></div>
 
     <section class="bw-wheel-help">
         <h2>게임 방법</h2>

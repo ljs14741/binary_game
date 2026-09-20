@@ -865,36 +865,6 @@
         return;
     }
 
-    // ── 공유 (다른 게임들과 같은 방식) ──────────────────────
-    var SHARE_URL = 'https://game.binaryworld.kr/ladder';
-    var SHARE_TITLE = '사다리타기 워터슬라이드';
-    var SHARE_DESC = '물이 미끄럼틀을 타고 내려가는 사다리타기! 커피내기·점심내기·벌칙뽑기.';
-
-    window.shareTwitter = function shareTwitter() {
-        window.open('https://twitter.com/intent/tweet?text=' +
-            encodeURIComponent(SHARE_TITLE + ' - 커피내기·점심내기·벌칙뽑기') +
-            '&url=' + encodeURIComponent(SHARE_URL));
-    };
-
-    window.shareFacebook = function shareFacebook() {
-        window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(SHARE_URL));
-    };
-
-    window.setupKakaoShareButton = function setupKakaoShareButton() {
-        if (!window.Kakao || !document.querySelector('#btnKakao')) { return; }
-        if (!Kakao.isInitialized()) { Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da'); }
-        Kakao.Share.createDefaultButton({
-            container: '#btnKakao',
-            objectType: 'feed',
-            content: {
-                title: SHARE_TITLE,
-                description: SHARE_DESC,
-                imageUrl: 'https://game.binaryworld.kr/img/ladder.png',
-                link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL }
-            }
-        });
-    };
-
     document.addEventListener('DOMContentLoaded', function () {
         canvas = document.getElementById('ladder-canvas');
         if (!canvas) { return; }
@@ -921,6 +891,5 @@
 
         bind();
         resize();
-        setupKakaoShareButton();
     });
 })();

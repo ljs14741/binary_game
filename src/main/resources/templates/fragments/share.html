@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/*
+  게임 페이지 공통 "공유 + 후원" 바.
+
+  쓰는 법 — 인자가 없다. 제목·설명·이미지·주소는 페이지의 og 메타와 canonical 에서 읽는다.
+  (모든 게임 페이지가 SEO 규칙상 그 태그를 갖고 있으니 게임별 설정이 필요 없다)
+    <div th:replace="~{fragments/share :: shareBar}"></div>
+
+  예전엔 게임마다 40px 아이콘 PNG 세 개(트위터·페이스북·카카오)를 따로 박아 넣고
+  shareTwitter()/setupKakaoShareButton() 을 페이지마다 복사해 뒀다. 모양도 제각각이었고
+  경마·무궁화에는 아예 없었다. 이 조각 하나로 통일한다.
+
+  버튼: 카카오톡 · X · 페이스북 · 링크 복사 · (모바일: 기기 공유). 아이콘은 인라인 SVG 라 이미지 요청이 없다.
+  카카오 SDK 는 이 조각이 보일 때 한 번만 비동기로 불러온다 (페이지 <head> 의 kakao.min.js 태그는 지워도 된다).
+
+  후원: "개발자에게 커피 한 잔" → 모달. 휴대폰이면 카카오페이 송금 링크 버튼, PC 면 QR.
+  계좌는 둘 다 보여주고 복사 버튼. 결혼식 사이트(binary_wedding SiteHeader.tsx)와 같은 구성.
+  구걸처럼 보이면 손해라 링크 한 줄로만 두고, 결과 화면·팝업엔 절대 넣지 않는다.
+
+  스타일을 같이 둔 이유: other-games 조각과 같다 — main-dark/light 두 벌을 안 고치려고.
+*/-->
+<section class="bw-share" th:fragment="shareBar">
+    <style>
+        .bw-share {
+            max-width: 960px;
+            margin: 26px auto 8px;
+            padding: 0 14px;
+            text-align: center;
+            font-family: var(--bw-font-body, "Manrope", "Pretendard", "Segoe UI", sans-serif);
+        }
+        .bw-share-head {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--bw-muted, #a7a49b);
+            margin-bottom: 10px;
+        }
+        .bw-share-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        .bw-share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            height: 40px;
+            padding: 0 15px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font: inherit;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bw-share-btn svg { width: 18px; height: 18px; flex: none; }
+        .bw-share-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.25); filter: brightness(1.05); }
+        .bw-share-btn:active { transform: translateY(0); box-shadow: none; }
+        .bw-share-btn.kakao    { background: #FEE500; color: #191919; }
+        .bw-share-btn.x        { background: #111; color: #fff; border-color: rgba(255,255,255,.18); }
+        .bw-share-btn.facebook { background: #1877F2; color: #fff; }
+        .bw-share-btn.copy,
+        .bw-share-btn.native   { background: var(--bw-surface-strong, #14181e); color: var(--bw-text, #f3f1ec); border-color: var(--bw-border, rgba(255,255,255,.12)); }
+        .bw-share-btn.native   { display: none; }
+        .bw-share.has-native .bw-share-btn.native { display: inline-flex; }
+
+        .bw-donate-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 14px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px dashed rgba(251, 191, 36, .55);
+            background: rgba(251, 191, 36, .08);
+            color: #fbbf24;
+            font: inherit;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s ease, transform .15s ease;
+        }
+        .bw-donate-link:hover { background: rgba(251, 191, 36, .16); transform: translateY(-1px); }
+        .bw-donate-link svg { width: 15px; height: 15px; }
+
+        /* 토스트 */
+        .bw-share-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 28px;
+            transform: translateX(-50%) translateY(12px);
+            padding: 10px 18px;
+            border-radius: 999px;
+            background: #14181e;
+            color: #f3f1ec;
+            border: 1px solid rgba(255,255,255,.14);
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 12px 32px rgba(0,0,0,.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease, transform .2s ease;
+            z-index: 9998;
+        }
+        .bw-share-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* 후원 모달 */
+        .bw-donate { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; padding: 18px; }
+        .bw-donate.open { display: flex; }
+        .bw-donate-dim { position: absolute; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(3px); }
+        .bw-donate-card {
+            position: relative;
+            width: 100%;
+            max-width: 360px;
+            max-height: calc(100vh - 36px);
+            overflow-y: auto;
+            background: #fff;
+            color: #0f172a;
+            border-radius: 28px;
+            padding: 30px 24px 24px;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0,0,0,.5);
+            animation: bw-donate-in .28s cubic-bezier(.22,1,.36,1) both;
+        }
+        @keyframes bw-donate-in { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+        .bw-donate-close {
+            position: absolute; top: 14px; right: 14px;
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 0; background: #f1f5f9; color: #64748b; font-size: 18px; cursor: pointer;
+        }
+        .bw-donate-close:hover { background: #e2e8f0; color: #0f172a; }
+        .bw-donate-icon {
+            width: 64px; height: 64px; margin: 0 auto 14px;
+            border-radius: 50%; background: #FEE500; color: #191919;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .bw-donate-icon svg { width: 30px; height: 30px; }
+        .bw-donate-card h3 { margin: 0 0 8px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
+        .bw-donate-card p  { margin: 0 0 16px; font-size: 13.5px; line-height: 1.6; color: #64748b; }
+        .bw-donate-card p b { color: #e11d48; }
+        .bw-donate-pay {
+            display: none;
+            width: 100%; padding: 15px 0; margin-bottom: 12px;
+            border-radius: 16px; background: #FEE500; color: #191919;
+            font-weight: 900; font-size: 15px; text-decoration: none;
+        }
+        .bw-donate.is-mobile .bw-donate-pay { display: block; }
+        .bw-donate-qr { display: block; width: 190px; height: 190px; margin: 0 auto 12px; border-radius: 14px; border: 1px solid #e2e8f0; }
+        .bw-donate.is-mobile .bw-donate-qr { display: none; }
+        .bw-donate-acct {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 12px 14px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; text-align: left;
+        }
+        .bw-donate-acct b { display: block; font-size: 13.5px; color: #0f172a; }
+        .bw-donate-acct small { font-size: 12px; color: #64748b; }
+        .bw-donate-acct button {
+            flex: none; padding: 8px 14px; border-radius: 999px;
+            border: 1px solid #cbd5e1; background: #fff; color: #334155; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+        }
+        .bw-donate-acct button:hover { background: #f1f5f9; }
+
+        :root[data-theme="light"] .bw-share-btn.x { border-color: transparent; }
+        :root[data-theme="light"] .bw-share-btn.copy,
+        :root[data-theme="light"] .bw-share-btn.native { background: #fff; color: #0f172a; border-color: #cbd5e1; }
+        :root[data-theme="light"] .bw-donate-link { color: #b45309; border-color: rgba(180, 83, 9, .5); background: rgba(251, 191, 36, .12); }
+        :root[data-theme="light"] .bw-share-toast { background: #0f172a; }
+    </style>
+
+    <div class="bw-share-head">친구에게 공유하기</div>
+    <div class="bw-share-row">
+        <button type="button" class="bw-share-btn kakao" data-share="kakao" aria-label="카카오톡으로 공유">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.48 3 2 6.58 2 11c0 2.84 1.86 5.33 4.66 6.75l-.95 3.53c-.08.3.26.55.52.38l4.2-2.8c.51.06 1.03.09 1.57.09 5.52 0 10-3.58 10-7.95S17.52 3 12 3z"/></svg>
+            카카오톡
+        </button>
+        <button type="button" class="bw-share-btn x" data-share="x" aria-label="X(트위터)로 공유">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.53 3h3.06l-6.7 7.66L21.8 21h-6.17l-4.83-6.32L5.27 21H2.2l7.17-8.19L1.8 3h6.33l4.37 5.78L17.53 3zm-1.07 16.2h1.7L7.05 4.7H5.23l11.23 14.5z"/></svg>
+            X
+        </button>
+        <button type="button" class="bw-share-btn facebook" data-share="facebook" aria-label="페이스북으로 공유">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.25-1.5 1.55-1.5H16.6V4.4c-.3-.04-1.3-.13-2.45-.13-2.43 0-4.1 1.48-4.1 4.2v2.03H7.3v3h2.75V21h3.45z"/></svg>
+            페이스북
+        </button>
+        <button type="button" class="bw-share-btn copy" data-share="copy" aria-label="링크 복사">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            링크 복사
+        </button>
+        <button type="button" class="bw-share-btn native" data-share="native" aria-label="다른 앱으로 공유">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+            더보기
+        </button>
+    </div>
+
+    <button type="button" class="bw-donate-link" data-donate="open">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
+        재밌었다면 개발자에게 커피 한 잔
+    </button>
+
+    <div class="bw-share-toast" role="status" aria-live="polite"></div>
+
+    <div class="bw-donate" role="dialog" aria-modal="true" aria-labelledby="bw-donate-title">
+        <div class="bw-donate-dim" data-donate="close"></div>
+        <div class="bw-donate-card">
+            <button type="button" class="bw-donate-close" data-donate="close" aria-label="닫기">✕</button>
+            <div class="bw-donate-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
+            </div>
+            <h3 id="bw-donate-title">개발자에게 커피 쏘기</h3>
+            <p class="bw-donate-desc-pc">카카오톡 카메라로 QR을 찍으면 카카오페이로 바로 보낼 수 있어요.<br>보내주신 후원은 서버비에 소중히 씁니다.<br><b>사실 치킨이 먹고 싶어요 🍗</b></p>
+            <p class="bw-donate-desc-m">아래 버튼을 누르면 카카오페이로 바로 보낼 수 있어요.<br>보내주신 후원은 서버비에 소중히 씁니다.<br><b>사실 치킨이 먹고 싶어요 🍗</b></p>
+            <a class="bw-donate-pay" href="https://qr.kakaopay.com/Ej9JnRsvn" target="_blank" rel="noopener noreferrer">카카오페이로 후원하기</a>
+            <img class="bw-donate-qr" data-src="/img/donate-qr.png" alt="카카오페이 송금 QR" width="190" height="190">
+            <div class="bw-donate-acct">
+                <div>
+                    <b>국민은행 204202-04-331256</b>
+                    <small>예금주: 이진수</small>
+                </div>
+                <button type="button" data-donate="copy-acct" data-acct="20420204331256">복사</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var root = document.currentScript.closest('.bw-share');
+        if (!root) return;
+        var KAKAO_KEY = '8b68c737be6b8e9a8007c61ee6f9b8da';
+        var KAKAO_SDK = 'https://developers.kakao.com/sdk/js/kakao.min.js';
+
+        // 공유 내용은 페이지의 og 메타에서. SEO 규칙상 모든 게임 페이지가 갖고 있다.
+        var meta = function (p) { var el = document.querySelector('meta[property="' + p + '"]'); return el ? el.content : ''; };
+        var canon = document.querySelector('link[rel="canonical"]');
+        var url   = canon ? canon.href : location.href.split('?')[0];
+        var title = meta('og:title') || document.title;
+        var desc  = meta('og:description') || '';
+        var image = meta('og:image') || '';
+
+        var toastEl = root.querySelector('.bw-share-toast');
+        var toastTimer = 0;
+        function toast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+        }
+
+        // 클립보드 API 는 문서에 포커스가 없으면 영원히 대기한다(거부도 안 한다). 1초 안에 안 끝나면 구식 방법으로.
+        function copyLegacy(text) {
+            return new Promise(function (res, rej) {
+                var ta = document.createElement('textarea');
+                ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy') ? res() : rej(new Error('execCommand')); } catch (e) { rej(e); }
+                document.body.removeChild(ta);
+            });
+        }
+        function copyText(text) {
+            if (!(navigator.clipboard && window.isSecureContext)) return copyLegacy(text);
+            var timeout = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, 1000); });
+            return Promise.race([navigator.clipboard.writeText(text), timeout]).catch(function () { return copyLegacy(text); });
+        }
+
+        // 카카오 SDK: 이 조각이 화면에 들어올 때 한 번만 비동기로. 페이지에 이미 있으면 그걸 쓴다.
+        var kakaoLoading = null;
+        function loadKakao() {
+            if (window.Kakao) return Promise.resolve();
+            if (kakaoLoading) return kakaoLoading;
+            kakaoLoading = new Promise(function (res, rej) {
+                var s = document.createElement('script');
+                s.src = KAKAO_SDK; s.async = true; s.onload = res; s.onerror = rej;
+                document.head.appendChild(s);
+            });
+            return kakaoLoading;
+        }
+        if ('IntersectionObserver' in window) {
+            var io = new IntersectionObserver(function (es) {
+                if (es.some(function (e) { return e.isIntersecting; })) { loadKakao().catch(function () {}); io.disconnect(); }
+            }, { rootMargin: '200px' });
+            io.observe(root);
+        }
+        function shareKakao() {
+            loadKakao().then(function () {
+                if (!Kakao.isInitialized()) Kakao.init(KAKAO_KEY);
+                Kakao.Share.sendDefault({
+                    objectType: 'feed',
+                    content: { title: title, description: desc, imageUrl: image, link: { mobileWebUrl: url, webUrl: url } },
+                    buttons: [{ title: '게임 하러 가기', link: { mobileWebUrl: url, webUrl: url } }]
+                });
+            }).catch(function () { toast('카카오톡 공유를 불러오지 못했어요'); });
+        }
+
+        var popup = function (u) { window.open(u, '_blank', 'noopener,width=600,height=520'); };
+
+        if (navigator.share) root.classList.add('has-native');
+
+        root.addEventListener('click', function (ev) {
+            var btn = ev.target.closest('[data-share]');
+            if (!btn) return;
+            var kind = btn.getAttribute('data-share');
+            if (kind === 'kakao')    shareKakao();
+            if (kind === 'x')        popup('https://twitter.com/intent/tweet?text=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(url));
+            if (kind === 'facebook') popup('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url));
+            if (kind === 'copy')     copyText(url).then(function () { toast('링크를 복사했어요'); }, function () { toast('복사에 실패했어요. 주소창에서 복사해 주세요'); });
+            if (kind === 'native')   navigator.share({ title: title, text: desc, url: url }).catch(function () {});
+        });
+
+        // ── 후원 모달 ──
+        var modal = root.querySelector('.bw-donate');
+        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia('(max-width: 768px)').matches;
+        function openDonate() {
+            modal.classList.toggle('is-mobile', isMobile);
+            root.querySelector('.bw-donate-desc-pc').style.display = isMobile ? 'none' : '';
+            root.querySelector('.bw-donate-desc-m').style.display  = isMobile ? '' : 'none';
+            var qr = modal.querySelector('.bw-donate-qr');
+            if (!qr.src) qr.src = qr.getAttribute('data-src');   // 열 때만 QR 이미지를 받는다
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeDonate() { modal.classList.remove('open'); document.body.style.overflow = ''; }
+        root.addEventListener('click', function (ev) {
+            var el = ev.target.closest('[data-donate]');
+            if (!el) return;
+            var act = el.getAttribute('data-donate');
+            if (act === 'open')  openDonate();
+            if (act === 'close') closeDonate();
+            if (act === 'copy-acct') copyText(el.getAttribute('data-acct')).then(function () { el.textContent = '복사됨'; toast('계좌번호를 복사했어요'); setTimeout(function () { el.textContent = '복사'; }, 2000); }, function () { toast('복사에 실패했어요'); });
+        });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('open')) closeDonate(); });
+    })();
+    </script>
+</section>
+
+</body>
+</html>

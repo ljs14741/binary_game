@@ -712,34 +712,6 @@ body,
   font-weight: 600;
 }
 
-/* ===== Share icons ===== */
-.icon-container {
-  margin-top: 1.25rem;
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
-}
-
-.link-icon {
-  width: 42px;
-  height: 42px;
-  display: inline-block;
-  background-size: cover;
-  border-radius: 50%;
-  border: 1px solid var(--bw-border);
-  opacity: 0.92;
-  transition: transform 0.25s var(--bw-ease), opacity 0.25s var(--bw-ease);
-}
-
-.link-icon:hover {
-  transform: scale(1.08);
-  opacity: 1;
-}
-
-.link-icon.twitter { background-image: url(../img/icon-twitter.png); }
-.link-icon.facebook { background-image: url(../img/icon-facebook.png); }
-.link-icon.kakao { background-image: url(../img/icon-kakao.png); }
-
 /* ===== Motion ===== */
 @keyframes bw-game-rise {
   from { opacity: 0; transform: translateY(14px); }

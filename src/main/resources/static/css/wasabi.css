@@ -782,25 +782,6 @@ body.bw-wasabi-page[data-theme="dark"] .bw-wasabi-overlay-card .bw-wasabi-btn {
   font-weight: 600;
 }
 
-.bw-wasabi-share {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 0.95rem 0 0.25rem;
-}
-
-.bw-wasabi-share .link-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-size: cover;
-  opacity: 0.65;
-}
-
-.bw-wasabi-share .link-icon.twitter { background-image: url(../img/icon-twitter.png); }
-.bw-wasabi-share .link-icon.facebook { background-image: url(../img/icon-facebook.png); }
-.bw-wasabi-share .link-icon.kakao { background-image: url(../img/icon-kakao.png); }
-
 #bw-guestbook {
   width: min(560px, calc(100% - 1rem));
   margin: 1.5rem auto 0;

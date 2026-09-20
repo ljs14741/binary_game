@@ -52,7 +52,6 @@
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/wasabi.css}">
 
-    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
     <!-- Google tag (gtag.js) -->
@@ -111,11 +110,7 @@
         </div>
     </section>
 
-    <div class="bw-wasabi-share">
-        <a id="btnTwitter" class="link-icon twitter" href="javascript:shareTwitter();" aria-label="트위터 공유"></a>
-        <a id="btnFacebook" class="link-icon facebook" href="javascript:shareFacebook();" aria-label="페이스북 공유"></a>
-        <a id="btnKakao" class="link-icon kakao" href="javascript:void(0);" aria-label="카카오 공유"></a>
-    </div>
+    <div th:replace="~{fragments/share :: shareBar}"></div>
 
     <section class="bw-wasabi-help">
         <h2>게임 방법</h2>
@@ -135,15 +130,6 @@
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
 <script th:src="@{/js/wasabi.js}"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // 테마 토글은 공통 스크립트(/js/theme.js)가 처리한다.
-        if (typeof setupKakaoShareButton === "function") {
-            setupKakaoShareButton();
-        }
-    });
-</script>
-
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
 <script src="https://binaryworld.kr/common/guestbook.js" defer></script>

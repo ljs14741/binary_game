@@ -129,7 +129,6 @@
         return '#fb923c';
     }
 
-
     /** 표시용 압력(MPa). 간격이 좁을수록 올라간다. */
     function pressureOf(gap) {
         return 1.2 + (1 - Math.max(0, Math.min(GAP_FULL, gap)) / GAP_FULL) * 9.6;
@@ -1622,34 +1621,6 @@
         return;
     }
 
-    // ── 공유 ────────────────────────────────────────────────
-    var SHARE_URL = 'https://game.binaryworld.kr/press';
-    var SHARE_TITLE = '턱압프레스';
-    var SHARE_DESC = '한 번만 더 당겨보세요. 커피내기·점심내기·벌칙뽑기 복불복 게임!';
-
-    window.shareTwitter = function shareTwitter() {
-        window.open('https://twitter.com/intent/tweet?text=' +
-            encodeURIComponent(SHARE_TITLE + ' - 커피내기·점심내기·벌칙뽑기') +
-            '&url=' + encodeURIComponent(SHARE_URL));
-    };
-    window.shareFacebook = function shareFacebook() {
-        window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(SHARE_URL));
-    };
-    window.setupKakaoShareButton = function setupKakaoShareButton() {
-        if (!window.Kakao || !document.querySelector('#btnKakao')) { return; }
-        if (!Kakao.isInitialized()) { Kakao.init('8b68c737be6b8e9a8007c61ee6f9b8da'); }
-        Kakao.Share.createDefaultButton({
-            container: '#btnKakao',
-            objectType: 'feed',
-            content: {
-                title: SHARE_TITLE,
-                description: SHARE_DESC,
-                imageUrl: 'https://game.binaryworld.kr/img/press.png',
-                link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL }
-            }
-        });
-    };
-
     document.addEventListener('DOMContentLoaded', function () {
         canvas = document.getElementById('press-canvas');
         if (!canvas) { return; }
@@ -1674,6 +1645,5 @@
 
         bind();
         resize();
-        setupKakaoShareButton();
     });
 })();
