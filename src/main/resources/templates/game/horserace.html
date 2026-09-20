@@ -1,27 +1,29 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko" th:lang="${lang}">
 <head>
-    <title>말달리자 게임 – 경마내기게임·경마게임·커피내기·점심내기·벌칙뽑기 | Binary World</title>
+    <!--/* 다국어: 글자는 i18n/messages*.properties 의 horserace.* 키. /en/horserace, /ja/horserace. Phaser 캔버스 글자는 아래 window.HORSERACE_I18N 으로 넘긴다 */-->
+    <title th:text="#{horserace.meta.title}">말달리자 게임 – 경마내기게임·경마게임·커피내기·점심내기·벌칙뽑기 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <!-- SEO: 말달리자게임, 경마내기게임, 커피내기·점심내기 유입 -->
-    <meta name="description" content="말달리자 게임! 경마내기게임·경마게임으로 커피내기·점심내기·벌칙뽑기. 사다리타기·룰렛 대신 등급 랜덤·역전·막판 스퍼트. 최대 30명 무료 웹 경마.">
-    <meta name="keywords" content="말달리자, 말달리자게임, 말달리자 게임, 경마내기게임, 경마게임, 경마내기, 경마레이스, 커피내기, 점심내기, 벌칙뽑기, 당번뽑기, 사다리타기, 룰렛, 랜덤뽑기, Binary World">
+    <meta name="description" th:content="#{horserace.meta.description}" content="말달리자 게임! 경마내기게임·경마게임으로 커피내기·점심내기·벌칙뽑기. 사다리타기·룰렛 대신 등급 랜덤·역전·막판 스퍼트. 최대 30명 무료 웹 경마.">
+    <meta name="keywords" th:content="#{horserace.meta.keywords}" content="말달리자, 말달리자게임, 말달리자 게임, 경마내기게임, 경마게임, 경마내기, 경마레이스, 커피내기, 점심내기, 벌칙뽑기, 당번뽑기, 사다리타기, 룰렛, 랜덤뽑기, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <!-- Open Graph -->
     <meta property="og:type"        content="website">
-    <meta property="og:title"       content="말달리자 게임 – 경마내기게임·커피내기·점심내기 | Binary World">
-    <meta property="og:description" content="말달리자 게임·경마내기게임으로 커피내기·점심내기·벌칙뽑기! 사다리·룰렛 대신 무료 경마게임.">
+    <meta property="og:title"       th:content="#{horserace.meta.ogTitle}" content="말달리자 게임 – 경마내기게임·커피내기·점심내기 | Binary World">
+    <meta property="og:description" th:content="#{horserace.meta.ogDescription}" content="말달리자 게임·경마내기게임으로 커피내기·점심내기·벌칙뽑기! 사다리·룰렛 대신 무료 경마게임.">
     <meta property="og:image"       content="https://game.binaryworld.kr/img/horserace.png">
-    <meta property="og:url"         content="https://game.binaryworld.kr/horserace">
+    <meta property="og:url"         th:content="${canonicalUrl}" content="https://game.binaryworld.kr/horserace">
+    <meta property="og:locale"      th:content="${lang == 'ko' ? 'ko_KR' : (lang == 'ja' ? 'ja_JP' : 'en_US')}" content="ko_KR">
 
     <!-- Twitter -->
     <meta name="twitter:card"        content="summary_large_image">
-    <meta name="twitter:title"       content="말달리자 게임 – 경마내기게임·커피내기 | Binary World">
-    <meta name="twitter:description" content="말달리자 게임·경마내기게임! 커피내기·점심내기·벌칙뽑기용 무료 경마게임.">
+    <meta name="twitter:title"       th:content="#{horserace.meta.ogTitle}" content="말달리자 게임 – 경마내기게임·커피내기 | Binary World">
+    <meta name="twitter:description" th:content="#{horserace.meta.ogDescription}" content="말달리자 게임·경마내기게임! 커피내기·점심내기·벌칙뽑기용 무료 경마게임.">
     <meta name="twitter:image"       content="https://game.binaryworld.kr/img/horserace.png">
 
     <!-- 파비콘 -->
@@ -44,24 +46,23 @@
     <meta name="msapplication-TileImage" content="/img/favicon/ms-icon-144x144.png">
     <meta name="theme-color" content="#0b0d10">
 
-    <link rel="canonical"  href="https://game.binaryworld.kr/horserace">
-    <link rel="alternate"  hreflang="x-default" href="https://game.binaryworld.kr/horserace">
-    <link rel="alternate"  hreflang="ko" href="https://game.binaryworld.kr/horserace?lang=ko">
-    <link rel="alternate"  hreflang="en" href="https://game.binaryworld.kr/horserace?lang=en">
-    <link rel="alternate"  hreflang="ja" href="https://game.binaryworld.kr/horserace?lang=ja">
+    <!--/* canonical + 언어별 hreflang (fragments/i18n). 예전 ?lang=en 주소는 JS 번역이라 구글이 못 읽어 폐기했다 */-->
+    <th:block th:replace="~{fragments/i18n :: hreflang}"/>
 
     <!-- JSON-LD: 경마게임, 경마내기, 경마레이스 검색 유입 최적화 -->
-    <script type="application/ld+json">
+    <script type="application/ld+json" th:inline="javascript">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "말달리자 게임",
-      "alternateName": ["말달리자게임", "경마내기게임", "경마게임", "경마내기", "경마레이스", "커피내기게임", "점심내기", "벌칙뽑기"],
-      "url": "https://game.binaryworld.kr/horserace",
-      "description": "말달리자 게임·경마내기게임. 커피내기·점심내기·벌칙뽑기용 무료 경마. 등급 랜덤·역전·막판 스퍼트, 최대 30명.",
+      "name": [[#{horserace.ld.name}]],
+      "alternateName": [[${ {#messages.msg('horserace.ld.alt1'), #messages.msg('horserace.ld.alt2'), #messages.msg('horserace.ld.alt3'), #messages.msg('horserace.ld.alt4')} }]],
+      "url": [[${canonicalUrl}]],
+      "inLanguage": [[${lang}]],
+      "description": [[#{horserace.ld.description}]],
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": [[#{horserace.ld.keywords}]]
     }
     </script>
 
@@ -456,28 +457,30 @@
     <div class="container">
 
         <div class="nav-back">
-            <a href="/" class="back-btn">← 게임 목록</a>
+            <a href="/" class="back-btn" th:text="#{common.back}">← 게임 목록</a>
         </div>
 
-        <h1 class="game-title">말달리자 경마내기게임</h1>
-        <p class="game-desc">말 하나 골라놓고 결승선까지 조마조마. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+        <div th:replace="~{fragments/i18n :: langSwitch}"></div>
+
+        <h1 class="game-title" th:text="#{horserace.ui.title}">말달리자 경마내기게임</h1>
+        <p class="game-desc" th:text="#{horserace.ui.lead}">말 하나 골라놓고 결승선까지 조마조마. 커피내기·점심내기·벌칙뽑기에 딱!</p>
 
         <div id="horserace-fullscreen-wrap">
-        <button type="button" id="hrFsExitBtn" class="hr-fs-exit-btn" aria-label="전체화면 나가기">✕ 나가기</button>
+        <button type="button" id="hrFsExitBtn" class="hr-fs-exit-btn" aria-label="전체화면 나가기" th:aria-label="#{horserace.ui.fsExitAria}" th:text="#{horserace.ui.fsExit}">✕ 나가기</button>
         <div id="hr-mobile-fs-exit" class="hr-mobile-fs-exit" aria-hidden="true">
-            <button type="button" id="hrMobileFsExitBtn" aria-label="전체화면 종료">✕ 전체화면 종료</button>
+            <button type="button" id="hrMobileFsExitBtn" aria-label="전체화면 종료" th:aria-label="#{horserace.ui.mobileFsExitAria}" th:text="#{horserace.ui.mobileFsExit}">✕ 전체화면 종료</button>
         </div>
         <div class="game-bgm">
-            <button id="bgmToggle">🔊 BGM 켜짐</button>
-            <label for="volumeControl">볼륨:</label>
+            <button id="bgmToggle" th:text="#{horserace.ui.bgmOn}">🔊 BGM 켜짐</button>
+            <label for="volumeControl" th:text="#{horserace.ui.volume}">볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="30">
-            <button id="fsToggle" title="전체화면 전환">전체화면</button>
+            <button id="fsToggle" title="전체화면 전환" th:title="#{horserace.ui.fsToggleTip}" th:text="#{horserace.ui.fsToggle}">전체화면</button>
         </div>
 
         <div id="game-container">
             <div id="hr-setup-overlay">
                 <textarea id="hrNamesInput"
-                    placeholder="홍길동&#10;이순신&#10;강감찬"
+                    placeholder="홍길동&#10;이순신&#10;강감찬" th:placeholder="#{horserace.ui.namesPlaceholder}"
                     autocomplete="off" autocorrect="off"
                     autocapitalize="none" spellcheck="false"></textarea>
             </div>
@@ -486,19 +489,19 @@
 
         <!-- 소개 & 사용법 -->
         <div class="hr-description">
-            <h2 id="hr-desc-h2-1">방법</h2>
+            <h2 th:text="#{horserace.help.title1}">방법</h2>
             <ol>
-                <li id="hr-desc-step-1">참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명)</li>
-                <li id="hr-desc-step-2"><strong>꼴찌 벌칙 뽑기</strong>(기본) / <strong>1등 우승 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong></li>
-                <li id="hr-desc-step-3">시작 시 말마다 등급 랜덤: 🏇 일반 94% / 🦄 레어 5% (속도 +10%, 부스터 확률 1.5배) / 🐉 에픽 1% (속도 +20%)</li>
-                <li id="hr-desc-step-4">🥕 당근 = <strong>부스터</strong>(잠시 2배 속도, 1등은 못 씀) · 돌멩이 = <strong>빙글 돌며 뒤로 밀리고</strong> 한동안 느려짐 · 💧 웅덩이 = <strong>잠시 느려짐</strong>. 마지막(또는 첫 번째)으로 결승선을 넘는 말의 주인이 벌칙(또는 우승)</li>
+                <li th:utext="#{horserace.help.step1}">참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명)</li>
+                <li th:utext="#{horserace.help.step2}"><strong>꼴찌 벌칙 뽑기</strong>(기본) / <strong>1등 우승 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong></li>
+                <li th:utext="#{horserace.help.step3}">시작 시 말마다 등급 랜덤: 🏇 일반 94% / 🦄 레어 5% (속도 +10%, 부스터 확률 1.5배) / 🐉 에픽 1% (속도 +20%)</li>
+                <li th:utext="#{horserace.help.step4}">🥕 당근 = <strong>부스터</strong>(잠시 2배 속도, 1등은 못 씀) · 돌멩이 = <strong>빙글 돌며 뒤로 밀리고</strong> 한동안 느려짐 · 💧 웅덩이 = <strong>잠시 느려짐</strong>. 마지막(또는 첫 번째)으로 결승선을 넘는 말의 주인이 벌칙(또는 우승)</li>
             </ol>
 
-            <h2 id="hr-desc-h2-2">특징</h2>
+            <h2 th:text="#{horserace.help.title2}">특징</h2>
             <ul>
-                <li id="hr-desc-feat-1"><strong>커피내기·점심내기·벌칙뽑기·당번뽑기</strong>용 경마내기게임 (사다리·룰렛 대신)</li>
-                <li id="hr-desc-feat-2"><strong>역전 요소</strong> – 꼴찌 부스터, 막판 스퍼트, 1~3위만 걸리는 선두 억까</li>
-                <li id="hr-desc-feat-3">말마다 고유 색상으로 순위 한눈에 구분, 최대 30명 참가</li>
+                <li th:utext="#{horserace.help.feat1}"><strong>커피내기·점심내기·벌칙뽑기·당번뽑기</strong>용 경마내기게임 (사다리·룰렛 대신)</li>
+                <li th:utext="#{horserace.help.feat2}"><strong>역전 요소</strong> – 꼴찌 부스터, 막판 스퍼트, 1~3위만 걸리는 선두 억까</li>
+                <li th:utext="#{horserace.help.feat3}">말마다 고유 색상으로 순위 한눈에 구분, 최대 30명 참가</li>
             </ul>
         </div>
 
@@ -513,6 +516,51 @@
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
 <!-- Phaser 3 & 게임 스크립트 -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // horserace.js 가 캔버스·버튼에 띄우는 문구. 키는 messages*.properties 의 horserace.js.* / horserace.ui.*
+    window.HORSERACE_I18N = {
+        title:           [[#{horserace.js.title}]],
+        subtitle:        [[#{horserace.js.subtitle}]],
+        placeholder:     [[#{horserace.js.placeholder}]],
+        count:           [[#{horserace.js.count('{0}')}]],
+        countMin:        [[#{horserace.js.countMin}]],
+        countMax:        [[#{horserace.js.countMax}]],
+        countOk:         [[#{horserace.js.countOk}]],
+        modeLabel:       [[#{horserace.js.modeLabel}]],
+        modeWinner:      [[#{horserace.js.modeWinner}]],
+        modeLoser:       [[#{horserace.js.modeLoser}]],
+        modeHintLoser:   [[#{horserace.js.modeHintLoser}]],
+        modeHintWinner:  [[#{horserace.js.modeHintWinner}]],
+        startBtn:        [[#{horserace.js.startBtn}]],
+        msgMin:          [[#{horserace.js.msgMin}]],
+        msgMax:          [[#{horserace.js.msgMax}]],
+        footerPromo:     [[#{horserace.js.footerPromo}]],
+        defaultName1:    [[#{horserace.js.defaultName1}]],
+        defaultName2:    [[#{horserace.js.defaultName2}]],
+        fsExitLabel:     [[#{horserace.js.fsExitLabel}]],
+        leaderboard:     [[#{horserace.js.leaderboard}]],
+        rank:            [[#{horserace.js.rank('{0}')}]],
+        finalSpurt:      [[#{horserace.js.finalSpurt}]],
+        carrotEat:       [[#{horserace.js.carrotEat}]],
+        rockHit:         [[#{horserace.js.rockHit}]],
+        puddleHit:       [[#{horserace.js.puddleHit}]],
+        resultWin:       [[#{horserace.js.resultWin}]],
+        resultLose:      [[#{horserace.js.resultLose}]],
+        btnRestart:      [[#{horserace.js.btnRestart}]],
+        btnNewSetup:     [[#{horserace.js.btnNewSetup}]],
+        bgmOn:           [[#{horserace.ui.bgmOn}]],
+        bgmOff:          [[#{horserace.ui.bgmOff}]],
+        domFsToggle:     [[#{horserace.ui.fsToggle}]],
+        domFsToggleExit: [[#{horserace.ui.fsToggleExit}]],
+        domFsToggleTip:  [[#{horserace.ui.fsToggleTip}]],
+        domFsExitTip:    [[#{horserace.ui.fsExitTip}]],
+        mobileFsBlockTitle:   [[#{horserace.js.mobileFsTitle}]],
+        mobileFsBlockMessage: [[#{horserace.js.mobileFsMessage}]],
+        mobileFsBlockOk:      [[#{horserace.js.mobileFsOk}]]
+    };
+    /*]]>*/
+</script>
 <script th:src="@{/js/phaser.min.js}"></script>
 <script th:src="@{/js/horserace-art.js}"></script>
 <script th:src="@{/js/horserace.js}"></script>
