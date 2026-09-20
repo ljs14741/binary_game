@@ -115,6 +115,10 @@
             box-shadow: 0 0 40px rgba(255, 215, 0, 0.12);
             min-height: 400px;
             aspect-ratio: 1000 / 720;
+            /* 캔버스가 화면보다 길면 결승 순간·결과가 접힘 아래로 내려간다.
+               높이가 아니라 폭을 줄여 비율(1000:720)을 지킨다 — 이름 입력 오버레이가 컨테이너 % 좌표라
+               비율이 깨지면 캔버스 그림과 어긋난다. 위쪽 헤더·제목·BGM 바 몫으로 약 300px 를 뺀다. */
+            width: min(100%, calc((100vh - 300px) * 1000 / 720));
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
@@ -485,9 +489,9 @@
             <h2 id="hr-desc-h2-1">방법</h2>
             <ol>
                 <li id="hr-desc-step-1">참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명)</li>
-                <li id="hr-desc-step-2"><strong>1등 우승 뽑기</strong> / <strong>꼴찌 벌칙 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong></li>
-                <li id="hr-desc-step-3">시작 시 말마다 등급 랜덤: 🏇 일반 / 🦄 레어 / 🐉 에픽</li>
-                <li id="hr-desc-step-4">🥕 당근은 먹고, 🪨 돌·💧 웅덩이는 피하기. 결승선 통과한 말의 주인이 우승(또는 꼴찌)</li>
+                <li id="hr-desc-step-2"><strong>꼴찌 벌칙 뽑기</strong>(기본) / <strong>1등 우승 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong></li>
+                <li id="hr-desc-step-3">시작 시 말마다 등급 랜덤: 🏇 일반 94% / 🦄 레어 5% (속도 +10%, 부스터 확률 1.5배) / 🐉 에픽 1% (속도 +20%)</li>
+                <li id="hr-desc-step-4">🥕 당근 = <strong>부스터</strong>(잠시 2배 속도, 1등은 못 씀) · 돌멩이 = <strong>빙글 돌며 뒤로 밀리고</strong> 한동안 느려짐 · 💧 웅덩이 = <strong>잠시 느려짐</strong>. 마지막(또는 첫 번째)으로 결승선을 넘는 말의 주인이 벌칙(또는 우승)</li>
             </ol>
 
             <h2 id="hr-desc-h2-2">특징</h2>
@@ -509,6 +513,7 @@
 
 <!-- Phaser 3 & 게임 스크립트 -->
 <script th:src="@{/js/phaser.min.js}"></script>
+<script th:src="@{/js/horserace-art.js}"></script>
 <script th:src="@{/js/horserace.js}"></script>
 
 <script>

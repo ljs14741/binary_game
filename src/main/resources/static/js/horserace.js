@@ -26,6 +26,8 @@ const I18N = {
         modeLabel:       '게임 모드 선택',
         modeWinner:      '🏆 1등 우승 뽑기',
         modeLoser:       '💣 꼴찌 벌칙 뽑기',
+        modeHintLoser:   '▲ 결승선에 마지막으로 들어오는 말의 주인이 벌칙!',
+        modeHintWinner:  '▲ 결승선에 제일 먼저 들어오는 말의 주인이 우승!',
         startBtn:        '🏁  경주 시작!',
         msgMin:          '최소 2명 이상 입력해주세요!',
         msgMax:          '최대 30명까지 가능합니다!',
@@ -58,9 +60,9 @@ const I18N = {
         domDescH2_1:     '방법',
         domDescH2_2:     '특징',
         domDescStep1:    '참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명)',
-        domDescStep2:    '<strong>1등 우승 뽑기</strong> / <strong>꼴찌 벌칙 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong>',
-        domDescStep3:    '시작 시 말마다 등급 랜덤: 🏇 일반 / 🦄 레어 / 🐉 에픽',
-        domDescStep4:    '🥕 당근은 먹고, 🪨 돌·💧 웅덩이는 피하기. 결승선 통과한 말의 주인이 우승(또는 꼴찌)',
+        domDescStep2:    '<strong>꼴찌 벌칙 뽑기</strong>(기본) / <strong>1등 우승 뽑기</strong> 중 선택 후 <strong>경주 시작!</strong>',
+        domDescStep3:    '시작 시 말마다 등급 랜덤: 🏇 일반 94% / 🦄 레어 5% (속도 +10%, 부스터 확률 1.5배) / 🐉 에픽 1% (속도 +20%)',
+        domDescStep4:    '🥕 당근 = <strong>부스터</strong>(잠시 2배 속도, 1등은 못 씀) · 돌멩이 = <strong>빙글 돌며 뒤로 밀리고</strong> 한동안 느려짐 · 💧 웅덩이 = <strong>잠시 느려짐</strong>. 마지막(또는 첫 번째)으로 결승선을 넘는 말의 주인이 벌칙(또는 우승)',
         domDescFeat1:    '벌칙·당번·커피 뽑기 등 <strong>뽑기·추첨용</strong> (사다리·룰렛 대신)',
         domDescFeat2:    '<strong>역전 요소</strong> – 꼴찌 부스터, 막판 스퍼트, 1~3위만 걸리는 선두 억까',
         domDescFeat3:    '말마다 고유 색상으로 순위 한눈에 구분, 최대 30명 참가',
@@ -79,6 +81,8 @@ const I18N = {
         modeLabel:       'Select Game Mode',
         modeWinner:      '🏆 Pick the Winner',
         modeLoser:       '💣 Pick the Loser',
+        modeHintLoser:   '▲ The owner of the LAST horse to finish gets the penalty!',
+        modeHintWinner:  '▲ The owner of the FIRST horse to finish wins!',
         startBtn:        '🏁  Start Race!',
         msgMin:          'Please enter at least 2 participants!',
         msgMax:          'Maximum 30 participants allowed!',
@@ -109,9 +113,9 @@ const I18N = {
         domDescH2_1:     'How to Play',
         domDescH2_2:     'Features',
         domDescStep1:    'Enter names separated by <strong>comma or newline</strong> (2–30 players)',
-        domDescStep2:    'Choose <strong>Pick the Winner</strong> or <strong>Pick the Loser</strong>, then click <strong>Start Race!</strong>',
-        domDescStep3:    'Each horse gets a random tier at start: 🏇 Common / 🦄 Rare / 🐉 Epic',
-        domDescStep4:    '🥕 Eat carrots, avoid 🪨 rocks & 💧 puddles. The owner of the first (or last) horse to finish wins!',
+        domDescStep2:    'Choose <strong>Pick the Loser</strong> (default) or <strong>Pick the Winner</strong>, then click <strong>Start Race!</strong>',
+        domDescStep3:    'Each horse gets a random tier at start: 🏇 Common 94% / 🦄 Rare 5% (+10% speed, 1.5× boost chance) / 🐉 Epic 1% (+20% speed)',
+        domDescStep4:    '🥕 Carrot = <strong>booster</strong> (2× speed for a moment, not for the leader) · Rock = <strong>spin, knocked back</strong> and slowed for a while · 💧 Puddle = <strong>slowed briefly</strong>. The owner of the last (or first) horse across the line gets the penalty (or wins)',
         domDescFeat1:    'Great for penalty draws, chore picks, coffee bets — <strong>random picker</strong> (instead of ladder or roulette)',
         domDescFeat2:    '<strong>Comeback mechanics</strong> — last-place boost, final spurt, leader stumble penalty',
         domDescFeat3:    'Each horse has a unique color for easy rank tracking, up to 30 players',
@@ -130,6 +134,8 @@ const I18N = {
         modeLabel:       'ゲームモードを選択',
         modeWinner:      '🏆 1位優勝を決める',
         modeLoser:       '💣 最下位罰ゲーム',
+        modeHintLoser:   '▲ 最後にゴールした馬のオーナーが罰ゲーム！',
+        modeHintWinner:  '▲ 最初にゴールした馬のオーナーが優勝！',
         startBtn:        '🏁  レーススタート！',
         msgMin:          '最低2名以上入力してください！',
         msgMax:          '最大30名まで参加できます！',
@@ -160,9 +166,9 @@ const I18N = {
         domDescH2_1:     '遊び方',
         domDescH2_2:     '特徴',
         domDescStep1:    '参加者名を<strong>カンマまたは改行</strong>で区切って入力（2〜30名）',
-        domDescStep2:    '<strong>1位優勝</strong>または<strong>最下位罰ゲーム</strong>を選んで<strong>レーススタート！</strong>をクリック',
-        domDescStep3:    'スタート時に馬ごとにティアがランダム決定：🏇 コモン / 🦄 レア / 🐉 エピック',
-        domDescStep4:    '🥕 にんじんを食べ、🪨 岩・💧 水たまりを避けよう。ゴールを通過した馬のオーナーが優勝（または罰ゲーム）',
+        domDescStep2:    '<strong>最下位罰ゲーム</strong>（初期設定）または<strong>1位優勝</strong>を選んで<strong>レーススタート！</strong>をクリック',
+        domDescStep3:    'スタート時に馬ごとにティアがランダム決定：🏇 コモン 94% / 🦄 レア 5%（速度+10%、ブースト確率1.5倍）/ 🐉 エピック 1%（速度+20%）',
+        domDescStep4:    '🥕 にんじん＝<strong>ブースト</strong>（一時的に2倍速、先頭は不可）・岩＝<strong>回転して押し戻され</strong>しばらく減速・💧 水たまり＝<strong>一時減速</strong>。最後（または最初）にゴールした馬のオーナーが罰ゲーム（または優勝）',
         domDescFeat1:    '罰ゲーム・当番・コーヒー争奪など<strong>抽選・くじ引き用途</strong>に最適（はしご・ルーレットの代替）',
         domDescFeat2:    '<strong>逆転要素あり</strong> — 最下位ブースター・ラストスパート・先頭馬への横やり',
         domDescFeat3:    '馬ごとに固有カラーで順位が一目でわかる、最大30名参加可能',
@@ -214,13 +220,18 @@ function pickDistinctColorsForCount(n) {
 }
 
 // 말 등급 (뽑기): 일반 대다수, 레어 5%, 에픽 1~2% (잭팟 느낌)
+// 말은 OS 이모지를 쓴다. 코드로 그린 스프라이트로 바꿔 봤는데(2026-09-20) 이모지보다 못생겨서 되돌렸다.
+// 이모지 🏇🦄🐉✨🔥 는 전부 유니코드 6~8 이라 어디서나 나온다 (깨지던 건 🪨 뿐이고 그건 장애물 쪽에서 그림으로 대체).
+// 달리는 느낌은 _drawHorseVisuals 의 들썩임(gait)으로 낸다.
+// 에픽 dodgeMul 은 원래 0.35(덩치 커서 둔함)였는데, 계산해 보니 바위에 두 번 더 걸리는 손해(약 1200px)가
+// 속도 보너스(약 300px)를 크게 넘어 1% 잭팟이 오히려 불리했다. 용은 날아 넘는다는 설정으로 1.0.
 const TIER_COMMON = 'common';
 const TIER_RARE   = 'rare';
 const TIER_EPIC   = 'epic';
 const TIER_DEF = [
     { tier: TIER_COMMON, prob: 0.94, emoji: '🏇', speedBonus: 0,   boosterMul: 1.0, trail: null, dodgeMul: 1.0 },
     { tier: TIER_RARE,   prob: 0.05, emoji: '🦄', speedBonus: 0.1, boosterMul: 1.5, trail: '✨', dodgeMul: 1.0 },
-    { tier: TIER_EPIC,   prob: 0.01, emoji: '🐉', speedBonus: 0.2, boosterMul: 1.0, trail: '🔥', dodgeMul: 0.35 },
+    { tier: TIER_EPIC,   prob: 0.01, emoji: '🐉', speedBonus: 0.2, boosterMul: 1.0, trail: '🔥', dodgeMul: 1.0 },
 ];
 function pickTier() {
     const r = Math.random();
@@ -232,11 +243,11 @@ function pickTier() {
     return TIER_DEF[0];
 }
 
-// 장애물 정의 (가중치 랜덤)
+// 장애물 정의 (가중치 랜덤). 그림은 HorseRaceArt 의 'hr_obs_<type>' 텍스처
 const OBSTACLE_DEF = [
-    { type: 'rock',   emoji: '🪨', weight: 3 },
-    { type: 'puddle', emoji: '💧', weight: 3 },
-    { type: 'carrot', emoji: '🥕', weight: 4 },
+    { type: 'rock',   weight: 3 },
+    { type: 'puddle', weight: 3 },
+    { type: 'carrot', weight: 4 },
 ];
 
 function pickObstacleDef() {
@@ -272,6 +283,7 @@ class PreloadScene extends Phaser.Scene {
         this.load.audio(SFX_FANFARE,   '/assets/horseRace/fanfare.mp3');
     }
     create() {
+        HorseRaceArt.build(this);   // 말·장애물·아이콘 텍스처 (게임 전체에서 공유)
         this.scene.start('SetupScene');
     }
 }
@@ -365,7 +377,8 @@ class SetupScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // 모드 토글 버튼 생성 (닉네임 입력·라벨 아래에 고정 배치)
-        this.gameMode = this.registry.get('gameMode') || 'winner';
+        // 기본은 꼴찌 벌칙 뽑기. 내기 용도가 대부분이라 "누가 쏘냐"가 먼저다
+        this.gameMode = this.registry.get('gameMode') || 'loser';
         this._createModeButtons();
 
         // 시작 버튼 (모드 버튼 아래에 배치)
@@ -480,17 +493,21 @@ class SetupScene extends Phaser.Scene {
         this.modeBtnGfx = this.add.graphics();
 
         const lblShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
-        this.modeLbl1 = this.add.text(x1 + BW / 2, BY + BH / 2, I18N[currentLang].modeWinner, {
+        // 왼쪽(x1)이 꼴찌 벌칙, 오른쪽(x2)이 1등 우승. 기본 선택이 꼴찌라 먼저 놓는다
+        const lblStyle = {
             fontFamily: '"Pretendard",Arial',
             fontSize: '18px',
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 3,
             shadow: lblShadow,
-        }).setOrigin(0.5);
-        this.modeLbl2 = this.add.text(x2 + BW / 2, BY + BH / 2, I18N[currentLang].modeLoser, {
+        };
+        this.modeLblLoser  = this.add.text(x1 + BW / 2, BY + BH / 2, '', lblStyle).setOrigin(0.5);
+        this.modeLblWinner = this.add.text(x2 + BW / 2, BY + BH / 2, '', lblStyle).setOrigin(0.5);
+        // 버튼 아래 한 줄: 지금 뭘 고른 상태인지 말로 한 번 더
+        this.modeHint = this.add.text(cx, BY + BH + 24, '', {
             fontFamily: '"Pretendard",Arial',
-            fontSize: '18px',
+            fontSize: '14px',
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 3,
@@ -499,17 +516,18 @@ class SetupScene extends Phaser.Scene {
 
         this.add.rectangle(x1 + BW / 2, BY + BH / 2, BW, BH)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => { this.gameMode = 'winner'; this._refreshModeButtons(); });
+            .on('pointerdown', () => { this.gameMode = 'loser';  this._refreshModeButtons(); });
         this.add.rectangle(x2 + BW / 2, BY + BH / 2, BW, BH)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => { this.gameMode = 'loser';  this._refreshModeButtons(); });
+            .on('pointerdown', () => { this.gameMode = 'winner'; this._refreshModeButtons(); });
 
         this._refreshModeButtons();
     }
 
     _refreshModeButtons() {
         const { x1, x2, y, w, h } = this._modePos;
-        const isWinner = this.gameMode === 'winner';
+        const isLoser = this.gameMode !== 'winner';
+        const L = I18N[currentLang];
         const g = this.modeBtnGfx;
         g.clear();
 
@@ -520,20 +538,26 @@ class SetupScene extends Phaser.Scene {
         g.lineStyle(1.5, 0x4a4a88, 0.9);
         g.strokeRoundedRect(x1 - pad, y - pad, (x2 - x1) + w + pad * 2, h + pad * 2, 16);
 
-        // 선택됐을 때: 금색/빨강. 비선택: 어두운 배경 + 밝은 테두리·글자로 구분
-        g.fillStyle(isWinner ? 0xFFD700 : 0x252550, 1);
-        g.fillRoundedRect(x1, y, w, h, 12);
-        g.lineStyle(2.5, isWinner ? 0xFFD700 : 0x6a6acc, 1);
-        g.strokeRoundedRect(x1, y, w, h, 12);
+        // 선택된 쪽: 진한 색 + 바깥 글로우 링 두 겹 + 흰 테두리. 비선택: 어둡고 흐리게.
+        // 예전엔 둘 다 색이 진해서 뭐가 눌린 건지 한눈에 안 들어왔다.
+        const drawBtn = (x, selected, colFill, colGlow, colDim, colDimLine) => {
+            if (selected) {
+                g.lineStyle(10, colGlow, 0.18); g.strokeRoundedRect(x - 5, y - 5, w + 10, h + 10, 16);
+                g.lineStyle(5,  colGlow, 0.35); g.strokeRoundedRect(x - 2, y - 2, w + 4,  h + 4,  14);
+                g.fillStyle(colFill, 1);        g.fillRoundedRect(x, y, w, h, 12);
+                g.lineStyle(3, 0xffffff, 0.95); g.strokeRoundedRect(x, y, w, h, 12);
+            } else {
+                g.fillStyle(colDim, 0.6);       g.fillRoundedRect(x, y, w, h, 12);
+                g.lineStyle(1.5, colDimLine, 0.7); g.strokeRoundedRect(x, y, w, h, 12);
+            }
+        };
+        drawBtn(x1,  isLoser, 0xE53935, 0xFF6B6B, 0x352828, 0xaa5555);   // 꼴찌 벌칙 (빨강)
+        drawBtn(x2, !isLoser, 0xE0A800, 0xFFD700, 0x2a2a1a, 0xaaa055);   // 1등 우승 (금색)
 
-        g.fillStyle(!isWinner ? 0xFF4444 : 0x352828, 1);
-        g.fillRoundedRect(x2, y, w, h, 12);
-        g.lineStyle(2.5, !isWinner ? 0xFF6666 : 0xaa5555, 1);
-        g.strokeRoundedRect(x2, y, w, h, 12);
-
-        // 선택된 쪽은 흰색으로 해서 금/빨강 배경에서 잘 보이게
-        this.modeLbl1.setColor(isWinner ? '#ffffff' : '#c8c8ee');
-        this.modeLbl2.setColor(!isWinner ? '#ffffff' : '#e8c0c0');
+        // 선택된 쪽은 ✓ 를 붙이고 흰색, 비선택은 흐린 글자
+        this.modeLblLoser.setText((isLoser ? '✓ ' : '') + L.modeLoser).setColor(isLoser ? '#ffffff' : '#b09090').setAlpha(isLoser ? 1 : 0.75);
+        this.modeLblWinner.setText((!isLoser ? '✓ ' : '') + L.modeWinner).setColor(!isLoser ? '#ffffff' : '#b0a880').setAlpha(!isLoser ? 1 : 0.75);
+        this.modeHint.setText(isLoser ? L.modeHintLoser : L.modeHintWinner).setColor(isLoser ? '#FF8A80' : '#FFE082');
     }
 
     _parseNames(text) {
@@ -662,15 +686,17 @@ class GameScene extends Phaser.Scene {
         const TRACK_TOP  = MARGIN_TOP;
         const TRACK_H    = H - MARGIN_TOP - MARGIN_BOT;
         const LANE_H     = TRACK_H / this.numHorses;
-        // TODO: 말 이미지 교체 부분 ─────────────────────────────
-        // 현재 🏇 이모지 텍스트를 사용합니다.
-        // 실제 Sprite로 교체 시 HORSE_FONT 대신 Sprite.width/height를 사용하세요.
-        // this.add.sprite(x, y, 'horse_texture').setDepth(10);
-        const HORSE_FONT = Phaser.Math.Clamp(Math.floor(LANE_H * 0.78), 10, 44);
+        // HORSE_FONT 는 이모지 시절의 이름이지만 말 크기·오라·그림자·아이콘 위치의 기준 단위로 그대로 쓴다.
+        const HORSE_FONT = Phaser.Math.Clamp(Math.floor(LANE_H * 0.78), 10, 60);   // 상한 44→60: 이모지보다 스프라이트가 여유롭게 커도 된다
+        // 레인이 좁으면(대략 19명 이상) 이름표를 말 위가 아니라 말 뒤(왼쪽)에 붙인다.
+        // 위에 두면 윗 레인 말과 겹치고, 그걸 피하려고 글자를 7px 까지 줄이면 읽을 수가 없었다.
+        const NAME_BESIDE = LANE_H < 34;
         const FONT_SZ    = this.numHorses <= 10
             ? Phaser.Math.Clamp(Math.floor(LANE_H * 0.52), 12, 22)
-            : Phaser.Math.Clamp(Math.floor(LANE_H * 0.42), 7, 14);
-        this.layout = { TRACK_TOP, TRACK_H, LANE_H, HORSE_FONT, FONT_SZ };
+            : NAME_BESIDE
+                ? Phaser.Math.Clamp(Math.floor(LANE_H * 0.6), 10, 14)
+                : Phaser.Math.Clamp(Math.floor(LANE_H * 0.42), 10, 14);
+        this.layout = { TRACK_TOP, TRACK_H, LANE_H, HORSE_FONT, FONT_SZ, NAME_BESIDE };
 
         // ── 카메라 경계 ──────────────────────────────────────
         this.cameras.main.setBounds(0, 0, TRACK_LEN + 600, HR_H);
@@ -703,7 +729,7 @@ class GameScene extends Phaser.Scene {
         // ── 말 데이터 & 렌더 오브젝트 ───────────────────────
         this.nameGfx     = this.add.graphics().setDepth(9);  // 이름 배경 + 그림자 (매 프레임 재드로우)
         this.horses      = [];
-        this.horseEmojis = [];   // 🏇 Text 오브젝트
+        this.horseEmojis = [];   // 🏇🦄🐉 Text 오브젝트
         this.nameLabels  = [];
         this.statusIcons = [];
 
@@ -729,6 +755,7 @@ class GameScene extends Phaser.Scene {
                 tier:              tierDef.tier,
                 emoji:             tierDef.emoji,
                 trailParticle:     tierDef.trail,
+                gait:              Math.random() * Math.PI * 2,   // 들썩임 위상 (말마다 다르게 시작)
                 boosterChanceMul:  tierDef.boosterMul,
                 dodgeMul:          tierDef.dodgeMul,
                 x:                 120,
@@ -752,7 +779,7 @@ class GameScene extends Phaser.Scene {
                 obstacleDecisions: new Map(),
             });
 
-            // 등급별 이모지 텍스트 (TODO: 말 이미지 교체 부분 – Sprite로 대체 가능)
+            // 등급별 이모지 텍스트
             this.horseEmojis.push(
                 this.add.text(120, laneY, tierDef.emoji, { fontSize: `${HORSE_FONT}px` })
                     .setOrigin(0.5).setDepth(10)
@@ -767,10 +794,9 @@ class GameScene extends Phaser.Scene {
                 }).setOrigin(0.5).setDepth(11)
             );
 
+            const iconSz = Phaser.Math.Clamp(FONT_SZ + 6, 12, 24);
             this.statusIcons.push(
-                this.add.text(0, 0, '', {
-                    fontSize: `${Phaser.Math.Clamp(FONT_SZ + 5, 11, 22)}px`,
-                }).setDepth(12)
+                this.add.image(0, 0, 'hr_ic_boost').setDisplaySize(iconSz, iconSz).setDepth(12).setVisible(false)
             );
         }
 
@@ -898,7 +924,7 @@ class GameScene extends Phaser.Scene {
     _generateObstacles() {
         const { TRACK_TOP, LANE_H } = this.layout;
         const count      = Phaser.Math.Clamp(this.numHorses * 5, 20, 90);
-        const obsFontSz  = Phaser.Math.Clamp(Math.floor(LANE_H * 0.50), 10, 28);
+        const obsFontSz  = Phaser.Math.Clamp(Math.floor(LANE_H * 0.50), 14, 28);   // 최소 10→14: 30명 레인에서 12px 짜리 바위는 안 보였다
 
         for (let i = 0; i < count; i++) {
             const x       = Phaser.Math.Between(500, FINISH_X - 400);
@@ -906,17 +932,17 @@ class GameScene extends Phaser.Scene {
             const y       = TRACK_TOP + laneIdx * LANE_H + LANE_H / 2;
             const def     = pickObstacleDef();
 
-            const txt = this.add.text(x, y, def.emoji, { fontSize: `${obsFontSz}px` })
-                .setOrigin(0.5).setDepth(7.5);
+            const img = this.add.image(x, y, 'hr_obs_' + def.type)
+                .setOrigin(0.5).setDepth(7.5).setDisplaySize(obsFontSz * 1.25, obsFontSz * 1.25);
 
             // 살랑이는 애니메이션
             this.tweens.add({
-                targets: txt, y: y - 4, yoyo: true, repeat: -1,
+                targets: img, y: y - 4, yoyo: true, repeat: -1,
                 duration: 750 + Math.random() * 500, ease: 'Sine.easeInOut',
                 delay: Math.random() * 600,
             });
 
-            this.obstacleGroup.push({ id: i, x, y, laneIdx, type: def.type, textObj: txt, collected: false });
+            this.obstacleGroup.push({ id: i, x, y, laneIdx, type: def.type, sprite: img, collected: false });
         }
     }
 
@@ -1231,13 +1257,22 @@ class GameScene extends Phaser.Scene {
         if (horse.isSpinning) spd *= 0.15;
 
         // 상태 아이콘 업데이트 (스핀 > 부스터 > 걸림 우선순위)
-        if      (horse.isSpinning)  this.statusIcons[horse.idx].setText('💫');
-        else if (horse.isBoosting)  this.statusIcons[horse.idx].setText('🔥');
-        else if (horse.isStumbling) this.statusIcons[horse.idx].setText('❗');
-        else                        this.statusIcons[horse.idx].setText('');
+        const iconKey = horse.isSpinning ? 'hr_ic_dizzy' : horse.isBoosting ? 'hr_ic_boost' : horse.isStumbling ? 'hr_ic_alert' : null;
+        const icon = this.statusIcons[horse.idx];
+        if (iconKey) {
+            if (icon.texture.key !== iconKey) {
+                const w = icon.displayWidth, h = icon.displayHeight;
+                icon.setTexture(iconKey).setDisplaySize(w, h);
+            }
+            icon.setVisible(true);
+        } else {
+            icon.setVisible(false);
+        }
 
         // ★ Rubber-banding: 꼴찌 그룹 부스터 (레어 1.5배, 막판 스퍼트 시 하위권 대폭 상승)
-        if (!horse.isBoosting && !horse.isStumbling && activeCount >= 3) {
+        // 2명일 때도 돈다. 예전엔 3명 이상 조건이라 제일 흔한 1:1 에서 역전 장치가 통째로 꺼져 있었다.
+        // (2명이면 rank 2 > 2*0.72 이므로 뒤처진 쪽이 그대로 꼴찌 그룹에 잡힌다)
+        if (!horse.isBoosting && !horse.isStumbling && activeCount >= 2) {
             const chance = 0.009 * (horse.boosterChanceMul || 1.0);
             const inBack = horse.rank > activeCount * 0.72;
             const finalLapActive = this.finalLapUntil && time < this.finalLapUntil;
@@ -1264,6 +1299,8 @@ class GameScene extends Phaser.Scene {
         spd = Math.max(0.3, spd);
         horse.speed = spd;
         horse.x    += spd * dt;
+        // 들썩임 위상: 빠를수록 빨리 뛴다 (기본 속도 6 ≈ 초당 2.7보)
+        horse.gait += dt * 0.28 * Phaser.Math.Clamp(spd / 6, 0.4, 2.5);
 
         // 결승선 통과
         if (horse.x >= FINISH_X) {
@@ -1336,10 +1373,10 @@ class GameScene extends Phaser.Scene {
             if (obs.type === 'carrot') this.sound.play(SFX_CARROT);
         }
 
-        // 장애물 소멸 애니메이션
+        // 장애물 소멸 애니메이션 (setDisplaySize 로 잡은 스케일의 2.2배)
         this.tweens.add({
-            targets: obs.textObj, scaleX: 2.2, scaleY: 2.2, alpha: 0, duration: 380,
-            onComplete: () => obs.textObj.setVisible(false),
+            targets: obs.sprite, scaleX: obs.sprite.scaleX * 2.2, scaleY: obs.sprite.scaleY * 2.2, alpha: 0, duration: 380,
+            onComplete: () => obs.sprite.setVisible(false),
         });
 
         if (obs.type === 'carrot') {
@@ -1376,37 +1413,39 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    // ── Horse Render (이모지 + 그림자 + 이름 배경) ────────────
-    // TODO: 말 이미지 교체 부분 ──────────────────────────────────
-    // 이 함수를 제거하고 horseEmojis 대신 Sprite를 사용하세요:
-    //   horse.sprite.setPosition(horse.x, horse.y);
-    //   horse.sprite.setRotation(horse.rotation);
-    //   horse.sprite.setScale(horse.scaleBonus);
-    // ────────────────────────────────────────────────────────────
+    // ── Horse Render (이모지 + 들썩임 + 그림자 + 이름 배경) ────
     _drawHorseVisuals(horse) {
-        const { HORSE_FONT, FONT_SZ } = this.layout;
+        const { HORSE_FONT, FONT_SZ, NAME_BESIDE } = this.layout;
         const ht = this.horseEmojis[horse.idx];
         const nl = this.nameLabels[horse.idx];
         const si = this.statusIcons[horse.idx];
         const g  = this.nameGfx;
 
-        // 이모지 위치 & 변환 (등급별 이모지 유지)
-        ht.setPosition(horse.x, horse.y);
-        ht.setRotation(horse.rotation);
-        ht.setScale(horse.scaleBonus * (horse.isBoosting ? 1.08 : 1.0));
+        // 달리는 느낌: 이모지가 정지 그림이라 몸을 위아래로 들썩이고(bob), 앞뒤로 까딱이고(tilt),
+        // 살짝 늘었다 줄었다(stretch) 한다. 완주하면 멈춘다. 부스터 중엔 더 크게 들썩인다.
+        const running = !horse.finished;
+        const amp  = running ? (horse.isBoosting ? 1.5 : 1.0) : 0;
+        const bob  = Math.sin(horse.gait) * HORSE_FONT * 0.07 * amp;          // 위(-)로 뜰 때 음수
+        const tilt = Math.sin(horse.gait + Math.PI / 2) * 0.06 * amp;
+        const stretch = 1 + Math.sin(horse.gait) * 0.035 * amp;
+        const lean = horse.isStumbling && !horse.isSpinning ? 0.2 : 0;      // 걸리면 앞으로 고꾸라짐
+
+        ht.setPosition(horse.x, horse.y + bob);
+        ht.setRotation(horse.rotation + tilt + lean);
+        const sc = horse.scaleBonus * (horse.isBoosting ? 1.08 : 1.0);
+        ht.setScale(sc * stretch, sc / stretch);
         ht.setAlpha(horse.finished ? 0.5 : 1.0);
         if (horse.emoji) ht.setText(horse.emoji);
-        // 이모지(기본 말 이미지는 원본 색 유지)
-        ht.clearTint();
 
         // 고유 색상 오라 (이모지 뒤쪽 은은한 원형 글로우)
         const auraR = HORSE_FONT * 0.72;
         g.fillStyle(horse.color, 0.3);
         g.fillCircle(horse.x, horse.y, auraR);
 
-        // 바닥 그림자 (ellipse)
-        g.fillStyle(0x000000, 0.24);
-        g.fillEllipse(horse.x + 2, horse.y + HORSE_FONT * 0.50, HORSE_FONT * 0.88, HORSE_FONT * 0.20);
+        // 바닥 그림자 (ellipse) — 몸이 떠오르면 작고 흐려진다
+        const lift = Phaser.Math.Clamp(-bob / (HORSE_FONT * 0.07), -1, 1);   // 1 = 최고점
+        g.fillStyle(0x000000, 0.24 - lift * 0.06);
+        g.fillEllipse(horse.x + 2, horse.y + HORSE_FONT * 0.50, HORSE_FONT * (0.88 - lift * 0.12), HORSE_FONT * 0.20);
 
         // 이름 라벨 배경: 텍스트 실제 width + 좌우 12px 패딩 (width 미갱신 시 폴백)
         const nm = String(horse.name || '').trim() || '?';
@@ -1418,8 +1457,9 @@ class GameScene extends Phaser.Scene {
         const fallbackW = nm.length * charW + PADDING;
         const lblW = Math.max(w + PADDING, fallbackW, 42);
         const lblH = FONT_SZ + 7;
-        const lx   = horse.x;
-        const ly   = horse.y - HORSE_FONT * 0.62;
+        // 레인이 넓으면 말 위, 좁으면 말 뒤(왼쪽)에 세로 중앙으로
+        const lx   = NAME_BESIDE ? horse.x - HORSE_FONT * 0.85 - lblW / 2 : horse.x;
+        const ly   = NAME_BESIDE ? horse.y + lblH / 2 : horse.y - HORSE_FONT * 0.62;
 
         // 등급별 이름표: 오라와 동일한 고정 색상을 테두리에 적용
         const isRare = horse.tier === TIER_RARE;
