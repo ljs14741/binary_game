@@ -85,168 +85,60 @@ const PERSONALITY = [
     { type: 'cautious', label: '🐢', speedMul: 0.88, reactMul: 0.46 },
 ];
 
-// ── i18n ───────────────────────────────────────────────────
-const _navLang = (typeof navigator !== 'undefined' && navigator.language)
-    ? navigator.language.toLowerCase() : '';
-const currentLang = _navLang.startsWith('ko') ? 'ko' : _navLang.startsWith('ja') ? 'ja' : 'en';
-
-const I18N = {
-    ko: {
-        title:       '🌸 무궁화 꽃이 피었습니다',
-        subtitle:    '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요',
-        placeholder: '예시:\n홍길동, 김철수, 이영희\n또는 한 줄에 한 명씩 입력',
-        countSuffix: '명 입력됨',
-        countMin:    ' (최소 2명)',
-        countMax:    ' (최대 30명 초과!)',
-        countOk:     ' ✓',
-        modeLabel:   '게임 모드 선택',
-        modeWinner:  '🏆 1등 우승 뽑기',
-        modeLoser:   '💣 꼴찌 벌칙 뽑기',
-        startBtn:    '🚦  게임 시작!',
-        msgMin:      '최소 2명 이상 입력해주세요!',
-        msgMax:      '최대 30명까지 가능합니다!',
-        footerPromo: '내기 · 추첨 · 이벤트에 딱!  사다리타기 · 룰렛 · 말달리자 대신 🌸',
-        bgmOn:       '🔊 BGM 켜짐',
-        bgmOff:      '🔇 BGM 꺼짐',
-        defaultNames:['참가자1', '참가자2'],
-        btnRestart:  '🔄 같은 참가자로 재시작',
-        btnNewSetup: '✏️ 새로 설정',
-        labelStart:  '시작',
-        labelFinish: '결승',
-        labelRound:  '라운드',
-        labelAlive:  '생존',
-        stateGreen:  '달려!',
-        stateRed:    '멈춰! 🛑',
-        stateTurn:   '돌아본다!',
-        stateCheck:  '확인 중...',
-        msgWinner:   (n) => `🏆 ${n}  생존자!`,
-        msgLoser:    (n) => `💀 ${n}  꼴찌!`,
-        roundElim:   (n) => `${n}명 탈락!`,
-        personalityBold:    '🔥 돌진형',
-        personalityNormal:  '🚶 보통형',
-        personalityCautious:'🐢 신중형',
-        fakeTxt:     '속임수! 🤡',
-        phrase:      '무궁화꽃이피었습니다',
-        countdownGo: '출발!',
-        finishReach: (n) => `${n}  결승 도착!`,
-        allElim:     '전원 탈락!',
-        domDescH2_1: '방법', domDescH2_2: '특징',
-        domDescStep1:'참가자 이름을 <strong>쉼표 또는 줄바꿈</strong>으로 구분해 입력 (2~30명)',
-        domDescStep2:'<strong>1등 우승 뽑기</strong> / <strong>꼴찌 벌칙 뽑기</strong> 중 선택 후 <strong>게임 시작!</strong>',
-        domDescStep3:'시작 후 캐릭터가 <strong>자동으로</strong> 달리고 멈춥니다. 초록불·얼음은 연출이며, <strong>조작할 필요 없이</strong> 결과만 보면 됩니다',
-        domDescStep4:'결승선 1등 도착(우승) 또는 첫 번째 탈락자(벌칙)가 당첨으로 결정됩니다',
-        domDescFeat1:'벌칙·당번·커피 내기 등 <strong>뽑기·추첨용</strong> (사다리·룰렛·말달리자 대신)',
-        domDescFeat2:'<strong>라운드마다 속도 랜덤</strong> – 매 라운드 참가자 전원의 속도가 크게 바뀌어 결과 예측 불가',
-        domDescFeat3:'<strong>성격 랜덤</strong> – 돌진형·보통형·신중형마다 반응 다름, 최대 30명',
-        mobileFsBlockTitle:   '모바일 전체화면 안내',
-        mobileFsBlockMessage: '모바일 기기에서는 전체화면 모드에서\n일부 기기에서 터치 또는 화면 레이아웃 문제가 발생할 수 있습니다.\n\n화면이 조금 작더라도 기본 보기(전체화면 아님)를 권장합니다.\n\n※ 효과음을 위해 BGM을 켜고 플레이하는 것을 추천합니다!',
-        mobileFsBlockOk:      '알겠어요',
-    },
-    en: {
-        title:       '🌸 Red Light, Green Light',
-        subtitle:    'Enter names separated by comma ( , ) or newline',
-        placeholder: 'Example:\nAlice, Bob, Charlie\nor one name per line',
-        countSuffix: ' entered',
-        countMin:    ' (min. 2)',
-        countMax:    ' (over 30 max!)',
-        countOk:     ' ✓',
-        modeLabel:   'Select Game Mode',
-        modeWinner:  '🏆 Pick the Winner',
-        modeLoser:   '💣 Pick the Loser',
-        startBtn:    '🚦  Start Game!',
-        msgMin:      'Enter at least 2 names!',
-        msgMax:      'Maximum 30 names allowed!',
-        footerPromo: 'For bets · draws · events! Replace ladder / roulette 🌸',
-        bgmOn:       '🔊 BGM On',
-        bgmOff:      '🔇 BGM Off',
-        defaultNames:['Player1', 'Player2'],
-        btnRestart:  '🔄 Restart (same players)',
-        btnNewSetup: '✏️ New setup',
-        labelStart:  'START',
-        labelFinish: 'FINISH',
-        labelRound:  'Round',
-        labelAlive:  'Alive',
-        stateGreen:  'Go! 🟢',
-        stateRed:    'Stop! 🛑',
-        stateTurn:   'Turning!',
-        stateCheck:  'Checking...',
-        msgWinner:   (n) => `🏆 ${n}  Survivor!`,
-        msgLoser:    (n) => `💀 ${n}  Last Place!`,
-        roundElim:   (n) => `${n} eliminated!`,
-        personalityBold:    '🔥 Bold',
-        personalityNormal:  '🚶 Normal',
-        personalityCautious:'🐢 Cautious',
-        fakeTxt:     'Fake! 🤡',
-        phrase:      'Green Light!',
-        countdownGo: 'GO!',
-        finishReach: (n) => `${n}  Finished!`,
-        allElim:     'All Eliminated!',
-        domDescH2_1: 'How to play', domDescH2_2: 'Features',
-        domDescStep1:'Enter names separated by <strong>comma or newline</strong> (2~30)',
-        domDescStep2:'Choose <strong>Winner</strong> or <strong>Loser</strong> mode, then <strong>Start!</strong>',
-        domDescStep3:'After start, characters <strong>run and stop automatically</strong>. Green/red lights are visuals — <strong>no controls</strong>, just watch the result',
-        domDescStep4:'First to the finish (winner) or first eliminated (loser) is decided automatically!',
-        domDescFeat1:'Perfect for picks: <strong>bets, duty, coffee</strong> (instead of ladder/roulette)',
-        domDescFeat2:'<strong>Speed changes every round</strong> – everyone\'s speed randomizes each round, making results unpredictable',
-        domDescFeat3:'<strong>Random personalities</strong> – bold/normal/cautious each react differently, up to 30 players',
-        mobileFsBlockTitle:   'Fullscreen on Mobile',
-        mobileFsBlockMessage: 'On some mobile devices, fullscreen mode may cause touch or layout issues.\n\nWe recommend using the normal view (non-fullscreen) even if the screen is a bit smaller.\n\n※ For the best experience, please turn BGM on when you play!',
-        mobileFsBlockOk:      'OK',
-    },
-    ja: {
-        title:       '🌸 ダルマさんがころんだ',
-        subtitle:    '参加者名をカンマまたは改行で入力',
-        placeholder: '例:\n太郎, 花子\nまたは1行に1名',
-        countSuffix: '名入力',
-        countMin:    ' (最低2名)',
-        countMax:    ' (30名超過!)',
-        countOk:     ' ✓',
-        modeLabel:   'モード選択',
-        modeWinner:  '🏆 優勝を決める',
-        modeLoser:   '💣 最下位を決める',
-        startBtn:    '🚦  ゲーム開始!',
-        msgMin:      '2名以上入力してください!',
-        msgMax:      '最大30名までです!',
-        footerPromo: '賭け·抽選·イベントに! はしご·ルーレット代わりに 🌸',
-        bgmOn:       '🔊 BGM オン',
-        bgmOff:      '🔇 BGM オフ',
-        defaultNames:['プレイヤー1', 'プレイヤー2'],
-        btnRestart:  '🔄 同じメンバーで再開',
-        btnNewSetup: '✏️ 新規設定',
-        labelStart:  'スタート',
-        labelFinish: 'ゴール',
-        labelRound:  'ラウンド',
-        labelAlive:  '生存',
-        stateGreen:  '進め！🟢',
-        stateRed:    '止まれ！🛑',
-        stateTurn:   '振り向く！',
-        stateCheck:  '確認中...',
-        msgWinner:   (n) => `🏆 ${n}  生存者！`,
-        msgLoser:    (n) => `💀 ${n}  最下位！`,
-        roundElim:   (n) => `${n}名脱落！`,
-        personalityBold:    '🔥 猪突型',
-        personalityNormal:  '🚶 普通',
-        personalityCautious:'🐢 慎重型',
-        fakeTxt:     'フェイク！🤡',
-        phrase:      'だ・る・ま・さ・ん・が・こ・ろ・ん・だ',
-        countdownGo: 'スタート！',
-        finishReach: (n) => `${n}  ゴール！`,
-        allElim:     '全員脱落！',
-        domDescH2_1: '遊び方', domDescH2_2: '特徴',
-        domDescStep1:'参加者名を<strong>カンマまたは改行</strong>で入力 (2~30名)',
-        domDescStep2:'<strong>優勝</strong>/<strong>罰ゲーム</strong>モード選択後<strong>スタート！</strong>',
-        domDescStep3:'開始後キャラは<strong>自動</strong>で走り止まります。信号は演出で、<strong>操作不要</strong>・結果を見るだけ',
-        domDescStep4:'ゴール一番乗り(優勝)または最初の脱落者(罰)が自動決定！',
-        domDescFeat1:'罰ゲーム·担当·コーヒー決めに最適 (はしご·ルーレット代わり)',
-        domDescFeat2:'<strong>ラウンドごとにスピード変化</strong> – 毎ラウンド全員の速度が大きく変わり結果予測不可',
-        domDescFeat3:'<strong>ランダム性格</strong> – 猪突型·普通·慎重型で反応が違う、最大30名',
-        mobileFsBlockTitle:   'モバイル全画面について',
-        mobileFsBlockMessage: '一部のモバイル端末では、全画面モードでタッチやレイアウトの不具合が発生する場合があります。\n\n画面が少し小さくても、通常表示（非全画面）でのご利用をおすすめします。\n\n※ 効果音を楽しむため、BGMをオンにして遊ぶことをおすすめします！',
-        mobileFsBlockOk:      'OK',
-    },
-};
-
-const L = () => I18N[currentLang];
+// ── 화면 문구 (i18n) ───────────────────────────────────────
+// 템플릿(mugunghwa.html)이 messages*.properties 에서 읽어 window.MUGUNGHWA_I18N 으로 넘긴다.
+// 없으면 한국어 기본값. 문구를 고칠 땐 이 파일이 아니라 properties 를 고친다.
+// 예전엔 navigator.language 로 언어를 골라 JS 안의 사전을 썼는데, 구글이 영어 문서로 안 봐서
+// 서버 렌더(/en/mugunghwa, /ja/mugunghwa)로 바꿨다. 언어는 주소가 정한다.
+const T = Object.assign({
+    title:       '🌸 무궁화 꽃이 피었습니다',
+    subtitle:    '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요',
+    placeholder: '예시:\n홍길동, 김철수, 이영희\n또는 한 줄에 한 명씩 입력',
+    count:       '{0}명 입력됨',
+    countMin:    '(최소 2명)',
+    countMax:    '(최대 30명 초과!)',
+    countOk:     '✓',
+    modeLabel:   '게임 모드 선택',
+    modeWinner:  '🏆 1등 우승 뽑기',
+    modeLoser:   '💣 꼴찌 벌칙 뽑기',
+    modeWinnerShort: '🏆 1등 뽑기',
+    modeLoserShort:  '💣 꼴찌 뽑기',
+    startBtn:    '🚦  게임 시작!',
+    msgMin:      '최소 2명 이상 입력해주세요!',
+    msgMax:      '최대 30명까지 가능합니다!',
+    footerPromo: '내기 · 추첨 · 이벤트에 딱!  사다리타기 · 룰렛 · 말달리자 대신 🌸',
+    bgmOn:       '🔊 BGM 켜짐',
+    bgmOff:      '🔇 BGM 꺼짐',
+    defaultName1:'참가자1',
+    defaultName2:'참가자2',
+    btnRestart:  '🔄 같은 참가자로 재시작',
+    btnNewSetup: '✏️ 새로 설정',
+    labelStart:  '시작',
+    labelFinish: '결승',
+    alive:       '생존: {0}/{1}',
+    round:       '라운드: {0}',
+    stateGreen:  '달려!',
+    stateRed:    '멈춰! 🛑',
+    stateCheck:  '확인 중...',
+    msgLoser:    '💀 {0}  꼴찌!',
+    roundElim:   '{0}명 탈락!',
+    phrase:      '무궁화꽃이피었습니다',
+    allElim:     '전원 탈락!',
+    rankHeader:  '순 위',
+    rankName:    '{0}위 {1}',
+    freeze:      '🧊 얼음!',
+    elim:        '💀 {0} 탈락!',
+    first:       '🏆 {0}  1위!',
+    reach:       '🏁 {0}위!',
+    finalRank:   '🏆 최종 순위',
+    rank:        '{0}위',
+    fsToggle:    '⛶ 전체화면',
+    fsToggleExit:'⛶ 전체화면 종료',
+    mobileFsBlockTitle:   '모바일 전체화면 안내',
+    mobileFsBlockMessage: '모바일 기기에서는 전체화면 모드에서\n일부 기기에서 터치 또는 화면 레이아웃 문제가 발생할 수 있습니다.\n\n화면이 조금 작더라도 기본 보기(전체화면 아님)를 권장합니다.\n\n※ 효과음을 위해 BGM을 켜고 플레이하는 것을 추천합니다!',
+    mobileFsBlockOk:      '알겠어요',
+}, (typeof window !== 'undefined' && window.MUGUNGHWA_I18N) || {});
+function fmt(t, ...v) { return t.replace(/\{(\d)\}/g, (_, i) => String(v[i])); }
 
 // ── 색상 유틸 ──────────────────────────────────────────────
 function shuffledColors(n) {
@@ -363,14 +255,14 @@ class SetupScene extends Phaser.Scene {
         }
 
         const titleY = MARGIN_TOP + 28;
-        this.add.text(cx, titleY, L().title, {
+        this.add.text(cx, titleY, T.title, {
             fontFamily: '"Orbitron","Pretendard",Arial',
             fontSize: '38px', color: hexColor(MG_C.accent),
             stroke: '#3a0820', strokeThickness: 5,
             shadow,
         }).setOrigin(0.5);
 
-        this.add.text(cx, titleY + 58, L().subtitle, {
+        this.add.text(cx, titleY + 58, T.subtitle, {
             fontFamily: '"Pretendard",Arial', fontSize: '18px', color: '#EEEEEE', fontStyle: 'bold',
             shadow,
         }).setOrigin(0.5);
@@ -386,7 +278,7 @@ class SetupScene extends Phaser.Scene {
         const overlay = document.getElementById('mg-setup-overlay');
         if (overlay) overlay.classList.add('active');
         const phEl = document.getElementById('mgNamesInput');
-        if (phEl) phEl.placeholder = L().placeholder;
+        if (phEl) phEl.placeholder = T.placeholder;
 
         // Phaser 이벤트로 shutdown 훅 등록 (씬 전환 시 오버레이 확실히 숨김)
         this.events.once('shutdown', () => {
@@ -399,7 +291,7 @@ class SetupScene extends Phaser.Scene {
         });
 
         const FOOT_H = 36;
-        this.countText = this.add.text(cx, H - FOOT_H - 22, `0${L().countSuffix}`, {
+        this.countText = this.add.text(cx, H - FOOT_H - 22, fmt(T.count, 0), {
             fontFamily: '"Pretendard",Arial', fontSize: '21px', color: '#aa88aa', shadow,
         }).setOrigin(0.5);
 
@@ -411,7 +303,7 @@ class SetupScene extends Phaser.Scene {
             if (last && last.length) { taEl.value = last.join('\n'); this._updateCount(taEl.value); }
         }
 
-        this.add.text(cx, this._modeLabelY, L().modeLabel, {
+        this.add.text(cx, this._modeLabelY, T.modeLabel, {
             fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#d0a0c0', fontStyle: 'bold', shadow,
         }).setOrigin(0.5);
 
@@ -426,7 +318,7 @@ class SetupScene extends Phaser.Scene {
             startBg.fillRoundedRect(SBX, SBY, SBW, SBH, 12);
         };
         drawStart(MG_C.accent);
-        this.add.text(cx, SBY + SBH / 2, L().startBtn, {
+        this.add.text(cx, SBY + SBH / 2, T.startBtn, {
             fontFamily: '"Orbitron",Arial', fontSize: '22px', color: '#ffffff',
             fontStyle: 'bold', stroke: '#000000', strokeThickness: 4, shadow,
         }).setOrigin(0.5);
@@ -437,8 +329,8 @@ class SetupScene extends Phaser.Scene {
             .on('pointerdown', () => {
                 const ta = document.getElementById('mgNamesInput');
                 const names = this._parseNames(ta ? ta.value : '');
-                if (names.length < 2)  return this._showMsg(L().msgMin);
-                if (names.length > 30) return this._showMsg(L().msgMax);
+                if (names.length < 2)  return this._showMsg(T.msgMin);
+                if (names.length > 30) return this._showMsg(T.msgMax);
                 // 게임 시작 즉시 오버레이 숨기기 (씬 전환 전에 반드시 처리)
                 const ov = document.getElementById('mg-setup-overlay');
                 if (ov) ov.classList.remove('active');
@@ -452,7 +344,7 @@ class SetupScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         this.add.graphics().fillStyle(0x2a1028, 0.55).fillRect(0, H - FOOT_H, W, FOOT_H);
-        this.add.text(cx, H - FOOT_H / 2, L().footerPromo, {
+        this.add.text(cx, H - FOOT_H / 2, T.footerPromo, {
             fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#ffffff', shadow,
         }).setOrigin(0.5);
 
@@ -471,11 +363,8 @@ class SetupScene extends Phaser.Scene {
 
     _updateCount(raw) {
         const n = this._parseNames(raw).length;
-        let suffix = L().countSuffix;
-        if      (n < 2)  suffix += L().countMin;
-        else if (n > 30) suffix += L().countMax;
-        else             suffix += L().countOk;
-        this.countText.setText(`${n}${suffix}`);
+        const sfx = (n < 2) ? T.countMin : (n > 30) ? T.countMax : T.countOk;
+        this.countText.setText(fmt(T.count, n) + ' ' + sfx);
         this.countText.setColor(n >= 2 && n <= 30 ? '#88ddaa' : '#aa88aa');
     }
 
@@ -502,7 +391,7 @@ class SetupScene extends Phaser.Scene {
                 bg.strokeRoundedRect(bx - bw / 2, y - 22, bw, 44, 10);
             };
             draw(active);
-            const label = mode === 'winner' ? L().modeWinner : L().modeLoser;
+            const label = mode === 'winner' ? T.modeWinner : T.modeLoser;
             const txt = this.add.text(bx, y, label, {
                 fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#ffffff',
             }).setOrigin(0.5);
@@ -521,7 +410,7 @@ class GameScene extends Phaser.Scene {
     constructor() { super({ key: 'GameScene' }); }
 
     init(data) {
-        this.playerNames = data.names || L().defaultNames;
+        this.playerNames = data.names || [T.defaultName1, T.defaultName2];
         this.gameMode    = data.mode  || 'winner';
         this.numPlayers  = this.playerNames.length;
 
@@ -688,8 +577,8 @@ class GameScene extends Phaser.Scene {
 
         // 시작·결승 라벨
         const ls = { fontFamily: '"Pretendard",Arial', fontSize: '11px', color: '#ccddcc' };
-        this.add.text(TRACK_START_X, this.TRACK_TOP - 14, L().labelStart,  ls).setOrigin(0.5, 1).setDepth(3);
-        this.add.text(TRACK_END_X,   this.TRACK_TOP - 14, L().labelFinish, ls).setOrigin(0.5, 1).setDepth(3);
+        this.add.text(TRACK_START_X, this.TRACK_TOP - 14, T.labelStart,  ls).setOrigin(0.5, 1).setDepth(3);
+        this.add.text(TRACK_END_X,   this.TRACK_TOP - 14, T.labelFinish, ls).setOrigin(0.5, 1).setDepth(3);
 
         // 왼쪽 패널 (순위표 영역)
         this.add.graphics()
@@ -941,7 +830,7 @@ class GameScene extends Phaser.Scene {
         this.roundText = this.add.text(W - 10, 26, '', { ...st }).setOrigin(1, 0).setDepth(21);
 
         // 모드 라벨 (상단 좌측)
-        const modeLabel = this.gameMode === 'winner' ? '🏆 1등 뽑기' : '💣 꼴찌 뽑기';
+        const modeLabel = this.gameMode === 'winner' ? T.modeWinnerShort : T.modeLoserShort;
         const modeColor = this.gameMode === 'winner' ? '#FFD700' : '#FF6666';
         this.add.text(TRACK_START_X + 8, 8, modeLabel, {
             fontFamily: '"Pretendard",Arial', fontSize: '12px', color: modeColor,
@@ -975,8 +864,8 @@ class GameScene extends Phaser.Scene {
 
     _updateHUD() {
         const alive = this.players.filter(p => p.alive && !p.finished).length;
-        this.aliveText.setText(`생존: ${alive}/${this.numPlayers}`);
-        this.roundText.setText(`라운드: ${this.roundNum}`);
+        this.aliveText.setText(fmt(T.alive, alive, this.numPlayers));
+        this.roundText.setText(fmt(T.round, this.roundNum));
         this._drawProgressBars();
         this._updateLeaderboard();
     }
@@ -1025,7 +914,7 @@ class GameScene extends Phaser.Scene {
         const HDR_H  = 18;
 
         // 헤더
-        this.add.text(LBX + LBW / 2, LBY + HDR_H / 2, '순 위', {
+        this.add.text(LBX + LBW / 2, LBY + HDR_H / 2, T.rankHeader, {
             fontFamily: '"Pretendard",Arial', fontSize: '10px',
             color: '#aaddaa', fontStyle: 'bold',
         }).setOrigin(0.5).setDepth(22);
@@ -1084,7 +973,7 @@ class GameScene extends Phaser.Scene {
                 ? p.name.slice(0, this._lbMaxNm - 1) + '…' : p.name;
 
             row.dot.setPosition(this._lbX + 6, ry).setFillStyle(p.color);
-            const rankLabel = `${rank + 1}위 ${short}`;
+            const rankLabel = fmt(T.rankName, rank + 1, short);
             row.txt.setPosition(this._lbX + 14, ry)
                 .setText(rankLabel)
                 .setColor(p.finished ? '#FFD700' : '#ffffff');  // 탈락자도 흰색 유지 (❌ 아이콘으로 구분)
@@ -1131,7 +1020,7 @@ class GameScene extends Phaser.Scene {
         this._drawSignal('green');
         this._setDollBack();
 
-        this.stateLabel.setText(L().stateGreen).setColor(hexColor(MG_C.green)).setFontSize('20px');
+        this.stateLabel.setText(T.stateGreen).setColor(hexColor(MG_C.green)).setFontSize('20px');
         this.phraseText.setText('').setFontSize('24px').setColor('#ffffff');
 
         // 매 라운드 완전 재랜덤 속도 → 역전 가능
@@ -1165,7 +1054,7 @@ class GameScene extends Phaser.Scene {
 
     _updateGreenCycleLabel() {
         if (!this.stateLabel || this.phase !== 'GREEN') return;
-        this.stateLabel.setText(L().stateGreen).setColor(hexColor(MG_C.green)).setFontSize('20px');
+        this.stateLabel.setText(T.stateGreen).setColor(hexColor(MG_C.green)).setFontSize('20px');
     }
 
     _onDollPhraseComplete() {
@@ -1193,7 +1082,7 @@ class GameScene extends Phaser.Scene {
     }
 
     _playDollPhrase() {
-        const phrase = L().phrase;
+        const phrase = T.phrase;
         this.phraseText.setText(phrase).setFontSize('22px').setColor('#ffffff');
         this._updateGreenCycleLabel();
 
@@ -1247,7 +1136,7 @@ class GameScene extends Phaser.Scene {
         if (this.gameOver) return;
         this.phase = 'TURNING';
         this._drawSignal('red');
-        this.stateLabel.setText(L().stateRed).setColor(hexColor(MG_C.red)).setFontSize('22px');
+        this.stateLabel.setText(T.stateRed).setColor(hexColor(MG_C.red)).setFontSize('22px');
         this.phraseText.setText('🛑').setColor('#ffffff');
         this.cameras.main.shake(200, 0.010);
 
@@ -1257,7 +1146,7 @@ class GameScene extends Phaser.Scene {
         // "🧊 얼음!" 대형 텍스트 팡 등장
         const iceText = this.add.text(
             this.scale.width / 2, this.scale.height / 2 - 40,
-            '🧊 얼음!', {
+            T.freeze, {
                 fontSize: '88px',
                 fontFamily: 'Arial',
                 color: '#aaddff',
@@ -1357,7 +1246,7 @@ class GameScene extends Phaser.Scene {
                     dotCount = (dotCount + 1) % 4;
                     const dots = '●'.repeat(dotCount + 1) + '○'.repeat(3 - dotCount);
                     if (this.stateLabel && this.stateLabel.active && this.phase === 'RED') {
-                        this.stateLabel.setText(`${L().stateRed}  ${dots}`).setColor(hexColor(MG_C.red)).setFontSize('20px');
+                        this.stateLabel.setText(`${T.stateRed}  ${dots}`).setColor(hexColor(MG_C.red)).setFontSize('20px');
                     }
                 },
             });
@@ -1374,7 +1263,7 @@ class GameScene extends Phaser.Scene {
     _startCheckPhase() {
         if (this.gameOver) return;
         this.phase = 'CHECK';
-        this.stateLabel.setText(L().stateCheck).setColor('#aaaaaa').setFontSize('18px');
+        this.stateLabel.setText(T.stateCheck).setColor('#aaaaaa').setFontSize('18px');
 
         // 탈락자는 RED 단계에서 inPlaceRunning 판정 후 이미 모두 처리됨
         // → 이 단계에서는 newEliminated는 항상 빈 배열
@@ -1384,7 +1273,7 @@ class GameScene extends Phaser.Scene {
         const waitTime = allElimThisRound.length > 0 ? 300 : 350;
 
         if (allElimThisRound.length > 0 && this.stateLabel && this.stateLabel.active) {
-            this.stateLabel.setText(L().roundElim(allElimThisRound.length)).setColor(hexColor(MG_C.red));
+            this.stateLabel.setText(fmt(T.roundElim, allElimThisRound.length)).setColor(hexColor(MG_C.red));
         }
 
         // loser 모드: 탈락자 중 가장 뒤에 있던 사람 = 꼴찌
@@ -1507,7 +1396,7 @@ class GameScene extends Phaser.Scene {
         // 탈락 이름 플래시 (크고 강렬하게)
         const W = this.scale.width;
         const flash = this.add.text(W / 2, this.scale.height * 0.44,
-            `💀 ${p.name} 탈락!`, {
+            fmt(T.elim, p.name), {
                 fontFamily: '"Pretendard",Arial', fontSize: '30px', color: '#ff3333',
                 stroke: '#000', strokeThickness: 5,
                 shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 6, fill: true },
@@ -1541,7 +1430,7 @@ class GameScene extends Phaser.Scene {
             playSfx(this, SFX_FANFARE);
             const W = this.scale.width;
             const flt = this.add.text(W / 2, this.scale.height * 0.38,
-                `🏆 ${p.name}  1위!`, {
+                fmt(T.first, p.name), {
                     fontFamily: '"Orbitron","Pretendard",Arial',
                     fontSize: '36px', color: '#FFD700',
                     stroke: '#000', strokeThickness: 6,
@@ -1588,7 +1477,7 @@ class GameScene extends Phaser.Scene {
         p.container.setAngle(0);
         p.container.setX(p.x);
 
-        const flash = this.add.text(p.x, p.y - 10, `🏁 ${p.rank}위!`, {
+        const flash = this.add.text(p.x, p.y - 10, fmt(T.reach, p.rank), {
             fontFamily: '"Pretendard",Arial', fontSize: '20px', color: '#FFD700',
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5).setDepth(30);
@@ -1642,7 +1531,7 @@ class GameScene extends Phaser.Scene {
             g.fillRoundedRect(px - pW / 2, py - pH / 2, pW, 8, { tl: 20, tr: 20, bl: 0, br: 0 });
 
             // 우승자 섹션 (컴팩트 헤더)
-            this.add.text(px, py - pH / 2 + 38, '🏆 최종 순위', {
+            this.add.text(px, py - pH / 2 + 38, T.finalRank, {
                 fontFamily: '"Orbitron","Pretendard",Arial',
                 fontSize: '18px', color: '#c8920a',
                 stroke: '#000', strokeThickness: 2,
@@ -1703,7 +1592,7 @@ class GameScene extends Phaser.Scene {
                         fontFamily: '"Pretendard",Arial', fontSize: `${fz}px`,
                     }).setOrigin(0, 0.5).setDepth(42);
                 }
-                this.add.text(colRank, ry, `${rank}위`, {
+                this.add.text(colRank, ry, fmt(T.rank, rank), {
                     fontFamily: '"Pretendard",Arial', fontSize: `${fz}px`, color: col,
                     fontStyle: rank <= 3 ? 'bold' : 'normal',
                 }).setOrigin(0, 0.5).setDepth(42);
@@ -1714,10 +1603,10 @@ class GameScene extends Phaser.Scene {
 
             // 버튼 (패널 하단)
             const btnY = py + pH / 2 - 32;
-            this._addResultBtn(px - 152, btnY, L().btnRestart, 0x12305a, 0x1e5096, () => {
+            this._addResultBtn(px - 152, btnY, T.btnRestart, 0x12305a, 0x1e5096, () => {
                 this.scene.start('GameScene', { names: this.playerNames, mode: this.gameMode });
             });
-            this._addResultBtn(px + 152, btnY, L().btnNewSetup, 0x28124a, 0x4a248a, () => {
+            this._addResultBtn(px + 152, btnY, T.btnNewSetup, 0x28124a, 0x4a248a, () => {
                 this.scene.start('SetupScene');
             });
 
@@ -1736,14 +1625,14 @@ class GameScene extends Phaser.Scene {
                 panelCol  = 0x110308;
                 borderCol = 0xcc2244;
                 stripeCol = 0xcc2244;
-                topLabel  = L().msgLoser(resultPlayer.name);
+                topLabel  = fmt(T.msgLoser, resultPlayer.name);
                 nameText  = resultPlayer.name;
                 panelColor = '#ff5577';
             } else {
                 panelCol  = 0x0e0e1a;
                 borderCol = 0x6677bb;
                 stripeCol = 0x6677bb;
-                topLabel  = L().allElim;
+                topLabel  = T.allElim;
                 nameText  = '—';
                 panelColor = hexColor(MG_C.accent);
             }
@@ -1777,10 +1666,10 @@ class GameScene extends Phaser.Scene {
                 this._addLoserEffect(W, H);
             }
 
-            this._addResultBtn(W / 2 - 152, H - 80, L().btnRestart, 0x12305a, 0x1e5096, () => {
+            this._addResultBtn(W / 2 - 152, H - 80, T.btnRestart, 0x12305a, 0x1e5096, () => {
                 this.scene.start('GameScene', { names: this.playerNames, mode: this.gameMode });
             });
-            this._addResultBtn(W / 2 + 152, H - 80, L().btnNewSetup, 0x28124a, 0x4a248a, () => {
+            this._addResultBtn(W / 2 + 152, H - 80, T.btnNewSetup, 0x28124a, 0x4a248a, () => {
                 this.scene.start('SetupScene');
             });
         }
@@ -1963,21 +1852,7 @@ const mugunghwaGame = new Phaser.Game(mugunghwaConfig);
 // 외부 UI  (BGM 토글 · 전체화면)
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    document.documentElement.setAttribute('lang', currentLang);
-
-    // i18n – HTML 설명 텍스트 업데이트
-    const _setHTML = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
-    const _setTxt  = (id, txt)  => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-    const _L = L();
-    _setTxt('mg-desc-h2-1',    _L.domDescH2_1);
-    _setTxt('mg-desc-h2-2',    _L.domDescH2_2);
-    _setHTML('mg-desc-step-1', _L.domDescStep1);
-    _setHTML('mg-desc-step-2', _L.domDescStep2);
-    _setHTML('mg-desc-step-3', _L.domDescStep3);
-    _setHTML('mg-desc-step-4', _L.domDescStep4);
-    _setHTML('mg-desc-feat-1', _L.domDescFeat1);
-    _setHTML('mg-desc-feat-2', _L.domDescFeat2);
-    _setHTML('mg-desc-feat-3', _L.domDescFeat3);
+    // HTML 쪽 글자(설명·버튼)는 서버가 messages*.properties 로 렌더한다. 여기서는 상태에 따라 바뀌는 버튼만 만진다.
 
     const bgmToggle    = document.getElementById('bgmToggle');
     const volumeCtrl   = document.getElementById('volumeControl');
@@ -2010,7 +1885,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bgmToggle) {
         const updateBgmUI = () => {
             const on = mugunghwaGame.registry.get('bgmOn', true);
-            bgmToggle.textContent = on ? L().bgmOn : L().bgmOff;
+            bgmToggle.textContent = on ? T.bgmOn : T.bgmOff;
         };
         updateBgmUI();
 
@@ -2065,22 +1940,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // 모바일: 전체화면 비권장 안내 모달 + 버튼 숨김
     if (isMobile()) {
         if (fsToggle) fsToggle.style.display = 'none';
-        const _L = L();
         const mgMobileOverlay = document.createElement('div');
         mgMobileOverlay.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
         const mgMobileBox = document.createElement('div');
         mgMobileBox.style.cssText = 'max-width:420px;width:100%;background:rgba(10,10,30,0.96);border:1px solid rgba(255,215,0,0.6);border-radius:10px;padding:18px 20px 16px;color:#dddddd;font-family:"Pretendard",system-ui,sans-serif;font-size:13px;line-height:1.6;';
         const mgMobileTitle = document.createElement('div');
-        mgMobileTitle.textContent = _L.mobileFsBlockTitle;
+        mgMobileTitle.textContent = T.mobileFsBlockTitle;
         mgMobileTitle.style.cssText = 'font-size:14px;font-weight:700;color:#FFD700;margin-bottom:8px;';
         const mgMobileMsg = document.createElement('div');
-        mgMobileMsg.textContent = _L.mobileFsBlockMessage;
+        mgMobileMsg.textContent = T.mobileFsBlockMessage;
         mgMobileMsg.style.cssText = 'white-space:pre-line;margin-bottom:14px;';
         const mgMobileBtnWrap = document.createElement('div');
         mgMobileBtnWrap.style.cssText = 'display:flex;justify-content:flex-end;';
         const mgMobileOkBtn = document.createElement('button');
         mgMobileOkBtn.type = 'button';
-        mgMobileOkBtn.textContent = _L.mobileFsBlockOk;
+        mgMobileOkBtn.textContent = T.mobileFsBlockOk;
         mgMobileOkBtn.style.cssText = 'min-width:84px;padding:8px 14px;border-radius:6px;border:1px solid rgba(255,215,0,0.8);background:rgba(255,215,0,0.15);color:#FFD700;font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;';
         mgMobileOkBtn.addEventListener('click', () => {
             if (mgMobileOverlay.parentNode) mgMobileOverlay.parentNode.removeChild(mgMobileOverlay);
@@ -2221,7 +2095,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateFsUI() {
         const active = isFS() || fullWrap.classList.contains('mg-fullscreen-active');
-        if (fsToggle) fsToggle.textContent = active ? '⛶ 전체화면 종료' : '⛶ 전체화면';
+        if (fsToggle) fsToggle.textContent = active ? T.fsToggleExit : T.fsToggle;
         if (mobileFsBar && isMobile()) mobileFsBar.style.display = active ? 'flex' : 'none';
         resizeMgOverlay();
     }
