@@ -92,7 +92,7 @@ public final class GameCatalog {
             new Game("/dodge", "총알 피하기", "Arcade",
                     "랭킹 도전 · 오래 버틸수록 빨라지는 생존 아케이드", "2026-09-21", Set.of("en", "ja")),
             new Game("/kimchi", "김치 랜덤 디펜스", "Defense",
-                    "뽑기 운으로 막는 랜덤 타워 디펜스", "2026-08-30")
+                    "뽑기 운으로 막는 랜덤 타워 디펜스", "2026-09-21", Set.of("en", "ja"))
     );
 
     /** 경로로 하나 찾는다. 없으면 null. */

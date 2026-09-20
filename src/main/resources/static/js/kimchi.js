@@ -1,6 +1,32 @@
 window.onload = function() {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+    // 캔버스에 그리는 문구. 템플릿(kimchi.html)이 messages*.properties 에서 읽어 window.KIMCHI_I18N 으로 넘긴다.
+    // 없으면 한국어 기본값. 문구를 고칠 땐 이 파일이 아니라 properties 를 고친다.
+    // 등급 이름('일반'…'태초')은 데이터 표의 키라 코드 안에서는 한국어 그대로 쓰고, 화면에 낼 때만 gradeName() 으로 바꾼다.
+    const T = Object.assign({
+        menuDesc: '게임설명',
+        menuBuy: '랜덤 타워 구매 (15원)',
+        menuSpeed: '게임 2배속 On/Off',
+        menuStart: '게임시작',
+        description: '김치 랜덤 디펜스\n플레이어는 메소를 사용하여 타워를 구매하고 모든 적을 섬멸해야합니다.\n최종 보스는 15라운드!\n\n타워 등급과 출현 확률:\n- 일반: 50% | 레어: 33%\n- 영웅: 10% | 유물: 5%\n- 전설: 1.5% | 태초: 0.5%\n\n각 타워는 등급에 따라 다른 공격력과 사거리를 가집니다.\n전략적으로 타워를 배치하여 적을 물리치세요.\n\n*게임 배속은 존재하는 적에게는 적용되지 않습니다.',
+        close: '닫기',
+        noMoney: '화폐가 부족합니다!',
+        clear: '게임 클리어!',
+        gameOver: '게임 종료!',
+        restart: '게임 다시하기',
+        gradeCreated: '{0} 등급이 생성되었습니다.',
+        health: '체력: {0}/{1}',
+        details: '등급: {0}\n공격력: ({1} + {2})\n사거리: {3}',
+        upgrade: '{0}단계업그레이드({1}원)',
+        sell: '판매하기({0}원)',
+        move: '이동',
+        grade1: '일반', grade2: '레어', grade3: '영웅', grade4: '유물', grade5: '전설', grade6: '태초'
+    }, window.KIMCHI_I18N || {});
+    function fmt(t, ...v) { return t.replace(/\{(\d)\}/g, (_, i) => String(v[i])); }
+    const GRADE_KEY = { '일반': 'grade1', '레어': 'grade2', '영웅': 'grade3', '유물': 'grade4', '전설': 'grade5', '태초': 'grade6' };
+    function gradeName(grade) { return T[GRADE_KEY[grade]] || grade; }
+
     const config = {
         type: Phaser.AUTO,
         width: 800,
@@ -361,10 +387,10 @@ window.onload = function() {
 
             const style = { fontSize: `${UI.fontSize}px`, fill: '#FFF', fontFamily: 'Arial', align: 'center' };
             const btnY = [25, 95, 165, 235];
-            const gameDescriptionText = this.add.text(0, btnY[0], '게임설명', style).setOrigin(0.5).setInteractive({ useHandCursor: true });
-            const towerPurchaseText = this.add.text(0, btnY[1], '랜덤 타워 구매 (15원)', style).setOrigin(0.5).setInteractive({ useHandCursor: true });
-            const toggleSpeedText = this.add.text(0, btnY[2], '게임 2배속 On/Off', style).setOrigin(0.5).setInteractive({ useHandCursor: true });
-            const startGameText = this.add.text(0, btnY[3], '게임시작', style).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            const gameDescriptionText = this.add.text(0, btnY[0], T.menuDesc, style).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            const towerPurchaseText = this.add.text(0, btnY[1], T.menuBuy, style).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            const toggleSpeedText = this.add.text(0, btnY[2], T.menuSpeed, style).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            const startGameText = this.add.text(0, btnY[3], T.menuStart, style).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
             [gameDescriptionText, towerPurchaseText, toggleSpeedText, startGameText].forEach(addButtonTouchFeedback);
 
@@ -379,7 +405,7 @@ window.onload = function() {
                 descBg.setPosition(-descW / 2, -descH / 2);
                 descBg.setDepth(15);
 
-                const descriptionText = self.add.text(0, -140, '김치 랜덤 디펜스\n플레이어는 메소를 사용하여 타워를 구매하고 모든 적을 섬멸해야합니다.\n최종 보스는 15라운드!\n\n타워 등급과 출현 확률:\n- 일반: 50% | 레어: 33%\n- 영웅: 10% | 유물: 5%\n- 전설: 1.5% | 태초: 0.5%\n\n각 타워는 등급에 따라 다른 공격력과 사거리를 가집니다.\n전략적으로 타워를 배치하여 적을 물리치세요.\n\n*게임 배속은 존재하는 적에게는 적용되지 않습니다.', {
+                const descriptionText = self.add.text(0, -140, T.description, {
                     fontSize: '26px',
                     fill: '#FFF',
                     fontFamily: 'Arial',
@@ -399,7 +425,7 @@ window.onload = function() {
                 closeBtnBg.lineStyle(2, 0x4a90e2, 1);
                 closeBtnBg.strokeRoundedRect(closeBtnX - closeBtnW / 2, closeBtnY - closeBtnH / 2, closeBtnW, closeBtnH, 12);
                 closeBtnBg.setDepth(16);
-                const closeBtn = self.add.text(closeBtnX, closeBtnY, '닫기', {
+                const closeBtn = self.add.text(closeBtnX, closeBtnY, T.close, {
                     fontSize: `${UI.fontSize}px`,
                     fill: '#FFF',
                     fontFamily: 'Arial'
@@ -449,7 +475,7 @@ window.onload = function() {
                     currencyText.setText(`: ${currency}`);
 
                 } else {
-                    const warningText = self.add.text(400, 300, '화폐가 부족합니다!', { fontSize: `${UI.fontSize}px`, fill: '#FFF', backgroundColor: '#000' }).setOrigin(0.5);
+                    const warningText = self.add.text(400, 300, T.noMoney, { fontSize: `${UI.fontSize}px`, fill: '#FFF', backgroundColor: '#000' }).setOrigin(0.5);
                     self.time.addEvent({
                         delay: 2000,
                         callback: () => {
@@ -612,13 +638,13 @@ window.onload = function() {
         const gameClearBackground = createRoundedPanel(scene, panelW, panelH);
         gameClearBackground.setPosition(-panelW / 2, -panelH / 2);
 
-        const gameClearText = scene.add.text(0, -60, '게임 클리어!', {
+        const gameClearText = scene.add.text(0, -60, T.clear, {
             fontSize: `${UI.fontSizeLarge}px`,
             fill: '#FFF',
             fontFamily: 'Arial',
         }).setOrigin(0.5);
 
-        const restartButton = scene.add.text(0, 50, '게임 다시하기', {
+        const restartButton = scene.add.text(0, 50, T.restart, {
             fontSize: `${UI.fontSize}px`,
             fill: '#FFF',
             backgroundColor: '#22aa44',
@@ -645,7 +671,7 @@ window.onload = function() {
         const notificationBackground = createRoundedPanel(scene, notiW, notiH);
         notificationBackground.setPosition(-notiW / 2, -notiH / 2);
 
-        const notificationText = scene.add.text(0, 0, `${grade} 등급이 생성되었습니다.`, {
+        const notificationText = scene.add.text(0, 0, fmt(T.gradeCreated, gradeName(grade)), {
             fontSize: `${UI.fontSize}px`,
             fill: '#FFF',
             fontFamily: 'Arial',
@@ -781,7 +807,7 @@ window.onload = function() {
     }
 
     function showEnemyHealth(scene, enemy) {
-        const healthText = scene.add.text(enemy.x, enemy.y - 50, `체력: ${enemy.health}/${enemy.maxHealth}`, {
+        const healthText = scene.add.text(enemy.x, enemy.y - 50, fmt(T.health, enemy.health, enemy.maxHealth), {
             fontSize: `${UI.fontSizeSmall}px`,
             fill: '#FFF',
             backgroundColor: '#000'
@@ -855,13 +881,13 @@ window.onload = function() {
         const gameOverBackground = createRoundedPanel(scene, panelW, panelH);
         gameOverBackground.setPosition(-panelW / 2, -panelH / 2);
 
-        const gameOverText = scene.add.text(0, -60, '게임 종료!', {
+        const gameOverText = scene.add.text(0, -60, T.gameOver, {
             fontSize: `${UI.fontSizeLarge}px`,
             fill: '#FFF',
             fontFamily: 'Arial',
         }).setOrigin(0.5);
 
-        const restartButton = scene.add.text(0, 50, '게임 다시하기', {
+        const restartButton = scene.add.text(0, 50, T.restart, {
             fontSize: `${UI.fontSize}px`,
             fill: '#FFF',
             backgroundColor: '#cc3333',
@@ -977,16 +1003,16 @@ window.onload = function() {
         background.setPosition(-panelW / 2, -panelH / 2);
 
         const margin = 20;
-        const detailsText = scene.add.text(-panelW / 2 + margin, -panelH / 2 + margin, `등급: ${tower.grade}\n공격력: (${basePower} + ${towerUpgradeLevel * basePower})\n사거리: ${tower.range}`, style);
+        const detailsText = scene.add.text(-panelW / 2 + margin, -panelH / 2 + margin, fmt(T.details, gradeName(tower.grade), basePower, towerUpgradeLevel * basePower, tower.range), style);
 
         const upgradeCost = 20 + (towerUpgradeLevel * 2);
         const btnY = -panelH / 2 + 105;
         const btnGap = 56;
-        const upgradeText = scene.add.text(-panelW / 2 + margin, btnY, `${towerUpgradeLevel + 1}단계업그레이드(${upgradeCost}원)`, style)
+        const upgradeText = scene.add.text(-panelW / 2 + margin, btnY, fmt(T.upgrade, towerUpgradeLevel + 1, upgradeCost), style)
             .setInteractive({ useHandCursor: true }).setPadding(12, 8);
-        const sellText = scene.add.text(-panelW / 2 + margin, btnY + btnGap, `판매하기(${getSellPrice(tower.grade)}원)`, style)
+        const sellText = scene.add.text(-panelW / 2 + margin, btnY + btnGap, fmt(T.sell, getSellPrice(tower.grade)), style)
             .setInteractive({ useHandCursor: true }).setPadding(12, 8);
-        const moveText = scene.add.text(-panelW / 2 + margin, btnY + btnGap * 2, `이동`, style)
+        const moveText = scene.add.text(-panelW / 2 + margin, btnY + btnGap * 2, T.move, style)
             .setInteractive({ useHandCursor: true }).setPadding(12, 8);
 
         addButtonTouchFeedback(upgradeText);
@@ -1117,14 +1143,14 @@ window.onload = function() {
             });
 
             const basePower = baseAttackPower[tower.grade];
-            detailsText.setText(`등급: ${tower.grade}\n공격력: (${basePower} + ${towerUpgradeLevel * basePower})\n사거리: ${tower.range}`);
-            upgradeText.setText(`${towerUpgradeLevel + 1}단계업그레이드(${baseUpgradeCost + (towerUpgradeLevel * 2)}원)`);
+            detailsText.setText(fmt(T.details, gradeName(tower.grade), basePower, towerUpgradeLevel * basePower, tower.range));
+            upgradeText.setText(fmt(T.upgrade, towerUpgradeLevel + 1, baseUpgradeCost + (towerUpgradeLevel * 2)));
 
             rangeCircle.clear();
             rangeCircle.lineStyle(2, 0xff0000, 1);
             rangeCircle.strokeCircle(tower.x, tower.y, tower.range);
         } else {
-            const warningText = scene.add.text(400, 300, '화폐가 부족합니다!', { fontSize: '32px', fill: '#FFF', backgroundColor: '#000' }).setOrigin(0.5);
+            const warningText = scene.add.text(400, 300, T.noMoney, { fontSize: '32px', fill: '#FFF', backgroundColor: '#000' }).setOrigin(0.5);
             scene.time.addEvent({
                 delay: 2000,
                 callback: () => {

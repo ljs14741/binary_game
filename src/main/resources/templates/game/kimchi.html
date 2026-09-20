@@ -1,26 +1,28 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" th:lang="${lang}" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>김치 랜덤 디펜스 - 랜덤 타워 디펜스 게임 | Binary World</title>
+    <!--/* 다국어: 글자는 i18n/messages*.properties 의 kimchi.* 키. /en/kimchi, /ja/kimchi. Phaser 캔버스 글자는 아래 window.KIMCHI_I18N 으로 넘긴다 */-->
+    <title th:text="#{kimchi.meta.title}">김치 랜덤 디펜스 - 랜덤 타워 디펜스 게임 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content="김치 랜덤 디펜스! 랜덤 타워로 적의 침략을 막는 방어 게임. 전략적 배치와 운을 겨뤄보세요. 무료 웹게임 지금 플레이.">
-    <meta name="keywords" content="김치 랜덤 디펜스, 김치디펜스, 타워 디펜스, 랜덤 타워, 미니게임, 웹게임, Binary World">
+    <meta name="description" th:content="#{kimchi.meta.description}" content="김치 랜덤 디펜스! 랜덤 타워로 적의 침략을 막는 방어 게임. 전략적 배치와 운을 겨뤄보세요. 무료 웹게임 지금 플레이.">
+    <meta name="keywords" th:content="#{kimchi.meta.keywords}" content="김치 랜덤 디펜스, 김치디펜스, 타워 디펜스, 랜덤 타워, 미니게임, 웹게임, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="김치 랜덤 디펜스 - 랜덤 타워 디펜스 게임 | Binary World">
-    <meta property="og:description" content="김치 랜덤 디펜스! 랜덤 타워로 적 방어. 전략과 운이 필요한 무료 웹게임.">
+    <meta property="og:title" th:content="#{kimchi.meta.ogTitle}" content="김치 랜덤 디펜스 - 랜덤 타워 디펜스 게임 | Binary World">
+    <meta property="og:description" th:content="#{kimchi.meta.ogDescription}" content="김치 랜덤 디펜스! 랜덤 타워로 적 방어. 전략과 운이 필요한 무료 웹게임.">
     <meta property="og:image" content="https://game.binaryworld.kr/img/kimchi.png">
-    <meta property="og:url" content="https://game.binaryworld.kr/kimchi">
+    <meta property="og:url" th:content="${canonicalUrl}" content="https://game.binaryworld.kr/kimchi">
+    <meta property="og:locale" th:content="${lang == 'ko' ? 'ko_KR' : (lang == 'ja' ? 'ja_JP' : 'en_US')}" content="ko_KR">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="김치 랜덤 디펜스 - 랜덤 타워 디펜스 게임 | Binary World">
-    <meta name="twitter:description" content="김치 랜덤 디펜스! 랜덤 타워로 적 방어. 무료 웹게임 플레이.">
+    <meta name="twitter:title" th:content="#{kimchi.meta.ogTitle}" content="김치 랜덤 디펜스 - 랜덤 타워 디펜스 게임 | Binary World">
+    <meta name="twitter:description" th:content="#{kimchi.meta.ogDescription}" content="김치 랜덤 디펜스! 랜덤 타워로 적 방어. 무료 웹게임 플레이.">
     <meta name="twitter:image" content="https://game.binaryworld.kr/img/kimchi.png">
 
     <!-- 기본 파비콘 -->
@@ -49,18 +51,22 @@
 
     <meta name="_csrf" th:content="${_csrf.token}" />
 
-    <link rel="canonical" href="https://game.binaryworld.kr/kimchi">
+    <!--/* canonical + 언어별 hreflang (fragments/i18n) */-->
+    <th:block th:replace="~{fragments/i18n :: hreflang}"/>
 
-    <script type="application/ld+json">
+    <script type="application/ld+json" th:inline="javascript">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "김치 랜덤 디펜스 - 랜덤 타워 디펜스 게임",
-      "url": "https://game.binaryworld.kr/kimchi",
-      "description": "김치 랜덤 디펜스! 랜덤 타워로 적의 침략을 막는 방어 게임. 전략적 배치와 운을 겨뤄보세요. 무료 웹게임 지금 플레이.",
+      "name": [[#{kimchi.ld.name}]],
+      "alternateName": [[${ {#messages.msg('kimchi.ld.alt1'), #messages.msg('kimchi.ld.alt2'), #messages.msg('kimchi.ld.alt3'), #messages.msg('kimchi.ld.alt4')} }]],
+      "url": [[${canonicalUrl}]],
+      "inLanguage": [[${lang}]],
+      "description": [[#{kimchi.ld.description}]],
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": [[#{kimchi.ld.keywords}]]
     }
     </script>
 
@@ -93,17 +99,19 @@
     <div class="container">
 
         <div class="nav-back">
-            <a href="/" class="back-btn">← 게임 목록</a>
+            <a href="/" class="back-btn" th:text="#{common.back}">← 게임 목록</a>
         </div>
 
-        <h1 class="game-title">김치 랜덤 디펜스</h1>
-        <p class="game-desc">무엇이 나올지 모르는 뽑기 운으로 막아내는 랜덤 타워 디펜스.</p>
+        <div th:replace="~{fragments/i18n :: langSwitch}"></div>
+
+        <h1 class="game-title" th:text="#{kimchi.ui.title}">김치 랜덤 디펜스</h1>
+        <p class="game-desc" th:text="#{kimchi.ui.lead}">무엇이 나올지 모르는 뽑기 운으로 막아내는 랜덤 타워 디펜스.</p>
 
         <div class="game-bgm">
-            <button id="bgmToggle">BGM 켜기/끄기</button>
-            <label for="volumeControl">BGM 볼륨:</label>
+            <button id="bgmToggle" th:text="#{kimchi.ui.bgmToggle}">BGM 켜기/끄기</button>
+            <label for="volumeControl" th:text="#{kimchi.ui.bgmVolume}">BGM 볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="100">
-            <label for="sfxVolumeControl">효과음 볼륨:</label>
+            <label for="sfxVolumeControl" th:text="#{kimchi.ui.sfxVolume}">효과음 볼륨:</label>
             <input type="range" id="sfxVolumeControl" min="0" max="100" value="100">
         </div>
 
@@ -112,21 +120,21 @@
         <div th:replace="~{fragments/share :: shareBar}"></div>
 
         <div class="description">
-            <h2>게임 설명</h2>
+            <h2 th:text="#{kimchi.help.title}">게임 설명</h2>
             <p>
-                김치 랜덤 디펜스는 다양한 등급의 타워를 랜덤으로 구매해 적을 막는 디펜스 게임입니다.<br>
-                타워는 일반부터 태초까지 총 6등급이 있으며 각기 다른 공격력과 사거리를 가집니다.<br>
-                적은 라운드마다 점점 강해지며, 마지막 보스를 처치하면 게임을 클리어합니다.<br>
-                타워를 전략적으로 설치하고 업그레이드하며 최종 라운드를 돌파해보세요!
+                <span th:text="#{kimchi.help.1}">김치 랜덤 디펜스는 다양한 등급의 타워를 랜덤으로 구매해 적을 막는 디펜스 게임입니다.</span><br>
+                <span th:text="#{kimchi.help.2}">타워는 일반부터 태초까지 총 6등급이 있으며 각기 다른 공격력과 사거리를 가집니다.</span><br>
+                <span th:text="#{kimchi.help.3}">적은 라운드마다 점점 강해지며, 마지막 보스를 처치하면 게임을 클리어합니다.</span><br>
+                <span th:text="#{kimchi.help.4}">타워를 전략적으로 설치하고 업그레이드하며 최종 라운드를 돌파해보세요!</span>
             </p>
-            <h3>타워 등급 및 출현 확률</h3>
+            <h3 th:text="#{kimchi.help.gradesTitle}">타워 등급 및 출현 확률</h3>
             <ul>
-                <li>태초 ⭐⭐⭐⭐⭐⭐ : 0.5%</li>
-                <li>전설 ⭐⭐⭐⭐⭐ : 1.5%</li>
-                <li>유물 ⭐⭐⭐⭐ : 5%</li>
-                <li>영웅 ⭐⭐⭐ : 10%</li>
-                <li>레어 ⭐⭐ : 33%</li>
-                <li>일반 ⭐ : 50%</li>
+                <li th:text="#{kimchi.help.grade6}">태초 ⭐⭐⭐⭐⭐⭐ : 0.5%</li>
+                <li th:text="#{kimchi.help.grade5}">전설 ⭐⭐⭐⭐⭐ : 1.5%</li>
+                <li th:text="#{kimchi.help.grade4}">유물 ⭐⭐⭐⭐ : 5%</li>
+                <li th:text="#{kimchi.help.grade3}">영웅 ⭐⭐⭐ : 10%</li>
+                <li th:text="#{kimchi.help.grade2}">레어 ⭐⭐ : 33%</li>
+                <li th:text="#{kimchi.help.grade1}">일반 ⭐ : 50%</li>
             </ul>
         </div>
     </div>
@@ -138,6 +146,35 @@
 
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // kimchi.js 가 캔버스에 띄우는 문구. 키는 messages*.properties 의 kimchi.js.*
+    window.KIMCHI_I18N = {
+        menuDesc:     [[#{kimchi.js.menuDesc}]],
+        menuBuy:      [[#{kimchi.js.menuBuy}]],
+        menuSpeed:    [[#{kimchi.js.menuSpeed}]],
+        menuStart:    [[#{kimchi.js.menuStart}]],
+        description:  [[#{kimchi.js.description}]],
+        close:        [[#{kimchi.js.close}]],
+        noMoney:      [[#{kimchi.js.noMoney}]],
+        clear:        [[#{kimchi.js.clear}]],
+        gameOver:     [[#{kimchi.js.gameOver}]],
+        restart:      [[#{kimchi.js.restart}]],
+        gradeCreated: [[#{kimchi.js.gradeCreated('{0}')}]],
+        health:       [[#{kimchi.js.health('{0}', '{1}')}]],
+        details:      [[#{kimchi.js.details('{0}', '{1}', '{2}', '{3}')}]],
+        upgrade:      [[#{kimchi.js.upgrade('{0}', '{1}')}]],
+        sell:         [[#{kimchi.js.sell('{0}')}]],
+        move:         [[#{kimchi.js.move}]],
+        grade1:       [[#{kimchi.js.grade1}]],
+        grade2:       [[#{kimchi.js.grade2}]],
+        grade3:       [[#{kimchi.js.grade3}]],
+        grade4:       [[#{kimchi.js.grade4}]],
+        grade5:       [[#{kimchi.js.grade5}]],
+        grade6:       [[#{kimchi.js.grade6}]]
+    };
+    /*]]>*/
+</script>
 <script th:src="@{/js/phaser.min.js}"></script>
 <script th:src="@{/js/kimchi.js}"></script>
 <script>
