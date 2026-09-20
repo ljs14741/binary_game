@@ -1,6 +1,22 @@
 (() => {
   const TOPPINGS = ["salmon", "tuna", "egg", "shrimp"];
 
+  // 화면 문구. 템플릿(wasabi.html)이 messages*.properties 에서 읽어 window.WASABI_I18N 으로 넘긴다.
+  // 없으면(테스트 페이지 등) 한국어 기본값. 문구를 고칠 땐 이 파일이 아니라 properties 를 고친다.
+  const T = Object.assign({
+    plateAria: "초밥 접시 {0}",
+    remaining: "남은 접시",
+    bgmOn: "BGM 켜짐",
+    bgmOff: "BGM 꺼짐",
+    hintBase: "와사비를 피하세요",
+    hint1: "긴장타이소～",
+    hint2: "위험해진다",
+    hint3: "가즈아～",
+    hintLast: "마지막 접시… 집으면 벌칙!",
+    penalty: "응 너야～ ㅋ_ㅋ",
+    loseDetail: "벌칙 당첨! 와사비 초밥을 집었습니다.",
+  }, window.WASABI_I18N || {});
+
   const board = document.getElementById("wasabi-board");
   const stage = document.getElementById("wasabi-stage");
   const fxEl = document.getElementById("wasabi-fx");
@@ -45,7 +61,7 @@
   }
 
   function pickPenalty() {
-    return "응 너야～ ㅋ_ㅋ";
+    return T.penalty;
   }
 
   function makeSfx(src) {
@@ -126,17 +142,17 @@
 
   function hintForRemaining() {
     const level = tensionLevel();
-    if (remaining === 1) return "· 마지막 접시… 집으면 벌칙!";
-    if (level >= 3) return "· 가즈아～";
-    if (level >= 2) return "· 위험해진다";
-    if (level >= 1) return "· 긴장타이소～";
-    return "· 와사비를 피하세요";
+    if (remaining === 1) return "· " + T.hintLast;
+    if (level >= 3) return "· " + T.hint3;
+    if (level >= 2) return "· " + T.hint2;
+    if (level >= 1) return "· " + T.hint1;
+    return "· " + T.hintBase;
   }
 
   function flashToast(hint) {
     if (!toastEl) return;
     const text = String(hint || "").replace(/^·\s*/, "").trim();
-    if (!text || text === "와사비를 피하세요") return;
+    if (!text || text === T.hintBase) return;
     if (text === lastToastKey) return;
     lastToastKey = text;
     toastEl.textContent = text;
@@ -151,7 +167,7 @@
 
   function setStatus(count, hint) {
     statusEl.innerHTML = `
-      <span>남은 접시</span>
+      <span>${T.remaining}</span>
       <span class="bw-wasabi-count">${count}</span>
       <span>${hint || ""}</span>
     `;
@@ -259,7 +275,7 @@
       btn.type = "button";
       btn.className = "bw-wasabi-plate";
       btn.dataset.variant = variant;
-      btn.setAttribute("aria-label", `초밥 접시 ${i + 1}`);
+      btn.setAttribute("aria-label", T.plateAria.replace("{0}", String(i + 1)));
       btn.innerHTML = nigiriHtml(variant);
       btn.addEventListener("click", () => onPick(i));
       board.appendChild(btn);
@@ -353,7 +369,7 @@
       showResult(
         "lose",
         pickPenalty(),
-        "벌칙 당첨! 와사비 초밥을 집었습니다."
+        T.loseDetail
       );
       revealing = false;
       return;
@@ -393,7 +409,7 @@
     bgmToggle.addEventListener("click", async () => {
       bgmOn = !bgmOn;
       bgmToggle.classList.toggle("is-off", !bgmOn);
-      bgmToggle.textContent = bgmOn ? "BGM 켜짐" : "BGM 꺼짐";
+      bgmToggle.textContent = bgmOn ? T.bgmOn : T.bgmOff;
       bgmToggle.setAttribute("aria-pressed", String(bgmOn));
       if (bgmOn) {
         await unlockAndPlayBgm();

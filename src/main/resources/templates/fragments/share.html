@@ -13,10 +13,14 @@
   shareTwitter()/setupKakaoShareButton() 을 페이지마다 복사해 뒀다. 모양도 제각각이었고
   경마·무궁화에는 아예 없었다. 이 조각 하나로 통일한다.
 
-  버튼: 카카오톡 · X · 페이스북 · 링크 복사 · (모바일: 기기 공유). 아이콘은 인라인 SVG 라 이미지 요청이 없다.
+  버튼: 카카오톡 · LINE · X · 페이스북 · 링크 복사 · (모바일: 기기 공유). 아이콘은 인라인 SVG 라 이미지 요청이 없다.
+  언어와 무관하게 전부 보여준다 — 카톡 없는 사람은 안 누르면 그만이고, 일본은 LINE 이 카톡 자리다.
+  LINE 은 SDK 없이 공유 URL(social-plugins.line.me/lineit/share) 하나로 끝난다. X·페이스북과 같은 방식.
   카카오 SDK 는 이 조각이 보일 때 한 번만 비동기로 불러온다 (페이지 <head> 의 kakao.min.js 태그는 지워도 된다).
 
-  후원: "개발자에게 커피 한 잔" → 모달. 휴대폰이면 카카오페이 송금 링크 버튼, PC 면 QR.
+  후원: "개발자 커피 사주기" → 모달. 휴대폰이면 카카오페이 송금 링크 버튼, PC 면 QR.
+  **한국어 페이지에서만 보인다** (lang 이 ko 이거나 없을 때). 카카오페이·국내 계좌는 해외에서 결제가 안 된다.
+  해외 후원을 받으려면 Ko-fi 같은 링크를 만들고 여기 th:if 를 풀면 된다.
   계좌는 둘 다 보여주고 복사 버튼. 결혼식 사이트(binary_wedding SiteHeader.tsx)와 같은 구성.
   구걸처럼 보이면 손해라 링크 한 줄로만 두고, 결과 화면·팝업엔 절대 넣지 않는다.
 
@@ -64,6 +68,7 @@
         .bw-share-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.25); filter: brightness(1.05); }
         .bw-share-btn:active { transform: translateY(0); box-shadow: none; }
         .bw-share-btn.kakao    { background: #FEE500; color: #191919; }
+        .bw-share-btn.line     { background: #06C755; color: #fff; }
         .bw-share-btn.x        { background: #111; color: #fff; border-color: rgba(255,255,255,.18); }
         .bw-share-btn.facebook { background: #1877F2; color: #fff; }
         .bw-share-btn.copy,
@@ -182,63 +187,78 @@
         :root[data-theme="light"] .bw-share-toast { background: #0f172a; }
     </style>
 
-    <div class="bw-share-head">친구에게 공유하기</div>
+    <div class="bw-share-head" th:text="#{common.share.head}">친구에게 공유하기</div>
     <div class="bw-share-row">
-        <button type="button" class="bw-share-btn kakao" data-share="kakao" aria-label="카카오톡으로 공유">
+        <button type="button" class="bw-share-btn kakao" data-share="kakao" th:aria-label="#{common.share.aria.kakao}" aria-label="카카오톡으로 공유">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.48 3 2 6.58 2 11c0 2.84 1.86 5.33 4.66 6.75l-.95 3.53c-.08.3.26.55.52.38l4.2-2.8c.51.06 1.03.09 1.57.09 5.52 0 10-3.58 10-7.95S17.52 3 12 3z"/></svg>
-            카카오톡
+            <span th:text="#{common.share.kakao}">카카오톡</span>
         </button>
-        <button type="button" class="bw-share-btn x" data-share="x" aria-label="X(트위터)로 공유">
+        <button type="button" class="bw-share-btn line" data-share="line" th:aria-label="#{common.share.aria.line}" aria-label="LINE으로 공유">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5C6.48 2.5 2 6.1 2 10.55c0 3.98 3.54 7.32 8.32 7.95.32.07.76.21.87.49.1.25.07.65.03.9l-.14.84c-.04.25-.2.98.86.53 1.06-.44 5.7-3.36 7.78-5.75C21.15 13.98 22 12.36 22 10.55 22 6.1 17.52 2.5 12 2.5zM8.6 13.1H6.6a.5.5 0 0 1-.5-.5V8.9a.5.5 0 1 1 1 0v3.2h1.5a.5.5 0 1 1 0 1zm1.9-.5a.5.5 0 1 1-1 0V8.9a.5.5 0 1 1 1 0v3.7zm4.6 0a.5.5 0 0 1-.9.3l-2-2.7v2.4a.5.5 0 1 1-1 0V8.9a.5.5 0 0 1 .9-.3l2 2.7V8.9a.5.5 0 1 1 1 0v3.7zm3.3-2.35a.5.5 0 1 1 0 1h-1.5v.85h1.5a.5.5 0 1 1 0 1h-2a.5.5 0 0 1-.5-.5V8.9a.5.5 0 0 1 .5-.5h2a.5.5 0 1 1 0 1h-1.5v.85h1.5z"/></svg>
+            <span th:text="#{common.share.line}">LINE</span>
+        </button>
+        <button type="button" class="bw-share-btn x" data-share="x" th:aria-label="#{common.share.aria.x}" aria-label="X(트위터)로 공유">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.53 3h3.06l-6.7 7.66L21.8 21h-6.17l-4.83-6.32L5.27 21H2.2l7.17-8.19L1.8 3h6.33l4.37 5.78L17.53 3zm-1.07 16.2h1.7L7.05 4.7H5.23l11.23 14.5z"/></svg>
-            X
+            <span th:text="#{common.share.x}">X</span>
         </button>
-        <button type="button" class="bw-share-btn facebook" data-share="facebook" aria-label="페이스북으로 공유">
+        <button type="button" class="bw-share-btn facebook" data-share="facebook" th:aria-label="#{common.share.aria.facebook}" aria-label="페이스북으로 공유">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.25-1.5 1.55-1.5H16.6V4.4c-.3-.04-1.3-.13-2.45-.13-2.43 0-4.1 1.48-4.1 4.2v2.03H7.3v3h2.75V21h3.45z"/></svg>
-            페이스북
+            <span th:text="#{common.share.facebook}">페이스북</span>
         </button>
-        <button type="button" class="bw-share-btn copy" data-share="copy" aria-label="링크 복사">
+        <button type="button" class="bw-share-btn copy" data-share="copy" th:aria-label="#{common.share.aria.copy}" aria-label="링크 복사">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-            링크 복사
+            <span th:text="#{common.share.copy}">링크 복사</span>
         </button>
-        <button type="button" class="bw-share-btn native" data-share="native" aria-label="다른 앱으로 공유">
+        <button type="button" class="bw-share-btn native" data-share="native" th:aria-label="#{common.share.aria.more}" aria-label="다른 앱으로 공유">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
-            더보기
+            <span th:text="#{common.share.more}">더보기</span>
         </button>
     </div>
 
-    <button type="button" class="bw-donate-link" data-donate="open" aria-label="개발자에게 커피 사주기 (카카오페이 후원)">
+    <button type="button" class="bw-donate-link" data-donate="open" th:if="${lang == null or lang == 'ko'}" th:aria-label="#{common.donate.aria}" aria-label="개발자에게 커피 사주기 (카카오페이 후원)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 9h1a3.5 3.5 0 1 1 0 7h-1"/><path d="M3 9h14v7a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V9z"/><g class="steam"><path d="M7 3v3M10.5 2v4M14 3v3"/></g></svg>
-        개발자 커피 사주기
+        <span th:text="#{common.donate.button}">개발자 커피 사주기</span>
     </button>
 
     <div class="bw-share-toast" role="status" aria-live="polite"></div>
 
-    <div class="bw-donate" role="dialog" aria-modal="true" aria-labelledby="bw-donate-title">
+    <div class="bw-donate" role="dialog" aria-modal="true" aria-labelledby="bw-donate-title" th:if="${lang == null or lang == 'ko'}">
         <div class="bw-donate-dim" data-donate="close"></div>
         <div class="bw-donate-card">
-            <button type="button" class="bw-donate-close" data-donate="close" aria-label="닫기">✕</button>
+            <button type="button" class="bw-donate-close" data-donate="close" th:aria-label="#{common.donate.close}" aria-label="닫기">✕</button>
             <div class="bw-donate-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
             </div>
-            <h3 id="bw-donate-title">개발자에게 커피 쏘기</h3>
-            <p class="bw-donate-desc-pc">카카오톡 카메라로 QR을 찍으면 카카오페이로 바로 보낼 수 있어요.<br>보내주신 후원은 서버비에 소중히 씁니다.<br><b>사실 치킨이 먹고 싶어요 🍗</b></p>
-            <p class="bw-donate-desc-m">아래 버튼을 누르면 카카오페이로 바로 보낼 수 있어요.<br>보내주신 후원은 서버비에 소중히 씁니다.<br><b>사실 치킨이 먹고 싶어요 🍗</b></p>
-            <a class="bw-donate-pay" href="https://qr.kakaopay.com/Ej9JnRsvn" target="_blank" rel="noopener noreferrer">카카오페이로 후원하기</a>
-            <img class="bw-donate-qr" data-src="/img/donate-qr.png" alt="카카오페이 송금 QR" width="190" height="190">
+            <h3 id="bw-donate-title" th:text="#{common.donate.title}">개발자에게 커피 쏘기</h3>
+            <p class="bw-donate-desc-pc"><span th:text="#{common.donate.descPc}">카카오톡 카메라로 QR을 찍으면 카카오페이로 바로 보낼 수 있어요.</span><br><span th:text="#{common.donate.thanks}">보내주신 후원은 서버비에 소중히 씁니다.</span><br><b th:text="#{common.donate.joke}">사실 치킨이 먹고 싶어요 🍗</b></p>
+            <p class="bw-donate-desc-m"><span th:text="#{common.donate.descMobile}">아래 버튼을 누르면 카카오페이로 바로 보낼 수 있어요.</span><br><span th:text="#{common.donate.thanks}">보내주신 후원은 서버비에 소중히 씁니다.</span><br><b th:text="#{common.donate.joke}">사실 치킨이 먹고 싶어요 🍗</b></p>
+            <a class="bw-donate-pay" href="https://qr.kakaopay.com/Ej9JnRsvn" target="_blank" rel="noopener noreferrer" th:text="#{common.donate.pay}">카카오페이로 후원하기</a>
+            <img class="bw-donate-qr" data-src="/img/donate-qr.png" th:alt="#{common.donate.qrAlt}" alt="카카오페이 송금 QR" width="190" height="190">
             <div class="bw-donate-acct">
                 <div>
-                    <b>국민은행 204202-04-331256</b>
-                    <small>예금주: 이진수</small>
+                    <b th:text="#{common.donate.bank}">국민은행 204202-04-331256</b>
+                    <small th:text="#{common.donate.owner}">예금주: 이진수</small>
                 </div>
-                <button type="button" data-donate="copy-acct" data-acct="20420204331256">복사</button>
+                <button type="button" data-donate="copy-acct" data-acct="20420204331256" th:text="#{common.donate.copy}">복사</button>
             </div>
         </div>
     </div>
 
-    <script>
+    <script th:inline="javascript">
     (function () {
         var root = document.currentScript.closest('.bw-share');
         if (!root) return;
+        // 토스트·버튼 문구. 템플릿 밖(정적 테스트)에서는 한국어 기본값
+        var MSG = {
+            copied:        /*[[#{common.share.copied}]]*/ '링크를 복사했어요',
+            copyFail:      /*[[#{common.share.copyFail}]]*/ '복사에 실패했어요. 주소창에서 복사해 주세요',
+            kakaoFail:     /*[[#{common.share.kakaoFail}]]*/ '카카오톡 공유를 불러오지 못했어요',
+            kakaoButton:   /*[[#{common.share.kakaoButton}]]*/ '게임 하러 가기',
+            acctCopied:    /*[[#{common.donate.copiedToast}]]*/ '계좌번호를 복사했어요',
+            copiedLabel:   /*[[#{common.donate.copied}]]*/ '복사됨',
+            copyLabel:     /*[[#{common.donate.copy}]]*/ '복사',
+            copyFailShort: /*[[#{common.donate.copyFail}]]*/ '복사에 실패했어요'
+        };
         var KAKAO_KEY = '8b68c737be6b8e9a8007c61ee6f9b8da';
         var KAKAO_SDK = 'https://developers.kakao.com/sdk/js/kakao.min.js';
 
@@ -299,9 +319,9 @@
                 Kakao.Share.sendDefault({
                     objectType: 'feed',
                     content: { title: title, description: desc, imageUrl: image, link: { mobileWebUrl: url, webUrl: url } },
-                    buttons: [{ title: '게임 하러 가기', link: { mobileWebUrl: url, webUrl: url } }]
+                    buttons: [{ title: MSG.kakaoButton, link: { mobileWebUrl: url, webUrl: url } }]
                 });
-            }).catch(function () { toast('카카오톡 공유를 불러오지 못했어요'); });
+            }).catch(function () { toast(MSG.kakaoFail); });
         }
 
         var popup = function (u) { window.open(u, '_blank', 'noopener,width=600,height=520'); };
@@ -313,14 +333,16 @@
             if (!btn) return;
             var kind = btn.getAttribute('data-share');
             if (kind === 'kakao')    shareKakao();
+            if (kind === 'line')     popup('https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(url));
             if (kind === 'x')        popup('https://twitter.com/intent/tweet?text=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(url));
             if (kind === 'facebook') popup('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url));
-            if (kind === 'copy')     copyText(url).then(function () { toast('링크를 복사했어요'); }, function () { toast('복사에 실패했어요. 주소창에서 복사해 주세요'); });
+            if (kind === 'copy')     copyText(url).then(function () { toast(MSG.copied); }, function () { toast(MSG.copyFail); });
             if (kind === 'native')   navigator.share({ title: title, text: desc, url: url }).catch(function () {});
         });
 
         // ── 후원 모달 ──
         var modal = root.querySelector('.bw-donate');
+        if (!modal) return;   // 한국어 외 페이지엔 후원 모달이 없다
         var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia('(max-width: 768px)').matches;
         function openDonate() {
             modal.classList.toggle('is-mobile', isMobile);
@@ -338,7 +360,7 @@
             var act = el.getAttribute('data-donate');
             if (act === 'open')  openDonate();
             if (act === 'close') closeDonate();
-            if (act === 'copy-acct') copyText(el.getAttribute('data-acct')).then(function () { el.textContent = '복사됨'; toast('계좌번호를 복사했어요'); setTimeout(function () { el.textContent = '복사'; }, 2000); }, function () { toast('복사에 실패했어요'); });
+            if (act === 'copy-acct') copyText(el.getAttribute('data-acct')).then(function () { el.textContent = MSG.copiedLabel; toast(MSG.acctCopied); setTimeout(function () { el.textContent = MSG.copyLabel; }, 2000); }, function () { toast(MSG.copyFailShort); });
         });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('open')) closeDonate(); });
     })();

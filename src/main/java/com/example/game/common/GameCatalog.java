@@ -28,14 +28,26 @@ public final class GameCatalog {
      * @param kicker   카드 상단의 짧은 영문 라벨
      * @param tagline  카드 아래 한 줄 설명
      * @param lastmod  사이트맵의 lastmod. 페이지를 크게 고쳤을 때 갱신한다
+     * @param langs    한국어 외에 번역이 있는 언어 (예: {@code Set.of("en")}). 여기 든 언어만 {@code /en/경로} 가 열린다.
+     *                 번역은 {@code i18n/messages_xx.properties} 에 {@code 게임명.xxx} 키로 넣는다
      */
     public record Game(
             String path,
             String name,
             String kicker,
             String tagline,
-            String lastmod
+            String lastmod,
+            Set<String> langs
     ) {
+        /** 번역이 없는 게임 (대부분). */
+        public Game(String path, String name, String kicker, String tagline, String lastmod) {
+            this(path, name, kicker, tagline, lastmod, Set.of());
+        }
+
+        public boolean hasLang(String lang) {
+            return langs.contains(lang);
+        }
+
         /**
          * 카드 썸네일. 600x400(3:2) 로 통일돼 있다.
          * 기본은 WebP 이고, PNG_CARDS 에 든 것만 PNG 다.
@@ -72,7 +84,7 @@ public final class GameCatalog {
             new Game("/roulette", "물풍선 룰렛", "Roulette",
                     "러시안룰렛 · 돌아가며 펌프질 · 터뜨리면 물벼락", "2026-08-31"),
             new Game("/wasabi", "와사비 룰렛", "Roulette",
-                    "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-08-30"),
+                    "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-09-20", Set.of("en", "ja")),
             new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",
                     "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", "2026-08-30"),
             new Game("/horserace", "말달리자 경마내기게임", "Race",

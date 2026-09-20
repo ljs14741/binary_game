@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/*
+  다국어 페이지용 조각 두 개. 번역이 있는 게임(GameCatalog langs)만 쓴다.
+
+  1) head 안:   <th:block th:replace="~{fragments/i18n :: hreflang}"/>
+     canonical + 언어별 hreflang. 모델의 langLinks / canonicalUrl (GameCatalogAdvice) 을 읽는다.
+     번역이 없는 페이지에서 써도 canonical 하나만 나와서 무해하다.
+
+  2) body 맨 위: <div th:replace="~{fragments/i18n :: langSwitch}"></div>
+     - 영어 페이지: "한국어로 보기" 링크를 항상 보여준다 (한국인이 영어판에 떨어졌을 때 탈출구)
+     - 한국어 페이지: 브라우저 언어가 영어일 때만 "View in English" 띠를 보여준다 (JS 로 판단)
+     자동 리다이렉트는 하지 않는다 — 구글봇의 한국어 색인이 깨진다.
+*/-->
+
+<th:block th:fragment="hreflang">
+    <link rel="canonical" th:href="${canonicalUrl}">
+    <th:block th:if="${langLinks != null and langLinks.size() > 1}">
+        <link rel="alternate" th:each="l : ${langLinks}" th:hreflang="${l.lang}" th:href="${l.url}">
+        <link rel="alternate" hreflang="x-default" th:href="${langLinks[0].url}">
+    </th:block>
+</th:block>
+
+<div class="bw-lang" th:fragment="langSwitch" th:if="${langLinks != null and langLinks.size() > 1}">
+    <style>
+        .bw-lang { max-width: 960px; margin: 6px auto 0; padding: 0 14px; display: none; }
+        .bw-lang.show { display: block; }
+        .bw-lang a + a { margin-left: 6px; }
+        .bw-lang a {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border-radius: 999px;
+            border: 1px solid var(--bw-border, rgba(255,255,255,.14));
+            background: var(--bw-surface, rgba(18,21,26,.82));
+            color: var(--bw-text, #f3f1ec); text-decoration: none;
+            font-size: 12.5px; font-weight: 700;
+        }
+        .bw-lang a:hover { border-color: var(--bw-accent, #2dd4bf); }
+        :root[data-theme="light"] .bw-lang a { background: #fff; border-color: #cbd5e1; color: #0f172a; }
+    </style>
+    <!--/* 외국어 페이지 → 나머지 언어 링크 전부, 항상 표시 (한국어가 맨 앞) */-->
+    <th:block th:if="${lang != 'ko'}">
+        <a th:each="l : ${langLinks}" th:unless="${l.lang == lang}" th:href="${l.url}" th:hreflang="${l.lang}"
+           th:text="#{${'common.lang.switch.' + l.lang}}">한국어로 보기</a>
+        <script>document.currentScript.parentElement.classList.add('show');</script>
+    </th:block>
+    <!--/* 한국어 페이지 → 브라우저 언어와 맞는 번역이 있을 때만 그 링크 하나 */-->
+    <th:block th:if="${lang == 'ko'}">
+        <a th:each="l : ${langLinks}" th:unless="${l.lang == 'ko'}" th:href="${l.url}" th:hreflang="${l.lang}" th:data-lang="${l.lang}" hidden>🌐 <span th:text="#{${'common.lang.switch.' + l.lang}}">View in English</span></a>
+        <script>
+            (function () {
+                var box = document.currentScript.parentElement;
+                var nav = (navigator.language || '').toLowerCase();
+                box.querySelectorAll('a[data-lang]').forEach(function (a) {
+                    if (nav.indexOf(a.dataset.lang) === 0) { a.hidden = false; box.classList.add('show'); }
+                });
+            })();
+        </script>
+    </th:block>
+</div>
+
+</body>
+</html>

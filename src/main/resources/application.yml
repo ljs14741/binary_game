@@ -66,6 +66,12 @@ spring:
       static-locations: classpath:/static/,file:C:/workspace/uploads/
 #      static-locations: classpath:/static/,file:/home/uploads/
 
+  # 다국어 문구. i18n/messages.properties(한국어) + messages_en.properties. 언어는 주소 접두(/en/)가 정한다
+  messages:
+    basename: i18n/messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+
   servlet:
     multipart:
       max-file-size: 10MB

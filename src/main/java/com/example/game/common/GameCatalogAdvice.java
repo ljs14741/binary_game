@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,6 +32,51 @@ public class GameCatalogAdvice {
     @ModelAttribute("currentGame")
     public GameCatalog.Game currentGame(HttpServletRequest request) {
         return GameCatalog.byPath(request.getRequestURI());
+    }
+
+    /** 언어별 주소. 템플릿의 canonical·hreflang·언어 전환 링크가 쓴다. */
+    public record LangLink(String lang, String url) {
+    }
+
+    private static final String BASE_URL = "https://game.binaryworld.kr";
+
+    /** 지금 요청의 언어 코드 ("ko" 기본). 주소 접두가 정한다 — {@link LocalePrefixFilter}. */
+    @ModelAttribute("lang")
+    public String lang(HttpServletRequest request) {
+        Object l = request.getAttribute(LocalePrefixFilter.ATTR_LANG);
+        return l == null ? "ko" : l.toString();
+    }
+
+    /**
+     * 현재 게임의 언어별 주소 목록. 한국어가 먼저, 그다음 번역된 언어.
+     * 게임 페이지가 아니거나 번역이 없으면 한국어 하나만 든다 (canonical 용).
+     */
+    @ModelAttribute("langLinks")
+    public List<LangLink> langLinks(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        List<LangLink> links = new ArrayList<>();
+        links.add(new LangLink("ko", BASE_URL + path));
+        GameCatalog.Game game = GameCatalog.byPath(path);
+        if (game != null) {
+            for (String l : LocalePrefixFilter.SUPPORTED) {
+                if (game.hasLang(l)) {
+                    links.add(new LangLink(l, BASE_URL + "/" + l + path));
+                }
+            }
+        }
+        return links;
+    }
+
+    /** 지금 보고 있는 언어의 주소. canonical 과 og:url 에 쓴다. */
+    @ModelAttribute("canonicalUrl")
+    public String canonicalUrl(HttpServletRequest request) {
+        String l = lang(request);
+        for (LangLink link : langLinks(request)) {
+            if (link.lang().equals(l)) {
+                return link.url();
+            }
+        }
+        return BASE_URL + request.getRequestURI();
     }
 
     /** 현재 게임을 뺀 나머지. 매 요청 섞여서 재방문자에게 다른 게임이 보인다. */

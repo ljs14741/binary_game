@@ -1,44 +1,48 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" th:lang="${lang}" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 초밥 게임 | Binary World</title>
+    <!--/* 다국어: 글자는 전부 i18n/messages*.properties 의 wasabi.* 키. /en/wasabi 면 영어가 나온다 (LocalePrefixFilter) */-->
+    <title th:text="#{wasabi.meta.title}">와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 초밥 게임 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <meta name="description" content="와사비 룰렛! 초밥 접시 중 와사비를 피하세요. 커피내기·점심내기·벌칙뽑기에 딱 맞는 무료 미니게임. 와사비 집으면 벌칙 당첨.">
-    <meta name="keywords" content="와사비 룰렛, 와사비룰렛, 와사비 룰렛 게임, 초밥 게임, 커피내기, 커피내기게임, 점심내기, 벌칙뽑기, 당번뽑기, 악어룰렛 대체, 랜덤뽑기, Binary World">
+    <meta name="description" th:content="#{wasabi.meta.description}" content="와사비 룰렛! 초밥 접시 중 와사비를 피하세요. 커피내기·점심내기·벌칙뽑기에 딱 맞는 무료 미니게임. 와사비 집으면 벌칙 당첨.">
+    <meta name="keywords" th:content="#{wasabi.meta.keywords}" content="와사비 룰렛, 와사비룰렛, 와사비 룰렛 게임, 초밥 게임, 커피내기, 커피내기게임, 점심내기, 벌칙뽑기, 당번뽑기, 악어룰렛 대체, 랜덤뽑기, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 | Binary World">
-    <meta property="og:description" content="초밥 접시 중 와사비를 피하세요. 와사비 집으면 벌칙 당첨! 커피내기·점심내기용 무료 미니게임.">
+    <meta property="og:title" th:content="#{wasabi.meta.ogTitle}" content="와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 | Binary World">
+    <meta property="og:description" th:content="#{wasabi.meta.ogDescription}" content="초밥 접시 중 와사비를 피하세요. 와사비 집으면 벌칙 당첨! 커피내기·점심내기용 무료 미니게임.">
     <meta property="og:image" content="https://game.binaryworld.kr/img/wasabi.jpg">
-    <meta property="og:url" content="https://game.binaryworld.kr/wasabi">
+    <meta property="og:url" th:content="${canonicalUrl}" content="https://game.binaryworld.kr/wasabi">
+    <meta property="og:locale" th:content="${lang == 'ko' ? 'ko_KR' : (lang == 'ja' ? 'ja_JP' : 'en_US')}" content="ko_KR">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 | Binary World">
-    <meta name="twitter:description" content="초밥 접시 중 와사비를 피하세요. 와사비 집으면 벌칙 당첨! 커피내기·점심내기용 무료 미니게임.">
+    <meta name="twitter:title" th:content="#{wasabi.meta.ogTitle}" content="와사비 룰렛 – 커피내기·점심내기·벌칙뽑기 | Binary World">
+    <meta name="twitter:description" th:content="#{wasabi.meta.ogDescription}" content="초밥 접시 중 와사비를 피하세요. 와사비 집으면 벌칙 당첨! 커피내기·점심내기용 무료 미니게임.">
     <meta name="twitter:image" content="https://game.binaryworld.kr/img/wasabi.jpg">
 
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
     <link rel="manifest" href="/img/favicon/manifest.json">
     <meta name="theme-color" content="#0b0d10">
-    <link rel="canonical" href="https://game.binaryworld.kr/wasabi">
+    <!--/* canonical + 언어별 hreflang (fragments/i18n) */-->
+    <th:block th:replace="~{fragments/i18n :: hreflang}"/>
 
-    <script type="application/ld+json">
+    <script type="application/ld+json" th:inline="javascript">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "와사비 룰렛",
-      "alternateName": ["와사비룰렛", "초밥 벌칙뽑기", "커피내기 게임", "점심내기 게임"],
-      "url": "https://game.binaryworld.kr/wasabi",
-      "description": "초밥 접시 중 와사비를 피하는 무료 미니게임. 커피내기·점심내기·벌칙뽑기에 적합. 와사비 집으면 벌칙 당첨.",
+      "name": [[#{wasabi.ld.name}]],
+      "alternateName": [[${ {#messages.msg('wasabi.ld.alt1'), #messages.msg('wasabi.ld.alt2'), #messages.msg('wasabi.ld.alt3'), #messages.msg('wasabi.ld.alt4')} }]],
+      "url": [[${canonicalUrl}]],
+      "inLanguage": [[${lang}]],
+      "description": [[#{wasabi.ld.description}]],
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
-      "keywords": "와사비 룰렛, 커피내기, 점심내기, 벌칙뽑기, 초밥 게임"
+      "keywords": [[#{wasabi.ld.keywords}]]
     }
     </script>
 
@@ -68,18 +72,20 @@
 
 <div class="bw-wasabi-shell">
     <div class="nav-back">
-        <a href="/" class="back-btn">← 게임 목록</a>
+        <a href="/" class="back-btn" th:text="#{common.back}">← 게임 목록</a>
     </div>
 
+    <div th:replace="~{fragments/i18n :: langSwitch}"></div>
+
     <header class="bw-wasabi-hero">
-        <h1 class="game-title">와사비 룰렛</h1>
-        <p class="bw-wasabi-lead game-desc">초밥 접시 중 와사비를 피하세요. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+        <h1 class="game-title" th:text="#{wasabi.ui.title}">와사비 룰렛</h1>
+        <p class="bw-wasabi-lead game-desc" th:text="#{wasabi.ui.lead}">초밥 접시 중 와사비를 피하세요. 커피내기·점심내기·벌칙뽑기에 딱!</p>
     </header>
 
     <div class="bw-wasabi-setup" id="wasabi-setup">
         <div class="bw-wasabi-field">
-            <span>접시 수</span>
-            <div class="bw-wasabi-seg" id="wasabi-plate-opts" role="group" aria-label="접시 수">
+            <span th:text="#{wasabi.ui.plates}">접시 수</span>
+            <div class="bw-wasabi-seg" id="wasabi-plate-opts" role="group" th:aria-label="#{wasabi.ui.plates}" aria-label="접시 수">
                 <button type="button" class="bw-wasabi-seg-btn" data-plates="10">10</button>
                 <button type="button" class="bw-wasabi-seg-btn is-active" data-plates="20">20</button>
                 <button type="button" class="bw-wasabi-seg-btn" data-plates="30">30</button>
@@ -89,15 +95,15 @@
 
     <div class="bw-wasabi-hud">
         <p class="bw-wasabi-status" id="wasabi-status">
-            <span>남은 접시</span>
+            <span th:text="#{wasabi.ui.remaining}">남은 접시</span>
             <span class="bw-wasabi-count">20</span>
         </p>
         <div class="bw-wasabi-actions">
-            <button type="button" class="bw-wasabi-btn bw-wasabi-btn-ghost" id="wasabi-bgm-toggle" aria-pressed="true">BGM 켜짐</button>
+            <button type="button" class="bw-wasabi-btn bw-wasabi-btn-ghost" id="wasabi-bgm-toggle" aria-pressed="true" th:text="#{wasabi.ui.bgmOn}">BGM 켜짐</button>
         </div>
     </div>
 
-    <section class="bw-wasabi-stage" id="wasabi-stage" data-tension="0" aria-label="와사비 룰렛 보드">
+    <section class="bw-wasabi-stage" id="wasabi-stage" data-tension="0" th:aria-label="#{wasabi.ui.board}" aria-label="와사비 룰렛 보드">
         <div class="bw-wasabi-fx" id="wasabi-fx" aria-hidden="true"></div>
         <div class="bw-wasabi-toast" id="wasabi-toast" aria-live="polite"></div>
         <div class="bw-wasabi-board" id="wasabi-board" data-cols="5"></div>
@@ -105,7 +111,7 @@
             <div class="bw-wasabi-overlay-card">
                 <p class="bw-wasabi-overlay-title" id="wasabi-result-title"></p>
                 <span class="bw-wasabi-overlay-detail" id="wasabi-result-detail"></span>
-                <button type="button" class="bw-wasabi-btn" id="wasabi-restart">다시하기</button>
+                <button type="button" class="bw-wasabi-btn" id="wasabi-restart" th:text="#{wasabi.ui.restart}">다시하기</button>
             </div>
         </div>
     </section>
@@ -113,13 +119,13 @@
     <div th:replace="~{fragments/share :: shareBar}"></div>
 
     <section class="bw-wasabi-help">
-        <h2>게임 방법</h2>
+        <h2 th:text="#{wasabi.help.title}">게임 방법</h2>
         <ol>
-            <li>접시 중 <strong>와사비 1개</strong>가 숨겨져 있습니다.</li>
-            <li>접시를 하나씩 눌러 초밥을 집으세요.</li>
-            <li>와사비를 집으면 <strong>벌칙 당첨</strong>입니다.</li>
-            <li>누군가 한 명은 반드시 걸립니다. 마지막 접시를 고른 사람도 당첨입니다.</li>
-            <li>커피내기·점심내기·벌칙뽑기에 가볍게 쓰기 좋아요.</li>
+            <li th:utext="#{wasabi.help.1}">접시 중 <strong>와사비 1개</strong>가 숨겨져 있습니다.</li>
+            <li th:utext="#{wasabi.help.2}">접시를 하나씩 눌러 초밥을 집으세요.</li>
+            <li th:utext="#{wasabi.help.3}">와사비를 집으면 <strong>벌칙 당첨</strong>입니다.</li>
+            <li th:utext="#{wasabi.help.4}">누군가 한 명은 반드시 걸립니다. 마지막 접시를 고른 사람도 당첨입니다.</li>
+            <li th:utext="#{wasabi.help.5}">커피내기·점심내기·벌칙뽑기에 가볍게 쓰기 좋아요.</li>
         </ol>
     </section>
 </div>
@@ -129,6 +135,24 @@
 <div id="bw-guestbook" aria-label="방명록"></div>
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // wasabi.js 가 띄우는 문구. 키는 messages*.properties 의 wasabi.js.*
+    window.WASABI_I18N = {
+        plateAria:  [[#{wasabi.js.plateAria('{0}')}]],
+        remaining:  [[#{wasabi.ui.remaining}]],
+        bgmOn:      [[#{wasabi.ui.bgmOn}]],
+        bgmOff:     [[#{wasabi.ui.bgmOff}]],
+        hintBase:   [[#{wasabi.js.hintBase}]],
+        hint1:      [[#{wasabi.js.hint1}]],
+        hint2:      [[#{wasabi.js.hint2}]],
+        hint3:      [[#{wasabi.js.hint3}]],
+        hintLast:   [[#{wasabi.js.hintLast}]],
+        penalty:    [[#{wasabi.js.penalty}]],
+        loseDetail: [[#{wasabi.js.loseDetail}]]
+    };
+    /*]]>*/
+</script>
 <script th:src="@{/js/wasabi.js}"></script>
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>
