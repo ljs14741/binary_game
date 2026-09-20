@@ -2,6 +2,7 @@
  * 서브클래스는 buildWorld() 에서 배경·벽·봇 위치를 만들고, targetFor(id) 로 벽을 돌려준다.
  */
 import Phaser from 'phaser';
+import { T } from '../meta/i18n.js';
 import { Conductor } from '../core/conductor.js';
 import { Judge, labelFor } from '../core/judge.js';
 import { AudioEngine as audio, chordFor } from '../core/audio.js';
@@ -54,7 +55,7 @@ export class StageScene extends Phaser.Scene {
     this.wirePauseUi();
     this.events.once('shutdown', () => this.teardown());
 
-    this.fx.setBanner('준비!');
+    this.fx.setBanner(T.ready);
     this.fx.setLives(this.judge.lives, this.judge.maxLives);
     // 처음 3판: 시범 듣는 동안 화면 아래에 조작법. 내 차례("부숴!")가 오면 걷는다.
     // 3판이면 충분히 손에 익고, 그 뒤로는 화면을 비워 둔다. 제목 화면엔 늘 있다.
@@ -127,14 +128,14 @@ export class StageScene extends Phaser.Scene {
 
   onPhase(ph) {
     if (ph.name === 'call') {
-      this.fx.setBanner('잘 들어!', '#8fd3ff');
+      this.fx.setBanner(T.listen, '#8fd3ff');
       this.focusTarget(this.conductor.patterns[ph.pattern].target);
       this.bot.listen(); this.bot.setFace('focus', 2);
     } else if (ph.name === 'response') {
-      this.fx.setBanner('부숴!', css(P.accent));
+      this.fx.setBanner(T.smash, css(P.accent));
       if (this.keyHintUi) { const k = this.keyHintUi; this.keyHintUi = null; this.tweens.add({ targets: k, alpha: 0, y: k.y + 20, duration: 400, onComplete: () => k.destroy() }); }
     } else if (ph.name === 'outro') {
-      this.fx.setBanner('다 뿌셨다!');
+      this.fx.setBanner(T.allSmashed);
       this.bot.setFace(this.judge.accuracy() >= 0.7 ? 'proud' : 'ouch', 3);
     }
   }
@@ -157,7 +158,7 @@ export class StageScene extends Phaser.Scene {
     if (mark) { this.marks.delete(idx); mark.destroy(); }
 
     const power = kind === 'perfect' ? 1.3 : kind === 'good' ? 1 : 0.7;
-    if (kind === 'whiff') { this.bot.stumble(); this.bot.setFace('dizzy', 0.6); audio.whiff(now); this.fx.popup('헛스윙!', 'whiff'); }
+    if (kind === 'whiff') { this.bot.stumble(); this.bot.setFace('dizzy', 0.6); audio.whiff(now); this.fx.popup(T.whiff, 'whiff'); }
     else {
       this.bot.swing(power);
       wall.smash(p.x, p.y, this.smashFor(kind, wall), power, 1);
@@ -191,7 +192,7 @@ export class StageScene extends Phaser.Scene {
     input.enabled = false;
     for (const m of this.marks.values()) m.destroy();
     this.marks.clear();
-    this.fx.setBanner('뿌셔 실패!', css(P.miss));
+    this.fx.setBanner(T.failed, css(P.miss));
     this.bot.setFace('dizzy', 5); this.bot.stumble();
     this.camFx.hitStop(120); this.camFx.shake(0.012, 400);
     audio.fanfare(audio.now() + 0.4, false);

@@ -3,6 +3,7 @@
  * |d| ≤ miss 안의 탭은 가장 가까운 노트를 소모한다. 노트 시각 + miss 가 지나면 자동 MISS.
  * MISS의 방향은 delta 부호로 구분한다 (delta < 0 이르게, > 0 늦게, null 자동).
  */
+import { T } from '../meta/i18n.js';
 export const WINDOWS = { perfect: 0.05, good: 0.11, miss: 0.16 };
 
 export class Judge {
@@ -99,7 +100,7 @@ export class Judge {
 export function labelFor(note) {
   if (!note) return null;
   if (note.result === 'perfect') return 'PERFECT';
-  if (note.result === 'good') return note.delta < 0 ? 'GOOD ▲빠름' : 'GOOD ▼늦음';
+  if (note.result === 'good') return note.delta < 0 ? T.goodEarly : T.goodLate;
   if (note.delta == null) return 'MISS';
-  return note.delta < 0 ? '너무 빨라!' : '너무 늦어!';
+  return note.delta < 0 ? T.tooEarly : T.tooLate;
 }

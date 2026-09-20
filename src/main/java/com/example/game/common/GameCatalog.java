@@ -70,7 +70,7 @@ public final class GameCatalog {
     /** 표시 순서 = 이 목록의 순서. 유입이 많은 게임을 위로 둔다. */
     public static final List<Game> GAMES = List.of(
             new Game("/rhythm", "뿌셔뿌셔 리듬게임", "Rhythm",
-                    "리듬 듣고 똑같이 따라 쳐서 벽·창문·굴뚝 부수기 · 버튼 하나 리듬게임", "2026-09-19"),
+                    "리듬 듣고 똑같이 따라 쳐서 벽·창문·굴뚝 부수기 · 버튼 하나 리듬게임", "2026-09-21", Set.of("en", "ja")),
             new Game("/mugunghwa", "무궁화 꽃이 피었습니다", "Pick",
                     "커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체", "2026-09-21", Set.of("en", "ja")),
             new Game("/ladder", "사다리타기 워터슬라이드", "Ladder",

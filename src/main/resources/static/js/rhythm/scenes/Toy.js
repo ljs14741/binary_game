@@ -2,6 +2,7 @@
  * 그만두기는 우상단 일시정지 버튼.
  */
 import Phaser from 'phaser';
+import { T } from '../meta/i18n.js';
 import { AudioEngine as audio, chordFor } from '../core/audio.js';
 import { input } from '../core/inputSingleton.js';
 import { Bot } from '../engine/Bot.js';
@@ -44,7 +45,7 @@ export class Toy extends Phaser.Scene {
     this.cameras.main.setZoom(DPR).centerOn(this.current.left + 60, this.floorY - 300);
     this.cameras.main.preRender();  // worldView 를 즉시 갱신해 첫 프레임부터 배경이 제자리에 오게
     this.syncRoom();
-    this.fx.setBanner('마음껏 부숴!', css(P.accent));
+    this.fx.setBanner(T.toyBanner, css(P.accent));
     this.time.delayedCall(1500, () => this.fx.setBanner(''));
 
     // 조작법 안내. 판정 없는 모드라 처음 잠깐만 띄우고 사라진다 (제목·스테이지와 같은 그림).

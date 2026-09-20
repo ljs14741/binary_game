@@ -7,6 +7,7 @@
  *
  * 좌표는 논리 좌표. HUD(scrollFactor 0) 로 쓰려면 호출 쪽이 hud() 로 변환한 좌표를 넘긴다. */
 import { FONT, P, css } from '../art/palette.js';
+import { T } from '../meta/i18n.js';
 
 const CAP_H = 44, GAP = 8, R = 8;
 
@@ -36,10 +37,10 @@ export function keyHint(scene, x, y, o = {}) {
     cx += w + GAP;
   });
   if (o.touch !== false) {
-    c.add(scene.add.text(0, CAP_H / 2 + 22, '아무 키나 · 또는 화면 터치', { fontFamily: FONT, fontSize: '15px', fontStyle: '700', color: '#fff', stroke: css(P.uiDark), strokeThickness: 4 }).setOrigin(0.5));
+    c.add(scene.add.text(0, CAP_H / 2 + 22, T.keysTouch, { fontFamily: FONT, fontSize: '15px', fontStyle: '700', color: '#fff', stroke: css(P.uiDark), strokeThickness: 4 }).setOrigin(0.5));
   }
   if (o.tip !== false) {
-    c.add(scene.add.text(0, CAP_H / 2 + 46, '빠른 구간은 D F · J K 양손으로 번갈아', { fontFamily: FONT, fontSize: '15px', fontStyle: '700', color: css(P.accent), stroke: css(P.uiDark), strokeThickness: 4 }).setOrigin(0.5));
+    c.add(scene.add.text(0, CAP_H / 2 + 46, T.keysTip, { fontFamily: FONT, fontSize: '15px', fontStyle: '700', color: css(P.accent), stroke: css(P.uiDark), strokeThickness: 4 }).setOrigin(0.5));
   }
   if (o.scale) c.setScale(o.scale);
   return c;

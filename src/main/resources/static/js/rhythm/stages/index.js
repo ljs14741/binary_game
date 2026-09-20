@@ -6,13 +6,15 @@ import window_ from '../charts/w1/window.js';
 import chimney from '../charts/w1/chimney.js';
 import nails from '../charts/w1/nails.js';
 import remix from '../charts/w1/remix.js';
+import { T } from '../meta/i18n.js';
 
+// title·learn 은 화면에 보이는 글자라 언어별로 i18n.js(T) 에서 온다. chart.title 은 채보 파일의 한국어 원본 (데이터).
 export const STAGES = [
-  { id: 'w1-wall',    key: 'W1Wall',    chart: wall,    label: '1-1', learn: '기본 4비트',      unlock: null },
-  { id: 'w1-window',  key: 'W1Window',  chart: window_, label: '1-2', learn: '더블 "촥촥"',     unlock: { prev: 'w1-wall' } },
-  { id: 'w1-chimney', key: 'W1Chimney', chart: chimney, label: '1-3', learn: '엇박',           unlock: { prev: 'w1-window' } },
-  { id: 'w1-nails',   key: 'W1Nails',   chart: nails,   label: '1-4', learn: '8분 연타',        unlock: { prev: 'w1-chimney' } },
-  { id: 'w1-remix',   key: 'W1Remix',   chart: remix,   label: '1-R', learn: '전부 섞어서',      unlock: { all: ['w1-wall', 'w1-window', 'w1-chimney', 'w1-nails'] }, remix: true }
+  { id: 'w1-wall',    key: 'W1Wall',    chart: wall,    label: '1-1', title: T.stageWall,    learn: T.learnWall,    unlock: null },
+  { id: 'w1-window',  key: 'W1Window',  chart: window_, label: '1-2', title: T.stageWindow,  learn: T.learnWindow,  unlock: { prev: 'w1-wall' } },
+  { id: 'w1-chimney', key: 'W1Chimney', chart: chimney, label: '1-3', title: T.stageChimney, learn: T.learnChimney, unlock: { prev: 'w1-window' } },
+  { id: 'w1-nails',   key: 'W1Nails',   chart: nails,   label: '1-4', title: T.stageNails,   learn: T.learnNails,   unlock: { prev: 'w1-chimney' } },
+  { id: 'w1-remix',   key: 'W1Remix',   chart: remix,   label: '1-R', title: T.stageRemix,   learn: T.learnRemix,   unlock: { all: ['w1-wall', 'w1-window', 'w1-chimney', 'w1-nails'] }, remix: true }
 ];
 
 export function stageById(id) { return STAGES.find(s => s.id === id); }

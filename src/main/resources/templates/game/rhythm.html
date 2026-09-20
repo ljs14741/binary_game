@@ -1,45 +1,47 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" th:lang="${lang}" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>뿌셔뿌셔 리듬게임 – 박자에 맞춰 벽·창문·굴뚝을 다 부수는 무료 웹 리듬게임 | Binary World</title>
+    <!--/* 다국어: 글자는 i18n/messages*.properties 의 rhythm.* 키. /en/rhythm, /ja/rhythm. 캔버스 글자는 아래 window.RHYTHM_I18N 으로 넘기고 js/rhythm/meta/i18n.js 가 읽는다 */-->
+    <title th:text="#{rhythm.meta.title}">뿌셔뿌셔 리듬게임 – 박자에 맞춰 벽·창문·굴뚝을 다 부수는 무료 웹 리듬게임 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="리듬을 듣고 똑같이 따라 쳐서 벽, 창문, 굴뚝을 부수는 무료 리듬게임. 버튼 하나(스페이스바·터치)로 즐기는 미니게임. 설치 없이 PC와 모바일 브라우저에서 바로 플레이.">
-    <meta name="keywords" content="뿌셔뿌셔 리듬게임, 리듬게임, 무료 리듬게임, 웹 리듬게임, 온라인 리듬게임, 모바일 리듬게임, 리듬 세상, 리듬천국, 버튼 하나 게임, 박자 게임, 캐주얼 게임, 미니게임, Binary World">
+    <meta name="description" th:content="#{rhythm.meta.description}" content="리듬을 듣고 똑같이 따라 쳐서 벽, 창문, 굴뚝을 부수는 무료 리듬게임. 버튼 하나(스페이스바·터치)로 즐기는 미니게임. 설치 없이 PC와 모바일 브라우저에서 바로 플레이.">
+    <meta name="keywords" th:content="#{rhythm.meta.keywords}" content="뿌셔뿌셔 리듬게임, 리듬게임, 무료 리듬게임, 웹 리듬게임, 온라인 리듬게임, 모바일 리듬게임, 리듬 세상, 리듬천국, 버튼 하나 게임, 박자 게임, 캐주얼 게임, 미니게임, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="뿌셔뿌셔 리듬게임 – 박자에 맞춰 다 부숴라 | Binary World">
-    <meta property="og:description" content="리듬을 듣고 똑같이 따라 쳐서 벽·창문·굴뚝을 부순다. 버튼 하나, 설치 없음.">
+    <meta property="og:title" th:content="#{rhythm.meta.ogTitle}" content="뿌셔뿌셔 리듬게임 – 박자에 맞춰 다 부숴라 | Binary World">
+    <meta property="og:description" th:content="#{rhythm.meta.ogDescription}" content="리듬을 듣고 똑같이 따라 쳐서 벽·창문·굴뚝을 부순다. 버튼 하나, 설치 없음.">
     <meta property="og:image" content="https://game.binaryworld.kr/img/rhythm.png">
-    <meta property="og:url" content="https://game.binaryworld.kr/rhythm">
-    <meta property="og:locale" content="ko_KR">
+    <meta property="og:url" th:content="${canonicalUrl}" content="https://game.binaryworld.kr/rhythm">
+    <meta property="og:locale" th:content="${lang == 'ko' ? 'ko_KR' : (lang == 'ja' ? 'ja_JP' : 'en_US')}" content="ko_KR">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="뿌셔뿌셔 리듬게임 – 박자에 맞춰 다 부숴라 | Binary World">
-    <meta name="twitter:description" content="리듬을 듣고 똑같이 따라 쳐서 벽·창문·굴뚝을 부순다. 버튼 하나, 설치 없음.">
+    <meta name="twitter:title" th:content="#{rhythm.meta.ogTitle}" content="뿌셔뿌셔 리듬게임 – 박자에 맞춰 다 부숴라 | Binary World">
+    <meta name="twitter:description" th:content="#{rhythm.meta.ogDescription}" content="리듬을 듣고 똑같이 따라 쳐서 벽·창문·굴뚝을 부순다. 버튼 하나, 설치 없음.">
     <meta name="twitter:image" content="https://game.binaryworld.kr/img/rhythm.png">
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
     <link rel="manifest" href="/img/favicon/manifest.json">
     <meta name="theme-color" content="#0b0d10">
-    <link rel="canonical" href="https://game.binaryworld.kr/rhythm">
-    <script type="application/ld+json">
+    <!--/* canonical + 언어별 hreflang (fragments/i18n) */-->
+    <th:block th:replace="~{fragments/i18n :: hreflang}"/>
+    <script type="application/ld+json" th:inline="javascript">
     {
       "@context": "https://schema.org",
       "@type": "VideoGame",
-      "name": "뿌셔뿌셔 리듬게임",
-      "alternateName": ["뿌셔뿌셔", "리듬게임", "무료 리듬게임", "웹 리듬게임", "박자 게임"],
-      "url": "https://game.binaryworld.kr/rhythm",
+      "name": [[#{rhythm.ld.name}]],
+      "alternateName": [[${ {#messages.msg('rhythm.ld.alt1'), #messages.msg('rhythm.ld.alt2'), #messages.msg('rhythm.ld.alt3'), #messages.msg('rhythm.ld.alt4')} }]],
+      "url": [[${canonicalUrl}]],
       "image": "https://game.binaryworld.kr/img/rhythm.png",
-      "description": "리듬을 듣고 똑같이 따라 쳐서 벽, 창문, 굴뚝을 부수는 무료 웹 리듬게임. 버튼 하나로 즐기며, 하트 3개가 목숨이다.",
+      "description": [[#{rhythm.ld.description}]],
       "genre": ["Rhythm", "Casual"],
       "gamePlatform": ["Web Browser", "Mobile"],
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",
-      "inLanguage": "ko",
+      "inLanguage": [[${lang}]],
       "isAccessibleForFree": true,
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
-      "keywords": "리듬게임, 무료 리듬게임, 웹 리듬게임, 모바일 리듬게임, 박자 게임"
+      "keywords": [[#{rhythm.ld.keywords}]]
     }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,10 +77,11 @@
 <header id="global-header" aria-label="Binary World 공통 메뉴"></header>
 <div class="bw-rhythm-shell">
     <div class="nav-back">
-        <a href="/" class="back-btn">← 게임 목록</a>
+        <a href="/" class="back-btn" th:text="#{common.back}">← 게임 목록</a>
     </div>
-    <h1 class="game-title">뿌셔뿌셔 리듬게임</h1>
-    <p class="game-desc">호루라기가 들려주는 리듬을 <strong>다음 마디에 똑같이</strong> 따라 치세요. 맞추면 벽·창문·굴뚝이 부서집니다. 스페이스바 또는 화면 터치, 버튼 하나면 됩니다.</p>
+    <div th:replace="~{fragments/i18n :: langSwitch}"></div>
+    <h1 class="game-title" th:text="#{rhythm.ui.title}">뿌셔뿌셔 리듬게임</h1>
+    <p class="game-desc" th:utext="#{rhythm.ui.lead}">호루라기가 들려주는 리듬을 <strong>다음 마디에 똑같이</strong> 따라 치세요. 맞추면 벽·창문·굴뚝이 부서집니다. 스페이스바 또는 화면 터치, 버튼 하나면 됩니다.</p>
 
     <!--/*
       게임 박스. Phaser 는 #game 안에 캔버스를 만들고 FIT 으로 박스를 채운다.
@@ -86,15 +89,15 @@
       전체화면 버튼은 이 박스만 키운다.
     */-->
     <div class="bw-rhythm-stage" id="bw-rhythm-stage">
-        <div id="game" aria-label="뿌셔뿌셔 리듬게임 화면" role="img"></div>
-        <div id="rotate">폰을 세로로 돌려주세요</div>
+        <div id="game" aria-label="뿌셔뿌셔 리듬게임 화면" th:aria-label="#{rhythm.ui.canvasAria}" role="img"></div>
+        <div id="rotate" th:text="#{rhythm.ui.rotate}">폰을 세로로 돌려주세요</div>
         <div id="hud">
-            <button id="btn-full" type="button" aria-label="전체화면">⛶</button>
-            <button id="btn-pause" type="button" aria-label="일시정지">II</button>
+            <button id="btn-full" type="button" aria-label="전체화면" th:aria-label="#{rhythm.ui.fullAria}">⛶</button>
+            <button id="btn-pause" type="button" aria-label="일시정지" th:aria-label="#{rhythm.ui.pauseAria}">II</button>
             <div id="pause-overlay">
-                <h2>일시정지</h2>
-                <button id="btn-resume" type="button">계속하기</button>
-                <button id="btn-quit" type="button" class="sub">그만두기</button>
+                <h2 th:text="#{rhythm.ui.paused}">일시정지</h2>
+                <button id="btn-resume" type="button" th:text="#{rhythm.ui.resume}">계속하기</button>
+                <button id="btn-quit" type="button" class="sub" th:text="#{rhythm.ui.quit}">그만두기</button>
             </div>
         </div>
     </div>
@@ -103,24 +106,112 @@
 
     <!--/* 검색엔진이 읽을 본문. 캔버스 안 글자는 검색이 못 읽는다. */-->
     <section class="bw-rhythm-help">
-        <h2>뿌셔뿌셔 리듬게임</h2>
-        <p>호루라기가 리듬을 들려주면, 다음 마디에 로봇 <strong>비트</strong>가 똑같이 따라 치며 벽과 창문과 굴뚝을 부수는 리듬게임입니다. 귀로 듣고 손으로 치면 됩니다.</p>
-        <h2>조작법</h2>
+        <h2 th:text="#{rhythm.help.title}">뿌셔뿌셔 리듬게임</h2>
+        <p th:utext="#{rhythm.help.intro}">호루라기가 리듬을 들려주면, 다음 마디에 로봇 <strong>비트</strong>가 똑같이 따라 치며 벽과 창문과 굴뚝을 부수는 리듬게임입니다. 귀로 듣고 손으로 치면 됩니다.</p>
+        <h2 th:text="#{rhythm.help.controlsTitle}">조작법</h2>
         <ol>
-            <li>PC는 <strong>스페이스바</strong>(또는 엔터·F·J·D·K), 모바일은 <strong>화면 터치</strong>.</li>
-            <li>호루라기 신호를 잘 듣고 <strong>다음 마디에 같은 타이밍</strong>으로 치세요.</li>
-            <li><strong>하트 3개</strong>가 목숨입니다. 너무 이르거나 늦으면 하나씩 잃고, 0개가 되면 실패.</li>
-            <li>정확도 70·85·95%로 <strong>동·은·금 메달</strong>. 메달을 따야 다음 스테이지가 열립니다.</li>
+            <li th:utext="#{rhythm.help.c1}">PC는 <strong>스페이스바</strong>(또는 엔터·F·J·D·K), 모바일은 <strong>화면 터치</strong>.</li>
+            <li th:utext="#{rhythm.help.c2}">호루라기 신호를 잘 듣고 <strong>다음 마디에 같은 타이밍</strong>으로 치세요.</li>
+            <li th:utext="#{rhythm.help.c3}"><strong>하트 3개</strong>가 목숨입니다. 너무 이르거나 늦으면 하나씩 잃고, 0개가 되면 실패.</li>
+            <li th:utext="#{rhythm.help.c4}">정확도 70·85·95%로 <strong>동·은·금 메달</strong>. 메달을 따야 다음 스테이지가 열립니다.</li>
         </ol>
-        <h2>스테이지</h2>
-        <p>벽 부수기, 창문 깨기, 굴뚝 무너뜨리기, 판자 뜯기, 그리고 전부 섞은 <strong>리믹스</strong>. 하드모드는 더 빠르고 하트가 1개뿐입니다.</p>
-        <p><strong>히든 스테이지</strong>도 하나 숨어 있어요. 판정도 목숨도 없이 마음껏 부수기만 하는 <strong>"스트레스 뿌셔뿌셔!"</strong> — 월드맵 맨 위에 있습니다.</p>
-        <p>박자가 자꾸 어긋나면 제목 화면의 <strong>박자 보정</strong>을 한 번 해보세요. 기기마다 다른 소리 지연을 맞춰 줍니다.</p>
+        <h2 th:text="#{rhythm.help.stagesTitle}">스테이지</h2>
+        <p th:utext="#{rhythm.help.s1}">벽 부수기, 창문 깨기, 굴뚝 무너뜨리기, 판자 뜯기, 그리고 전부 섞은 <strong>리믹스</strong>. 하드모드는 더 빠르고 하트가 1개뿐입니다.</p>
+        <p th:utext="#{rhythm.help.s2}"><strong>히든 스테이지</strong>도 하나 숨어 있어요. 판정도 목숨도 없이 마음껏 부수기만 하는 <strong>"스트레스 뿌셔뿌셔!"</strong> — 월드맵 맨 위에 있습니다.</p>
+        <p th:utext="#{rhythm.help.s3}">박자가 자꾸 어긋나면 제목 화면의 <strong>박자 보정</strong>을 한 번 해보세요. 기기마다 다른 소리 지연을 맞춰 줍니다.</p>
     </section>
 </div>
 <div th:replace="~{fragments/other-games :: otherGames}"></div>
 <div id="bw-guestbook" aria-label="방명록"></div>
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // 캔버스 안 글자. js/rhythm/meta/i18n.js 가 읽는다. 키는 messages*.properties 의 rhythm.js.* 와 1:1 (이름 같음).
+    // 모듈 스크립트보다 먼저 실행돼야 하므로 이 자리를 지킨다.
+    window.RHYTHM_I18N = {
+        brand:         [[#{rhythm.js.brand}]],
+        subtitle:      [[#{rhythm.js.subtitle}]],
+        hero:          [[#{rhythm.js.hero}]],
+        toyMode:       [[#{rhythm.js.toyMode}]],
+        tagline:       [[#{rhythm.js.tagline}]],
+        start:         [[#{rhythm.js.start}]],
+        calib:         [[#{rhythm.js.calib}]],
+        soundOn:       [[#{rhythm.js.soundOn}]],
+        soundOff:      [[#{rhythm.js.soundOff}]],
+        touchHint:     [[#{rhythm.js.touchHint}]],
+        medalGold:     [[#{rhythm.js.medalGold}]],
+        medalSilver:   [[#{rhythm.js.medalSilver}]],
+        medalBronze:   [[#{rhythm.js.medalBronze}]],
+        medalNone:     [[#{rhythm.js.medalNone}]],
+        keysTouch:     [[#{rhythm.js.keysTouch}]],
+        keysTip:       [[#{rhythm.js.keysTip}]],
+        world1:        [[#{rhythm.js.world1}]],
+        medals:        [[#{rhythm.js.medals('{0}', '{1}', '{2}')}]],
+        hard:          [[#{rhythm.js.hard}]],
+        normal:        [[#{rhythm.js.normal}]],
+        toyDesc:       [[#{rhythm.js.toyDesc}]],
+        best:          [[#{rhythm.js.best('{0}')}]],
+        lockPrev:      [[#{rhythm.js.lockPrev}]],
+        lockAll:       [[#{rhythm.js.lockAll}]],
+        hardOn:        [[#{rhythm.js.hardOn}]],
+        hardOff:       [[#{rhythm.js.hardOff}]],
+        toTitle:       [[#{rhythm.js.toTitle}]],
+        stageWall:     [[#{rhythm.js.stageWall}]],
+        stageWindow:   [[#{rhythm.js.stageWindow}]],
+        stageChimney:  [[#{rhythm.js.stageChimney}]],
+        stageNails:    [[#{rhythm.js.stageNails}]],
+        stageRemix:    [[#{rhythm.js.stageRemix}]],
+        learnWall:     [[#{rhythm.js.learnWall}]],
+        learnWindow:   [[#{rhythm.js.learnWindow}]],
+        learnChimney:  [[#{rhythm.js.learnChimney}]],
+        learnNails:    [[#{rhythm.js.learnNails}]],
+        learnRemix:    [[#{rhythm.js.learnRemix}]],
+        ready:         [[#{rhythm.js.ready}]],
+        listen:        [[#{rhythm.js.listen}]],
+        smash:         [[#{rhythm.js.smash}]],
+        allSmashed:    [[#{rhythm.js.allSmashed}]],
+        whiff:         [[#{rhythm.js.whiff}]],
+        failed:        [[#{rhythm.js.failed}]],
+        toyBanner:     [[#{rhythm.js.toyBanner}]],
+        goodEarly:     [[#{rhythm.js.goodEarly}]],
+        goodLate:      [[#{rhythm.js.goodLate}]],
+        tooEarly:      [[#{rhythm.js.tooEarly}]],
+        tooLate:       [[#{rhythm.js.tooLate}]],
+        msgS:          [[#{rhythm.js.msgS('{0}')}]],
+        msgA:          [[#{rhythm.js.msgA}]],
+        msgB:          [[#{rhythm.js.msgB}]],
+        msgC:          [[#{rhythm.js.msgC}]],
+        msgD:          [[#{rhythm.js.msgD('{0}')}]],
+        livesLost:     [[#{rhythm.js.livesLost}]],
+        fail:          [[#{rhythm.js.fail}]],
+        stoppedAt:     [[#{rhythm.js.stoppedAt('{0}', '{1}')}]],
+        retry:         [[#{rhythm.js.retry}]],
+        worldMap:      [[#{rhythm.js.worldMap}]],
+        points:        [[#{rhythm.js.points('{0}')}]],
+        whiffs:        [[#{rhythm.js.whiffs('{0}')}]],
+        stats:         [[#{rhythm.js.stats('{0}', '{1}', '{2}')}]],
+        newRecord:     [[#{rhythm.js.newRecord}]],
+        next:          [[#{rhythm.js.next('{0}', '{1}')}]],
+        again:         [[#{rhythm.js.again}]],
+        calibTitle:    [[#{rhythm.js.calibTitle}]],
+        calibDesc:     [[#{rhythm.js.calibDesc}]],
+        calibIdle:     [[#{rhythm.js.calibIdle}]],
+        calibPre:      [[#{rhythm.js.calibPre('{0}')}]],
+        calibFew:      [[#{rhythm.js.calibFew}]],
+        calibDone:     [[#{rhythm.js.calibDone}]],
+        calibResult:   [[#{rhythm.js.calibResult('{0}')}]],
+        calibNone:     [[#{rhythm.js.calibNone}]],
+        calibLate:     [[#{rhythm.js.calibLate}]],
+        calibEarly:    [[#{rhythm.js.calibEarly}]],
+        calibStart:    [[#{rhythm.js.calibStart}]],
+        calibSave:     [[#{rhythm.js.calibSave}]],
+        calibReset:    [[#{rhythm.js.calibReset}]],
+        back:          [[#{rhythm.js.back}]],
+        calibCurrent:  [[#{rhythm.js.calibCurrent('{0}')}]],
+        auto:          [[#{rhythm.js.auto}]]
+    };
+    /*]]>*/
+</script>
 <script th:src="@{/js/phaser-3.90.min.js}"></script>
 <script type="module" th:src="@{/js/rhythm/main.js}"></script>
 <script src="https://binaryworld.kr/common/header.js" defer></script>
