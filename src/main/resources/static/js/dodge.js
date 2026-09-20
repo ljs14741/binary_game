@@ -1,6 +1,16 @@
 window.onload = function() {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+    // 캔버스에 그리는 문구. 템플릿(dodge.html)이 messages*.properties 에서 읽어 window.DODGE_I18N 으로 넘긴다.
+    // 없으면 한국어 기본값. 문구를 고칠 땐 이 파일이 아니라 properties 를 고친다.
+    const T = Object.assign({
+        time: 'Time: {0}',
+        survived: '생존시간: {0} 초',
+        best: '최고기록: {0} 초',
+        restart: '다시하기 (R)'
+    }, window.DODGE_I18N || {});
+    function fmt(t, v) { return t.replace('{0}', String(v)); }
+
     const config = {
         type: Phaser.AUTO,
         width: 800,
@@ -213,7 +223,7 @@ window.onload = function() {
 
         // 타이머 업데이트
         const elapsed = Math.floor((this.time.now - startTime - totalPausedTime) / 1000);
-        timerText.setText('Time: ' + elapsed);
+        timerText.setText(fmt(T.time, elapsed));
 
         // 난이도 증가
         if (elapsed > 0 && elapsed % 10 === 0 && enemySpawnTimer.delay > 200) {
@@ -482,7 +492,7 @@ window.onload = function() {
             .setShadow(0, 0, '#ff3b3b', 12); // 은은한 레드 글로우
 
         // 생존 시간
-        const timeText = scene.add.text(width/2, cardY + 140, `생존시간: ${survivedTime} 초`, {
+        const timeText = scene.add.text(width/2, cardY + 140, fmt(T.survived, survivedTime), {
             fontFamily: 'Noto Sans KR, Arial',
             fontSize: '26px',
             color: '#e9ecef'
@@ -494,14 +504,14 @@ window.onload = function() {
             best = survivedTime;
             localStorage.setItem('dodge_best', best);
         }
-        const bestText = scene.add.text(width/2, cardY + 176, `최고기록: ${best} 초`, {
+        const bestText = scene.add.text(width/2, cardY + 176, fmt(T.best, best), {
             fontFamily: 'Noto Sans KR, Arial',
             fontSize: '16px',
             color: '#8ab4ff'
         }).setOrigin(0.5).setDepth(1002);
 
         // 버튼들
-        const restartBtn = makeUIButton(scene, width/2, cardY + cardH - 66, '다시하기 (R)', () => {
+        const restartBtn = makeUIButton(scene, width/2, cardY + cardH - 66, T.restart, () => {
             doRestart(scene);
         });
 
