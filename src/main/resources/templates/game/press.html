@@ -1,44 +1,48 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" th:lang="${lang}" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>턱압프레스 – 조진세 턱압프레스가 생각나는 수박 복불복 룰렛 | 벌칙게임 | Binary World</title>
+    <!--/* 다국어: 글자는 i18n/messages*.properties 의 press.* 키. /en/press, /ja/press. "턱압프레스"는 한국 밈이라 외국판 제목은 Jaw Press / アゴプレス */-->
+    <title th:text="#{press.meta.title}">턱압프레스 – 조진세 턱압프레스가 생각나는 수박 복불복 룰렛 | 벌칙게임 | Binary World</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <meta name="description" content="조진세의 턱압프레스가 생각나는 벌칙 게임. 레버를 당길 때마다 검은 쫄쫄이 사나이의 턱이 유압프레스처럼 내려와 수박을 찌그러뜨립니다. 언제 터질지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱.">
-    <meta name="keywords" content="턱압프레스, 조진세 턱압프레스, 턱으로 수박 깨기, 수박 복불복, 턱압 프레스, 유압프레스 게임, 압력프레스 게임, 프레스 게임, 프레스 룰렛, 벌칙게임, 복불복게임, 내기게임, 랜덤 벌칙 뽑기, 커피내기, 점심내기, 벌칙뽑기, 파티게임, Binary World">
+    <meta name="description" th:content="#{press.meta.description}" content="조진세의 턱압프레스가 생각나는 벌칙 게임. 레버를 당길 때마다 검은 쫄쫄이 사나이의 턱이 유압프레스처럼 내려와 수박을 찌그러뜨립니다. 언제 터질지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱.">
+    <meta name="keywords" th:content="#{press.meta.keywords}" content="턱압프레스, 조진세 턱압프레스, 턱으로 수박 깨기, 수박 복불복, 턱압 프레스, 유압프레스 게임, 압력프레스 게임, 프레스 게임, 프레스 룰렛, 벌칙게임, 복불복게임, 내기게임, 랜덤 벌칙 뽑기, 커피내기, 점심내기, 벌칙뽑기, 파티게임, Binary World">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Binary World">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="턱압프레스 – 당길수록 턱이 내려온다 | Binary World">
-    <meta property="og:description" content="턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 복불복 룰렛.">
+    <meta property="og:title" th:content="#{press.meta.ogTitle}" content="턱압프레스 – 당길수록 턱이 내려온다 | Binary World">
+    <meta property="og:description" th:content="#{press.meta.ogDescription}" content="턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 복불복 룰렛.">
     <meta property="og:image" content="https://game.binaryworld.kr/img/press.png">
-    <meta property="og:url" content="https://game.binaryworld.kr/press">
+    <meta property="og:url" th:content="${canonicalUrl}" content="https://game.binaryworld.kr/press">
+    <meta property="og:locale" th:content="${lang == 'ko' ? 'ko_KR' : (lang == 'ja' ? 'ja_JP' : 'en_US')}" content="ko_KR">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="턱압프레스 – 당길수록 턱이 내려온다 | Binary World">
-    <meta name="twitter:description" content="턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 복불복 룰렛.">
+    <meta name="twitter:title" th:content="#{press.meta.ogTitle}" content="턱압프레스 – 당길수록 턱이 내려온다 | Binary World">
+    <meta name="twitter:description" th:content="#{press.meta.ogDescription}" content="턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 복불복 룰렛.">
     <meta name="twitter:image" content="https://game.binaryworld.kr/img/press.png">
 
     <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
     <link rel="manifest" href="/img/favicon/manifest.json">
     <meta name="theme-color" content="#0b0d10">
-    <link rel="canonical" href="https://game.binaryworld.kr/press">
+    <!--/* canonical + 언어별 hreflang (fragments/i18n) */-->
+    <th:block th:replace="~{fragments/i18n :: hreflang}"/>
 
-    <script type="application/ld+json">
+    <script type="application/ld+json" th:inline="javascript">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "턱압프레스",
-      "alternateName": ["턱압 프레스", "턱압프레스 룰렛", "압력 프레스", "유압프레스 게임", "프레스 룰렛", "벌칙게임", "복불복게임"],
-      "url": "https://game.binaryworld.kr/press",
-      "description": "조진세 턱압프레스에서 영감을 받아 만든 수박 복불복 룰렛. 레버를 당길 때마다 턱이 유압프레스처럼 내려와 수박을 찌그러뜨리고, 안전 확정 구간이 없어 첫 레버부터 끝까지 긴장이 유지된다.",
+      "name": [[#{press.ld.name}]],
+      "alternateName": [[${ {#messages.msg('press.ld.alt1'), #messages.msg('press.ld.alt2'), #messages.msg('press.ld.alt3'), #messages.msg('press.ld.alt4')} }]],
+      "url": [[${canonicalUrl}]],
+      "inLanguage": [[${lang}]],
+      "description": [[#{press.ld.description}]],
       "applicationCategory": "GameApplication",
       "operatingSystem": "Web",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
-      "keywords": "벌칙게임, 복불복게임, 내기게임, 커피내기, 점심내기, 벌칙뽑기"
+      "keywords": [[#{press.ld.keywords}]]
     }
     </script>
 
@@ -68,16 +72,18 @@
 
 <div class="bw-press-shell">
     <div class="nav-back">
-        <a href="/" class="back-btn">← 게임 목록</a>
+        <a href="/" class="back-btn" th:text="#{common.back}">← 게임 목록</a>
     </div>
 
-    <h1 class="game-title">턱압프레스</h1>
-    <p class="game-desc">조진세가 생각나는 턱압프레스. 레버를 당길 때마다 턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
+    <div th:replace="~{fragments/i18n :: langSwitch}"></div>
+
+    <h1 class="game-title" th:text="#{press.ui.title}">턱압프레스</h1>
+    <p class="game-desc" th:text="#{press.ui.lead}">조진세가 생각나는 턱압프레스. 레버를 당길 때마다 턱이 내려옵니다. 언제 수박이 터질지는 아무도 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
 
     <div class="bw-press-setup" id="press-setup">
         <div class="bw-press-field">
-            <span>인원</span>
-            <div class="bw-press-seg" role="group" aria-label="인원 수">
+            <span th:text="#{press.ui.players}">인원</span>
+            <div class="bw-press-seg" role="group" th:aria-label="#{press.ui.playersAria}" aria-label="인원 수">
                 <button type="button" data-players="2">2</button>
                 <button type="button" data-players="3">3</button>
                 <button type="button" data-players="4" class="is-active">4</button>
@@ -89,23 +95,23 @@
         </div>
     </div>
 
-    <button type="button" class="bw-press-btn" id="press-start" style="width:100%">프레스 켜기</button>
+    <button type="button" class="bw-press-btn" id="press-start" style="width:100%" th:text="#{press.ui.start}">프레스 켜기</button>
 
     <div id="press-play" hidden>
         <div class="bw-press-hud">
-            <p class="bw-press-turn" id="press-turn">1번 차례</p>
-            <button type="button" id="press-mute" aria-pressed="true">소리 켜짐</button>
+            <p class="bw-press-turn" id="press-turn" th:text="#{press.js.turn('1')}">1번 차례</p>
+            <button type="button" id="press-mute" aria-pressed="true" th:text="#{press.ui.soundOn}">소리 켜짐</button>
         </div>
 
         <div class="bw-press-stage" id="press-stage">
-            <canvas id="press-canvas" aria-label="턱압프레스 화면" role="img"></canvas>
+            <canvas id="press-canvas" th:aria-label="#{press.ui.canvas}" aria-label="턱압프레스 화면" role="img"></canvas>
 
             <div class="bw-press-result" id="press-result" role="status" aria-live="polite" hidden>
                 <div class="bw-press-result-card">
                     <p class="bw-press-result-title" id="press-result-title"></p>
                     <span class="bw-press-result-detail" id="press-result-detail"></span>
-                    <button type="button" class="bw-press-btn" id="press-again">한 판 더</button>
-                    <button type="button" class="bw-press-btn bw-press-btn-ghost" id="press-setup-again">인원 다시 고르기</button>
+                    <button type="button" class="bw-press-btn" id="press-again" th:text="#{press.ui.again}">한 판 더</button>
+                    <button type="button" class="bw-press-btn bw-press-btn-ghost" id="press-setup-again" th:text="#{press.ui.setup}">인원 다시 고르기</button>
                 </div>
             </div>
         </div>
@@ -116,27 +122,27 @@
                 <div class="bw-press-gauge-fill" id="press-gauge-fill"></div>
             </div>
             <div class="bw-press-readout">
-                <span class="bw-press-stat">턱압 <b id="press-pressure">1.2</b> MPa</span>
-                <span class="bw-press-stat bw-press-stat-risk"><em class="bw-press-tag" id="press-danger">여유</em></span>
+                <span class="bw-press-stat"><span th:text="#{press.ui.pressure}">턱압</span> <b id="press-pressure">1.2</b> MPa</span>
+                <span class="bw-press-stat bw-press-stat-risk"><em class="bw-press-tag" id="press-danger" th:text="#{press.js.danger0}">여유</em></span>
             </div>
         </div>
 
-        <button type="button" class="bw-press-lever" id="press-lever">레버 당기기</button>
+        <button type="button" class="bw-press-lever" id="press-lever" th:text="#{press.ui.lever}">레버 당기기</button>
     </div>
 
     <div th:replace="~{fragments/share :: shareBar}"></div>
 
     <section class="bw-press-help">
-        <h2>게임 방법</h2>
+        <h2 th:text="#{press.help.title}">게임 방법</h2>
         <ol>
-            <li>인원을 고르고 <strong>프레스 켜기</strong>를 누릅니다.</li>
-            <li>한 명씩 돌아가며 <strong>레버 당기기</strong>를 누릅니다.</li>
-            <li>누를 때마다 턱이 <strong>랜덤한 만큼</strong> 내려옵니다. 언제 끝까지 내려올지는 아무도 모릅니다.</li>
-            <li><strong>순서에 유불리는 없습니다.</strong> 먼저 당기든 나중에 당기든 걸릴 확률은 똑같습니다.</li>
-            <li>턱이 수박에 닿으면 그때 레버를 당긴 사람이 벌칙입니다.</li>
+            <li th:utext="#{press.help.1}">인원을 고르고 <strong>프레스 켜기</strong>를 누릅니다.</li>
+            <li th:utext="#{press.help.2}">한 명씩 돌아가며 <strong>레버 당기기</strong>를 누릅니다.</li>
+            <li th:utext="#{press.help.3}">누를 때마다 턱이 <strong>랜덤한 만큼</strong> 내려옵니다. 언제 끝까지 내려올지는 아무도 모릅니다.</li>
+            <li th:utext="#{press.help.4}"><strong>순서에 유불리는 없습니다.</strong> 먼저 당기든 나중에 당기든 걸릴 확률은 똑같습니다.</li>
+            <li th:utext="#{press.help.5}">턱이 수박에 닿으면 그때 레버를 당긴 사람이 벌칙입니다.</li>
         </ol>
-        <p>운으로만 정해집니다. 레버를 당기는 것 말고 할 수 있는 일은 없습니다.</p>
-        <p class="bw-press-origin">조진세 <strong>턱압프레스</strong>에서 영감을 받아 만든 게임입니다.</p>
+        <p th:text="#{press.help.note}">운으로만 정해집니다. 레버를 당기는 것 말고 할 수 있는 일은 없습니다.</p>
+        <p class="bw-press-origin" th:utext="#{press.help.origin}">조진세 <strong>턱압프레스</strong>에서 영감을 받아 만든 게임입니다.</p>
     </section>
 </div>
 
@@ -146,6 +152,26 @@
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 
 
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // press.js 가 띄우는 문구. 키는 messages*.properties 의 press.js.* / press.ui.*
+    window.PRESS_I18N = {
+        dangerMax:     [[#{press.js.dangerMax}]],
+        danger0:       [[#{press.js.danger0}]],
+        danger1:       [[#{press.js.danger1}]],
+        danger2:       [[#{press.js.danger2}]],
+        danger3:       [[#{press.js.danger3}]],
+        resultTitle:   [[#{press.js.resultTitle('{0}')}]],
+        resultDetail:  [[#{press.js.resultDetail}]],
+        turn:          [[#{press.js.turn('{0}')}]],
+        lever:         [[#{press.ui.lever}]],
+        leverNoEscape: [[#{press.js.leverNoEscape}]],
+        leverHot:      [[#{press.js.leverHot}]],
+        soundOn:       [[#{press.ui.soundOn}]],
+        soundOff:      [[#{press.ui.soundOff}]]
+    };
+    /*]]>*/
+</script>
 <script th:src="@{/js/press.js}"></script>
 
 <script src="https://binaryworld.kr/common/header.js" defer></script>

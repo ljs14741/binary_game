@@ -78,7 +78,7 @@ public final class GameCatalog {
             new Game("/wheel", "해머 원판돌리기", "Wheel",
                     "이름 넣고 돌리는 온라인 돌림판 · 점심메뉴·커피내기·랜덤뽑기", "2026-09-21", Set.of("en", "ja")),
             new Game("/press", "턱압프레스", "Press",
-                    "조진세가 생각나는 턱압프레스 · 수박 터뜨리기 복불복 룰렛", "2026-08-31"),
+                    "조진세가 생각나는 턱압프레스 · 수박 터뜨리기 복불복 룰렛", "2026-09-21", Set.of("en", "ja")),
             // new Game("/parachute", "낙하산", "Nerve",
             //         "늦게 펼수록 이긴다 · 혼자 기록 도전 · 담력 복불복", "2026-09-01"),
             new Game("/roulette", "물풍선 룰렛", "Roulette",

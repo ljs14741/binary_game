@@ -14,6 +14,21 @@
  */
 (function () {
     'use strict';
+
+    // 화면 문구. 템플릿(press.html)이 messages*.properties 에서 읽어 window.PRESS_I18N 으로 넘긴다.
+    // 없으면(검증 하네스 등) 한국어 기본값. 문구를 고칠 땐 properties 를 고친다.
+    var T = Object.assign({
+        dangerMax: '초위험', danger0: '여유', danger1: '슬슬', danger2: '조심', danger3: '위험',
+        resultTitle: '{0}번 당첨!',
+        resultDetail: '축하합니다. 벌칙 확정입니다.',
+        turn: '{0}번 차례',
+        lever: '레버 당기기',
+        leverNoEscape: '피할 수 없습니다',
+        leverHot: '당길까요…?',
+        soundOn: '소리 켜짐',
+        soundOff: '소리 꺼짐'
+    }, (typeof window !== 'undefined' && window.PRESS_I18N) || {});
+    function fmt(t, v) { return t.replace('{0}', String(v)); }
     // ── 판정 규칙 ───────────────────────────────────────────
     // 총 레버 횟수는 인원의 두 바퀴로 고정이고, 그 중 정확히 한 번이 걸린다.
     // 어느 회차가 걸릴지는 전부 같은 확률이다 (4명이면 8회차 각 12.5%).
@@ -104,11 +119,11 @@
     /** 위험도 문구. 숫자만 있으면 차갑다. */
     function dangerLabel(p) {
         // 마지막 회차는 실제로 100% 지만 '확정'이라고 쓰지 않는다. 답을 알려주는 문구는 긴장을 걷어간다.
-        if (p >= 1) { return '초위험'; }
-        if (p < 0.15) { return '여유'; }
-        if (p < 0.22) { return '슬슬'; }
-        if (p < 0.40) { return '조심'; }
-        return '위험';
+        if (p >= 1) { return T.dangerMax; }
+        if (p < 0.15) { return T.danger0; }
+        if (p < 0.22) { return T.danger1; }
+        if (p < 0.40) { return T.danger2; }
+        return T.danger3;
     }
     /**
      * 경보 주기(Hz). 회차가 하나 넘어갈 때마다 **한 칸씩 균등하게** 빨라진다.
@@ -374,8 +389,8 @@
 
     function showResult() {
         state.phase = 'over';
-        el.resultTitle.textContent = state.loser + '번 당첨!';
-        el.resultDetail.textContent = '축하합니다. 벌칙 확정입니다.';   // 몇 번째였는지도 안 알려준다
+        el.resultTitle.textContent = fmt(T.resultTitle, state.loser);
+        el.resultDetail.textContent = T.resultDetail;   // 몇 번째였는지도 안 알려준다
         el.result.hidden = false;
     }
 
@@ -1522,13 +1537,13 @@
         el.dangerTag.style.animationDuration = beat;
         el.lever.style.animationDuration = beat;
 
-        el.turn.textContent = (state.turn + 1) + '번 차례';
+        el.turn.textContent = fmt(T.turn, state.turn + 1);
         el.turn.style.color = COLORS[state.turn % COLORS.length];
 
         var hot = risk >= 0.24;
         el.lever.disabled = state.phase !== 'ready';
         el.lever.textContent = state.phase !== 'ready' ? '…'
-            : (risk >= 1 ? '피할 수 없습니다' : (hot ? '당길까요…?' : '레버 당기기'));
+            : (risk >= 1 ? T.leverNoEscape : (hot ? T.leverHot : T.lever));
         el.lever.classList.toggle('is-risky', hot);
         el.stage.classList.toggle('is-risky', hot);
     }
@@ -1591,7 +1606,7 @@
             var m = !sfx.isMuted();
             sfx.setMuted(m);
             if (!m) { sfx.wake(); }
-            el.mute.textContent = m ? '소리 꺼짐' : '소리 켜짐';
+            el.mute.textContent = m ? T.soundOff : T.soundOn;
             el.mute.setAttribute('aria-pressed', String(!m));
         });
 
