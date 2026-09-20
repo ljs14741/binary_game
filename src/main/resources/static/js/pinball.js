@@ -7,7 +7,11 @@ const config = {
         default: 'matter',
         matter: {
             gravity: { y: 1 },
-            debug: false
+            debug: false,
+            // 터널링(공이 벽 통과) 방지: 충돌 반복 횟수를 올려 얇은 벽도 확실히 잡는다.
+            positionIterations: 12,
+            velocityIterations: 8,
+            constraintIterations: 4
         }
     },
     dom: { createContainer: true },
@@ -48,6 +52,19 @@ const bodyToPlayer = new Map();
 let _kbLocked = false;
 let __typingLock = false;
 let __domContainer = null;
+// ── 아트 팔레트 (뿌셔뿌셔 계열: 납작한 단색 + 두꺼운 잉크 외곽선 + 절제된 색) ──
+// 스테이지가 어두운 남색이라 잉크는 near-black, 외곽선 안쪽에 얇은 밝은 림을 둬서 형태가 뜨게 한다.
+const PB_INK = 0x0a0e1a;      // 외곽선(거의 검정 남색)
+const PB_LINE = 3;            // 외곽선 두께
+const PB = {
+    peg:     0x7dd3fc,        // 핀 — 하늘
+    spinner: 0xf472b6,        // 회전 팔 — 핑크(위험물)
+    mover:   0x38bdf8,        // 좌우 왕복 바 — 블루
+    deflect: 0xfb7185,        // 가이드 디플렉터 — 로즈
+    rail:    0xfbbf24,        // 결승 슬라이드 — 앰버
+    barrier: 0x64748b,        // 결승 상단 바리어 — 슬레이트
+    goal:    0x34d399,        // 골 — 그린
+};
 const UI_FONT = "Pretendard, 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', Roboto, Arial";
 const UI = {
     bg: '#0b1220',            // 씬 배경
@@ -379,7 +396,8 @@ function create() {
 
     this.cameras.main.setBackgroundColor('#222');
     this.cameras.main.setBounds(0, 0, config.width, 4000);
-    this.matter.world.setBounds(0, 0, config.width, 4000);
+    // 월드 경계 벽을 두껍게(200px) 잡아 빠른 공이 옆으로 새지 않게 한다.
+    this.matter.world.setBounds(0, 0, config.width, 4000, 200);
 
     applyTheme(this);
 
@@ -954,33 +972,26 @@ function darker(hex, factor = 0.6) {
 function makeBallTexture(scene, key, fillColor) {
     if (scene.textures.exists(key)) return;
 
+    // 뿌셔뿌셔 스타일: 납작한 단색 + 두꺼운 잉크 외곽선.
+    // 어두운 스테이지에서 형태가 뜨도록 잉크 링 안쪽에 아주 얇은 밝은 림을 하나 둔다.
     const cx = BALL_RADIUS, cy = BALL_RADIUS;
     const g = scene.add.graphics();
 
-    // 1) 베이스
-    g.fillStyle(fillColor, 1).fillCircle(cx, cy, BALL_RADIUS);
+    // 1) 잉크 외곽선(공 전체를 잉크색으로 채운 뒤, 안쪽을 단색으로 덮는다)
+    g.fillStyle(PB_INK, 1).fillCircle(cx, cy, BALL_RADIUS);
+    g.fillStyle(fillColor, 1).fillCircle(cx, cy, BALL_RADIUS - PB_LINE);
 
-    // 2) 안쪽 림(옵션)
-    if (BALL_INNER_W > 0) {
-        g.lineStyle(BALL_INNER_W, darker(fillColor, 0.6), BALL_INNER_A);
-        g.strokeCircle(cx, cy, BALL_RADIUS - 2);
-    }
-
-    // 3) 바깥 테두리 — 항상 흰색
-    g.lineStyle(BALL_OUTER_W, BALL_OUTLINE_COLOR, BALL_OUTER_A);
-    g.strokeCircle(cx, cy, BALL_RADIUS - 0.5);
-
-    // 4) 상단 글로스(얇게)
-    g.fillStyle(0xffffff, 0.20);
+    // 2) 아래쪽 살짝 어두운 반달 — 납작하지만 굴러가는 느낌만 최소한
+    g.fillStyle(darker(fillColor, 0.72), 1);
     g.beginPath();
-    g.arc(cx - 3, cy - 4, BALL_RADIUS - 7, Phaser.Math.DegToRad(220), Phaser.Math.DegToRad(320), false);
+    g.arc(cx, cy, BALL_RADIUS - PB_LINE, Phaser.Math.DegToRad(20), Phaser.Math.DegToRad(160), false);
+    g.arc(cx, cy + 2, BALL_RADIUS - PB_LINE, Phaser.Math.DegToRad(160), Phaser.Math.DegToRad(20), true);
+    g.closePath();
     g.fillPath();
 
-    // 5) 하단 미세 그림자
-    g.fillStyle(0x000000, 0.12);
-    g.beginPath();
-    g.arc(cx + 3, cy + 2, BALL_RADIUS - 5, Phaser.Math.DegToRad(30), Phaser.Math.DegToRad(150), false);
-    g.fillPath();
+    // 3) 왼쪽 위 하이라이트 도트(납작한 원 하나)
+    g.fillStyle(0xffffff, 0.85);
+    g.fillCircle(cx - BALL_RADIUS * 0.32, cy - BALL_RADIUS * 0.34, BALL_RADIUS * 0.22);
 
     g.generateTexture(key, BALL_DIAM, BALL_DIAM);
     g.destroy();
@@ -1104,7 +1115,10 @@ function startGame(scene) {
     const rightAnchor = startX + totalWidth / 2;
 
     for (let i = 0; i < playerCount; i++) {
-        const key = `ball_${i}`;
+        // 텍스처 키는 색 기준. 예전엔 ball_${i} 라서 "다시하기"로 팔레트가 다시 섞여도
+        // 캐시된 옛 색 공이 그대로 나와 이름표(새 색)와 안 맞았다.
+        const colorHex = ballColors[i].toString(16).padStart(6, '0');
+        const key = `ball_${colorHex}`;
         makeBallTexture(scene, key, ballColors[i]);
 
         const s = slotOrder[i];
@@ -1135,8 +1149,8 @@ function startGame(scene) {
         const padX = 14, padY = 6;
         const pillW = Math.ceil(nameText.width) + padX * 2;
         const pillH = Math.max(22, Math.ceil(nameText.height) + padY);
-        const pillKey = `pill_${i}_${pillW}x${pillH}`;
-        makePillTexture(scene, pillKey, pillW, pillH, playersColor = ballColors[i], 0x0f1729, 0.78);
+        const pillKey = `pill_${colorHex}_${pillW}x${pillH}`;   // 같은 이유로 색을 키에 넣는다
+        makePillTexture(scene, pillKey, pillW, pillH, ballColors[i], 0x0f1729, 0.78);
         const pillImg = scene.add.image(0, 0, pillKey).setOrigin(0.5);
 
         const label = scene.add.container(sx, sy - 24, [pillImg, nameText]);
@@ -1315,6 +1329,50 @@ function snapshotCurrentNicknameInputs() {
 }
 
 // 둥근 배지 텍스처 생성(필 + 테두리)
+// 금메달: 리본 두 가닥 + 잉크 외곽선 금색 원판 + 안쪽 링 + "1". size 는 정사각 한 변(px)
+function makeMedalTexture(scene, key, size = 96) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.add.graphics();
+    const cx = size / 2, cy = size * 0.62, r = size * 0.34;
+
+    // 리본 (왼쪽 빨강, 오른쪽 파랑) — 원판 뒤에서 위로 뻗는다
+    const ribbon = (color, dir) => {
+        g.fillStyle(PB_INK, 1);
+        g.fillTriangle(cx + dir * 4, cy - r * 0.5, cx + dir * (r * 1.05), 0, cx + dir * (r * 0.35), 0);
+        g.fillStyle(color, 1);
+        g.fillTriangle(cx + dir * 4, cy - r * 0.55, cx + dir * (r * 0.95), PB_LINE, cx + dir * (r * 0.42), PB_LINE);
+    };
+    ribbon(0xe0245e, -1);
+    ribbon(0x3b82f6, +1);
+
+    // 원판
+    g.fillStyle(PB_INK, 1).fillCircle(cx, cy, r);
+    g.fillStyle(0xf5b700, 1).fillCircle(cx, cy, r - PB_LINE);
+    g.lineStyle(PB_LINE, 0xc98a00, 1).strokeCircle(cx, cy, r * 0.68);
+    g.fillStyle(0xffffff, 0.55).fillCircle(cx - r * 0.35, cy - r * 0.38, r * 0.16);   // 하이라이트
+    g.generateTexture(key, size, size);
+    g.destroy();
+
+    // 숫자 "1"은 글자로 찍어 텍스처에 합친다 (그래픽스로 그리면 못생긴다)
+    const tex = scene.textures.get(key);
+    const src = tex.getSourceImage();
+    const cvs = document.createElement('canvas');
+    cvs.width = size; cvs.height = size;
+    const ctx = cvs.getContext('2d');
+    ctx.drawImage(src, 0, 0);
+    ctx.font = `900 ${Math.round(r * 1.15)}px "Arial Black", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = PB_LINE * 1.6;
+    ctx.strokeStyle = '#' + PB_INK.toString(16).padStart(6, '0');
+    ctx.strokeText('1', cx, cy + r * 0.06);
+    ctx.fillStyle = '#fff7d6';
+    ctx.fillText('1', cx, cy + r * 0.06);
+    scene.textures.remove(key);
+    scene.textures.addCanvas(key, cvs);
+}
+
 function makePillTexture(scene, key, w, h, strokeColor = 0xffffff, fillColor = 0x0f1729, fillA = 0.78) {
     if (scene.textures.exists(key)) return;
     const r = Math.min(12, Math.floor(h / 2));
@@ -1372,23 +1430,14 @@ function createObstacles(scene) {
 
     // ── 공용 텍스처 (필요한 것들만 보장)
     const ensureTextures = () => {
-        // 플링코 핀
-        if (!scene.textures.exists('pegDot')) {
-            const g = scene.add.graphics();
-            g.fillStyle(0x79c0ff, 1).fillCircle(6, 6, 6);
-            g.lineStyle(2, 0xffffff, 0.9).strokeCircle(6, 6, 6);
-            g.generateTexture('pegDot', 12, 12); g.destroy();
-        }
-        // 업드래프트 ↑ 타일
+        // 플링코 핀 — 물리 반지름(10)과 크기를 맞춘다(예전엔 시각 6, 물리 10으로 어긋났다)
+        makePegTexture(scene, 'pegDot', 10);
+        // 업드래프트 ↑ 타일 — 타일 하나에 깔끔한 위쪽 셰브론 하나(세로로 이어져 바람길이 된다)
         if (!scene.textures.exists('upTile')) {
             const g = scene.add.graphics();
-            g.fillStyle(0x0b1220, 0).fillRect(0,0,48,48);
-            g.lineStyle(4, 0x93c5fd, 0.95);
-            const U=(x,y)=>{ g.beginPath(); g.moveTo(x,y+10); g.lineTo(x,y-10);
-                g.moveTo(x,y-10); g.lineTo(x-6,y-4);
-                g.moveTo(x,y-10); g.lineTo(x+6,y-4); g.strokePath(); };
-            U(12,32); U(24,24); U(36,16);
-            g.generateTexture('upTile',48,48); g.destroy();
+            g.lineStyle(5, 0x93c5fd, 0.5);
+            g.beginPath(); g.moveTo(12, 34); g.lineTo(24, 18); g.lineTo(36, 34); g.strokePath();
+            g.generateTexture('upTile', 48, 48); g.destroy();
         }
         // 팬(업드래프트)
         if (!scene.textures.exists('fan')) {
@@ -1417,16 +1466,18 @@ function createObstacles(scene) {
     // ── 도우미: 단색 바 이미지
     function makeBarImage(x, y, w, color) {
         const key = `bar_${w}_${color.toString(16)}`;
-        makeSolidTexture(scene, key, w, 20, color, 1);
-        const img = scene.matter.add.image(x, y, key, null, { restitution: 0.6 });
+        makeFlatBar(scene, key, w, 20, color);
+        // 반발을 0.6→0.9 로 올린다. 낮으면 공이 왕복 바 위에 얹혀 안 떨어지고 끼었다.
+        // (여전히 1 미만이라 에너지가 늘지 않아 터널링은 없다)
+        const img = scene.matter.add.image(x, y, key, null, { restitution: 0.9 });
         img.setOrigin(0.5).setFriction(0).setFrictionStatic(0).setFrictionAir(0);
         return img;
     }
 
     // ── 도우미: 미끄러지는 가이드 디플렉터
-    function createDeflector(x, y, width, angleDeg, color = 0xfda4af, restitution = 0.35, thickness = 18) {
+    function createDeflector(x, y, width, angleDeg, color = PB.deflect, restitution = 0.35, thickness = 18) {
         const key = `deflect_${width}_${thickness}_${color.toString(16)}`;
-        makeSolidTexture(scene, key, width, thickness, color, 1);
+        makeFlatBar(scene, key, width, thickness, color);
         const img = scene.matter.add.image(x, y, key, null, {
             isStatic: true,
             restitution,           // 너무 튀지 않게
@@ -1536,16 +1587,16 @@ function createObstacles(scene) {
 
     // ── 배치 ─────────────────────────────────────────────
     // 상단 스피너/왕복
-    createSpinner(config.width/2, 900, 240, 0.10, 0xff8bd1, true);
-    createMover  (config.width/2, 1200, 180, 180, 1700, 0x93c5fd);
+    createSpinner(config.width/2, 900, 240, 0.10, PB.spinner, true);
+    createMover  (config.width/2, 1200, 180, 180, 1700, PB.mover);
 
     // 🔻 1구간(첫 플링코 앞) 디플렉터
     (function placeFirstPegDeflectors(){
         const y = 1520;               // 첫 플링코(1650) 직전
         const inset = 90;             // 좌/우 가장자리에서 안쪽으로
         const width = 220;            // 디플렉터 길이
-        createDeflector(inset,                 y, width,  +24, 0xfda4af, 0.35); // 좌측: \ 방향
-        createDeflector(config.width - inset,  y, width,  -24, 0xfda4af, 0.35); // 우측: / 방향
+        createDeflector(inset,                 y, width,  +24, PB.deflect, 0.35); // 좌측: \ 방향
+        createDeflector(config.width - inset,  y, width,  -24, PB.deflect, 0.35); // 우측: / 방향
     })();
 
     // 첫 번째 플링코
@@ -1556,17 +1607,17 @@ function createObstacles(scene) {
         const y = 2120;               // 두 번째 플링코(2200) 직전
         const inset = 90;
         const width = 220;
-        createDeflector(inset,                 y, width,  +24, 0xfda4af, 0.35);
-        createDeflector(config.width - inset,  y, width,  -24, 0xfda4af, 0.35);
+        createDeflector(inset,                 y, width,  +24, PB.deflect, 0.35);
+        createDeflector(config.width - inset,  y, width,  -24, PB.deflect, 0.35);
     })();
 
     // 두 번째 플링코
     createPegFieldFullWidth(2200, 7, 70, 24, 10, 0.85);
 
     // 하단 스피너/왕복
-    createSpinner (config.width/2, 3050, 280, -0.11, 0x34d399, true);
-    createMover   (config.width/2 - 120, 3300, 140, 220, 1400, 0xfca5a5);
-    createMover   (config.width/2 + 120, 3450, 140, -220, 1400, 0xfca5a5);
+    createSpinner (config.width/2, 3050, 280, -0.11, PB.spinner, true);
+    createMover   (config.width/2 - 120, 3300, 140, 220, 1400, PB.mover);
+    createMover   (config.width/2 + 120, 3450, 140, -220, 1400, PB.mover);
 
     // 피니시 업드래프트 (Y-레일 내부, 펄스형)
     createUpdraft(config.width/2 - 60, 3840, 120, 420, 0.0060, 1000, 700,   0);   // 왼쪽, 먼저 ON
@@ -1585,14 +1636,14 @@ function createGoalZone(scene) {
     const mergePointY = goalY + 50;
 
     const slideLength = Phaser.Math.Distance.Between(leftPathStartX, leftPathStartY, mergePointX, mergePointY);
-    const slideHeight = 10;
+    const slideHeight = 18;   // 10 → 18: 얇은 벽 관통 방지
 
     const leftAngleDeg  = Phaser.Math.RadToDeg(Math.atan2(mergePointY - leftPathStartY,  mergePointX - leftPathStartX));
     const rightAngleDeg = Phaser.Math.RadToDeg(Math.atan2(mergePointY - rightPathStartY, mergePointX - rightPathStartX));
 
     // ── 슬라이드(정적 바디)
     const slideKey = `slide_${Math.round(slideLength)}`;
-    makeSolidTexture(scene, slideKey, Math.round(slideLength), slideHeight, 0xffff00, 1);
+    makeFlatBar(scene, slideKey, Math.round(slideLength), slideHeight, PB.rail);
 
     const leftSlide = scene.matter.add.image(goalX - 60, goalY - 200, slideKey, null, { isStatic: true });
     leftSlide.setOrigin(0.5).setAngle(leftAngleDeg);
@@ -1602,18 +1653,20 @@ function createGoalZone(scene) {
 
     // ── 상단 가로 바리어(좌/우)
     const barrierY = leftPathStartY - 5;
-    const barrierThickness = 10;
+    const barrierThickness = 18;   // 10 → 18: 얇은 벽 관통 방지
 
     const leftWidth  = leftPathStartX;
     const rightWidth = config.width - rightPathStartX;
 
     const leftKey  = `barrier_L_${leftWidth}`;
     const rightKey = `barrier_R_${rightWidth}`;
-    makeSolidTexture(scene, leftKey,  leftWidth,  barrierThickness, 0x0000ff, 0.4);
-    makeSolidTexture(scene, rightKey, rightWidth, barrierThickness, 0x0000ff, 0.4);
+    makeFlatBar(scene, leftKey,  leftWidth,  barrierThickness, PB.barrier);
+    makeFlatBar(scene, rightKey, rightWidth, barrierThickness, PB.barrier);
 
-    const leftBarrier  = scene.matter.add.image(leftWidth / 2, barrierY, leftKey,  null, { isStatic: true, restitution: 1.2, friction: 0 });
-    const rightBarrier = scene.matter.add.image(rightPathStartX + rightWidth / 2, barrierY, rightKey, null, { isStatic: true, restitution: 1.2, friction: 0 });
+    // ⚠ restitution 을 1.2 로 두면 튕길 때마다 에너지가 늘어(반발계수>1) 공이 점점 빨라져
+    //    결국 벽을 뚫었다. 0.6 으로 낮춰 에너지 증가를 없앤다. 초기 튕김은 bounceOnBarrier 가 담당.
+    const leftBarrier  = scene.matter.add.image(leftWidth / 2, barrierY, leftKey,  null, { isStatic: true, restitution: 0.6, friction: 0 });
+    const rightBarrier = scene.matter.add.image(rightPathStartX + rightWidth / 2, barrierY, rightKey, null, { isStatic: true, restitution: 0.6, friction: 0 });
 
     // ✅ 중앙(갭) 방향으로 아주 살짝 경사
     leftBarrier.setAngle(+2);   // 오른쪽(중앙)으로 내려가도록
@@ -1622,12 +1675,25 @@ function createGoalZone(scene) {
     scene.leftBarrierBody  = leftBarrier.body;
     scene.rightBarrierBody = rightBarrier.body;
 
-    // 골인 이미지(장식)
-    scene.goalImage = scene.add.image(goalX, goalY, 'goal').setDisplaySize(200, 200);
+    // 골인 이미지(장식) — 코드로 그린 납작한 과녁(잉크 외곽선 + 단색 링)
+    if (!scene.textures.exists('goalFlat')) {
+        const gg = scene.add.graphics();
+        const C = 100;
+        const ring = (rad, col) => { gg.fillStyle(PB_INK, 1).fillCircle(C, C, rad); gg.fillStyle(col, 1).fillCircle(C, C, rad - PB_LINE - 1); };
+        ring(88, PB.goal);
+        ring(60, 0xf8fafc);
+        ring(34, PB.goal);
+        gg.fillStyle(PB_INK, 1).fillCircle(C, C, 12);
+        gg.generateTexture('goalFlat', 200, 200);
+        gg.destroy();
+    }
+    scene.goalImage = scene.add.image(goalX, goalY, 'goalFlat').setDisplaySize(200, 200);
 
-    // 골인 센서
+    // 골인 센서 — 예전엔 100×100 이라 바닥에 닿은 공이 x가 조금만 어긋나도 골에 안 들어가고
+    // 깔때기에서 계속 튕겼다("골에 안 들어감" 버그). 깔때기 목을 덮도록 넓혀 바닥에 도달한
+    // 공이 확실히 잡히게 한다. 어느 공이 먼저 도달하느냐는 그대로라 확률·공정성은 불변.
     const goalKey = `goalSensor`;
-    makeSolidTexture(scene, goalKey, 100, 100, 0x00ff00, 0); // 보이지 않는 센서
+    makeSolidTexture(scene, goalKey, 340, 200, 0x00ff00, 0); // 보이지 않는 센서(깔때기 양옆 사각지대까지 덮는다)
     const goalGO = scene.matter.add.image(goalX, goalY, goalKey, null, { isStatic: true, isSensor: true });
     goalGO.setOrigin(0.5);
     scene.goalZone = goalGO;
@@ -1674,11 +1740,16 @@ function registerCollisionHandlers(scene) {
         const mBody = p.body.body;
         const v = mBody.velocity;
 
-        // 충분히 내려오고 있을 때만 강하게 반전
+        // 충분히 내려오고 있을 때만 위로 반전.
+        // 원래 값은 mult 2 · floor -15 · 상한 없음. 진짜 문제는 mult 2 였다 — 튈 때마다 낙하속도의
+        // 2배로 차올리니 높이가 기하급수로 커져 맵 위까지 날아가 골에 안 들어갔다.
+        // 한 번 8~11 로 확 줄였더니 "통통 튀는 맛"이 죽어서(정점 230px → 80px) 되돌린다:
+        //   floor -15 는 그대로(예전 높이), mult 1 로 누적을 끊고, 상한 -18 로 폭주를 막는다.
+        // 결국 ON/OFF 주기(1000/700ms)의 OFF 구간에 떨어져 골로 간다. 모든 공 동일 → 공정성 불변.
         if (v.y > 0.8) {
-            const mult = 2;     // ← 기존 0.55보다 더 크게 반전
-            const floorVy = -15.0;  // ← 최소 위로 튀는 속도(더 세게)
-            const targetVy = Math.min(floorVy, -v.y * mult);
+            const mult = 1.0;
+            const floorVy = -15.0;
+            const targetVy = Math.max(-18, Math.min(floorVy, -v.y * mult));
             MatterJS.Body.setVelocity(mBody, { x: v.x, y: targetVy });
         }
     }
@@ -1761,7 +1832,10 @@ function registerCollisionHandlers(scene) {
                 if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
 
                 const vy = mBody.velocity.y; // + 아래로
-                const scale = Phaser.Math.Clamp(vy * 0.03, 0, 0.12);
+                // 연속 상승력이 너무 세면(원래 최대 0.126) 공이 골 위에 떠서 안 내려온다.
+                // 0.03 까지 낮췄더니 레일에서 다시 튀어오르는 느낌이 죽어 0.05 로 절충.
+                // 바람은 느끼되 결국 골로 가라앉는다(모든 공 동일 → 공정성 불변).
+                const scale = Phaser.Math.Clamp(vy * 0.03, 0, 0.05);
                 const base  = z.strength;
                 const jitter = (Math.random() - 0.5) * base * 0.4;
 
@@ -1820,6 +1894,35 @@ function makeSolidTexture(scene, key, w, h, color = 0xffffff, alpha = 1) {
     const g = scene.add.graphics();
     g.fillStyle(color, alpha).fillRect(0, 0, w, h);
     g.generateTexture(key, w, h);
+    g.destroy();
+}
+
+// 납작한 바 텍스처(뿌셔뿌셔 스타일): 두꺼운 잉크 외곽선 + 단색 + 위쪽 밝은 띠.
+// 물리 바디는 이 텍스처의 w×h 그대로라 충돌 크기는 바뀌지 않는다(연출만).
+function makeFlatBar(scene, key, w, h, color) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.add.graphics();
+    const r = Math.min(h, w) / 2;                 // 캡슐형 라운드
+    g.fillStyle(PB_INK, 1).fillRoundedRect(0, 0, w, h, r);
+    const iw = Math.max(1, w - PB_LINE * 2), ih = Math.max(1, h - PB_LINE * 2);
+    const ir = Math.max(0, r - PB_LINE);
+    g.fillStyle(color, 1).fillRoundedRect(PB_LINE, PB_LINE, iw, ih, ir);
+    // 위쪽 밝은 띠 + 아래쪽 살짝 어둡게(납작한 2톤)
+    g.fillStyle(0xffffff, 0.22).fillRoundedRect(PB_LINE + 1, PB_LINE + 1, iw - 2, Math.max(2, ih * 0.32), ir);
+    g.fillStyle(0x000000, 0.16).fillRoundedRect(PB_LINE + 1, PB_LINE + ih * 0.7, iw - 2, Math.max(1, ih * 0.28), ir);
+    g.generateTexture(key, w, h);
+    g.destroy();
+}
+
+// 핀(플링코) 텍스처: 잉크 외곽선 + 단색 + 하이라이트. 물리 반지름 r 과 크기를 맞춘다.
+function makePegTexture(scene, key, r) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.add.graphics();
+    const c = r;
+    g.fillStyle(PB_INK, 1).fillCircle(c, c, r);
+    g.fillStyle(PB.peg, 1).fillCircle(c, c, r - PB_LINE);
+    g.fillStyle(0xffffff, 0.8).fillCircle(c - r * 0.28, c - r * 0.3, r * 0.28);
+    g.generateTexture(key, r * 2, r * 2);
     g.destroy();
 }
 
@@ -2356,21 +2459,18 @@ function showWinnerUI(scene, winnerName) {
     if (scene.minimapCamera) scene.minimapCamera.ignore(hud);
 
     // ====== 튜닝값 ======
-    const GAP = 12;                 // 메달 ↔ 이름 간격
-    const MEDAL_RATIO = 0.8;        // ← 네가 쓰는 값
-    const MEDAL_DY = 2;             // 메달을 더 아래로 내리고 싶으면 +로 늘리기(0~6 추천)
-    const BOTTOM_PAD = 6;           // 화면 바닥과의 간격
-    const MAX_W = Math.floor(config.width * 0.92); // 한 줄 최대 폭
+    // 우측 하단에 붙인다. 하단 가운데는 골 과녁과 겹쳤고, 좌측 하단은 다시하기 버튼 자리다.
+    const GAP = 14;                 // 메달 ↔ 이름 간격
+    const MEDAL_RATIO = 1.7;        // 메달 높이 = 이름 글자 크기 × 이 값 (이모지 시절 0.8 → 눈에 띄게 키움)
+    const RIGHT_PAD = 18;           // 화면 오른쪽과의 간격
+    const BOTTOM_PAD = 14;          // 화면 바닥과의 간격
+    const MAX_W = Math.floor(config.width * 0.6); // 한 줄 최대 폭 (왼쪽 다시하기 버튼과 안 겹치게)
     // ====================
 
-    const medalTx = scene.add.text(0, 0, "🥇", {
-        fontFamily: "Segoe UI Emoji, Apple Color Emoji, system-ui",
-        fontSize: "20px",
-        color: "#ffffff",
-        stroke: "#000000",
-        strokeThickness: 4,
-        shadow: { color: "#000", blur: 6, fill: true, offsetY: 2 }
-    }).setScrollFactor(0).setOrigin(0, 1);   // ★ 하단 기준
+    // 금메달은 이모지 대신 그린다 (기기마다 다르게 보이는 문제도 없고, 크기도 마음대로)
+    makeMedalTexture(scene, 'medal_gold', 96);
+    const medalImg = scene.add.image(0, 0, 'medal_gold')
+        .setScrollFactor(0).setOrigin(1, 1);     // ★ 우측·하단 기준
 
     const nameTx = scene.add.text(0, 0, winnerName || "", {
         fontFamily: "Arial Black, system-ui",
@@ -2379,41 +2479,45 @@ function showWinnerUI(scene, winnerName) {
         stroke: "#000000",
         strokeThickness: 6,
         shadow: { color: "#000", blur: 6, fill: true, offsetY: 2 }
-    }).setScrollFactor(0).setOrigin(0, 1);   // ★ 하단 기준
+    }).setScrollFactor(0).setOrigin(1, 1);       // ★ 우측·하단 기준
 
-    hud.add(medalTx);
+    hud.add(medalImg);
     hud.add(nameTx);
 
-    // 크기/배치 자동 맞춤 (두 텍스트의 아래선 동일)
-    const fitRow = (minPx = 28, maxPx = 40) => {
+    // 크기/배치 자동 맞춤: 오른쪽 끝에 이름, 그 왼쪽에 메달. 둘의 아래선을 맞춘다
+    const fitRow = (minPx = 30, maxPx = 44) => {
         let lo = minPx, hi = maxPx, best = minPx;
+        const medalW = (px) => Math.round(px * MEDAL_RATIO);   // 메달 텍스처는 정사각형
         while (lo <= hi) {
             const mid = (lo + hi) >> 1;                 // 이름 폰트 크기
             nameTx.setFontSize(mid);
-            medalTx.setFontSize(Math.round(mid * MEDAL_RATIO));
-            const totalW = medalTx.width + GAP + nameTx.width;
+            const totalW = medalW(mid) + GAP + nameTx.width;
             if (totalW <= MAX_W) { best = mid; lo = mid + 1; }
             else hi = mid - 1;
         }
         nameTx.setFontSize(best);
-        medalTx.setFontSize(Math.round(best * MEDAL_RATIO));
+        const m = medalW(best);
+        medalImg.setDisplaySize(m, m);
 
-        const totalW = medalTx.width + GAP + nameTx.width;
-        const cx = config.width / 2;
-        const startX = Math.round(cx - totalW / 2);
-
-        const yBottom = config.height - BOTTOM_PAD; // ★ 두 텍스트의 아래선을 동일하게
-        medalTx.setPosition(startX, yBottom + MEDAL_DY); // 메달만 미세 보정
-        nameTx.setPosition(startX + medalTx.width + GAP, yBottom);
+        const xRight  = config.width - RIGHT_PAD;
+        const yBottom = config.height - BOTTOM_PAD;
+        nameTx.setPosition(xRight, yBottom);
+        medalImg.setPosition(xRight - nameTx.width - GAP, yBottom + 4);   // 메달 리본이 글자 밑선보다 살짝 내려오게
     };
     fitRow();
 
-    // 간단한 페이드 인
+    // 간단한 페이드 인 + 메달이 살짝 커졌다 제자리
     scene.tweens.add({
-        targets: [medalTx, nameTx],
+        targets: [medalImg, nameTx],
         alpha: { from: 0, to: 1 },
         duration: 200,
         ease: "Quad.easeOut"
+    });
+    scene.tweens.add({
+        targets: medalImg,
+        scale: { from: medalImg.scale * 1.5, to: medalImg.scale },
+        duration: 420,
+        ease: "Back.easeOut"
     });
 
     // 다시하기 버튼/컨페티 유지
@@ -2525,8 +2629,20 @@ function update() {
             if (mBody.isSleeping && MatterJS.Sleeping) MatterJS.Sleeping.set(mBody, false);
 
             const v = mBody.velocity;
-            const speed = Math.hypot(v.x, v.y);
+            let speed = Math.hypot(v.x, v.y);
             const pos = mBody.position;
+
+            // ── 속도 상한 클램프(폭주 안전망) ──
+            // ⚠ 이 게임은 바닥에서 공을 위로 쏘아 올린다(발사속도 110). 상한을 낮게 잡으면
+            //    발사가 잘려 공이 위로 못 올라간다(원래 룰: 아래→위→낙하). 그래서 발사보다
+            //    높은 140 으로 잡아, 반발계수>1 로 인한 폭주만 잘라내고 발사·정상 플레이는 건드리지 않는다.
+            //    (터널링은 벽 두께 상향 + 충돌 반복 횟수 상향으로 이미 막았다)
+            const MAX_SPEED = 140;
+            if (speed > MAX_SPEED) {
+                const k = MAX_SPEED / speed;
+                MatterJS.Body.setVelocity(mBody, { x: v.x * k, y: v.y * k });
+                speed = MAX_SPEED;
+            }
 
             // null 안전: 없으면 즉시 객체로 만들어 둔다
             if (!p._lastPos) p._lastPos = { x: pos.x, y: pos.y };
