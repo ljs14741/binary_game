@@ -22,6 +22,27 @@
 (function () {
     'use strict';
 
+    // 화면 문구. 템플릿(ladder.html)이 messages*.properties 에서 읽어 window.LADDER_I18N 으로 넘긴다.
+    // 없으면(검증 하네스 등) 한국어 기본값. 문구를 고칠 땐 properties 를 고친다.
+    var T = Object.assign({
+        pick: '출발할 번호를 고르세요',
+        falling: '내려가는 중…',
+        hitTitle: '🎉 {0}번 당첨!',
+        hitDetail: '축하합니다. 벌칙 확정입니다.',
+        safeTitle: '{0}번 안전',
+        safeDetail: '휴… 살았습니다.',
+        losers: '걸린 사람: {0}번',
+        losersNone: '걸린 사람: 없음',
+        status: '남은 사람 {0}명 · 걸릴 확률 {1}%',
+        hidden: '여기서부터는 안 보입니다',
+        slotBomb: '꽝',
+        slotSafe: '안전',
+        slotWho: '{0}번',
+        soundOn: '소리 켜짐',
+        soundOff: '소리 꺼짐'
+    }, (typeof window !== 'undefined' && window.LADDER_I18N) || {});
+    function fmt(t, a, b) { return t.replace('{0}', String(a)).replace('{1}', String(b)); }
+
     // ── 설정값 ──────────────────────────────────────────────
     var TOTAL_ROWS = 16;          // 인원과 무관하게 사다리 길이를 일정하게 유지한다
     var MIN_UPPER_ROWS = 6;
@@ -188,7 +209,7 @@
         resize();
         renderColumnButtons();
         renderSlots();
-        setStatus('출발할 번호를 고르세요');
+        setStatus(T.pick);
     }
 
     // ── 경로를 폴리라인으로 ─────────────────────────────────
@@ -275,7 +296,7 @@
             dist: 0, seg: 0, dwell: 0, revealed: 0, splash: []
         };
 
-        setStatus('내려가는 중…');
+        setStatus(T.falling);
         el.skip.hidden = false;
         renderColumnButtons();
         startBgm();
@@ -384,10 +405,10 @@
                 sfx.boom();
                 shake = 380;
                 burstConfetti();
-                showResult(true, '🎉 ' + (cur.col + 1) + '번 당첨!', '축하합니다. 벌칙 확정입니다.');
+                showResult(true, fmt(T.hitTitle, cur.col + 1), T.hitDetail);
             } else {
                 sfx.relief();
-                showResult(false, (cur.col + 1) + '번 안전', '휴… 살았습니다.');
+                showResult(false, fmt(T.safeTitle, cur.col + 1), T.safeDetail);
             }
         }, skipping ? 200 : HOLD_MS);
     }
@@ -404,8 +425,7 @@
             el.resultNext.hidden = true;
             el.resultRestart.hidden = false;
             el.resultSetup.hidden = false;
-            el.resultDetail.textContent = '걸린 사람: ' +
-                (state.losers.length ? state.losers.join(', ') + '번' : '없음');
+            el.resultDetail.textContent = state.losers.length ? fmt(T.losers, state.losers.join(', ')) : T.losersNone;
         } else {
             // 결과 카드가 떠 있는 동안 다음 사람을 못 고르게 막는다
             state.phase = 'result';
@@ -423,7 +443,7 @@
         renderColumnButtons();
         var left = state.cols - state.usedCols.length;
         var chance = Math.round((state.bombs - state.losers.length) / left * 100);
-        setStatus('남은 사람 ' + left + '명 · 걸릴 확률 ' + chance + '%');
+        setStatus(fmt(T.status, left, chance));
     }
 
     // 설정 화면으로 되돌린다. 다시하기만 있고 인원을 못 바꾸는 게 답답했다.
@@ -589,7 +609,7 @@
         ctx.fillStyle = t.zone;
         ctx.font = '600 11px system-ui, sans-serif';
         ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-        ctx.fillText('여기서부터는 안 보입니다', 10, y - 5);
+        ctx.fillText(T.hidden, 10, y - 5);
         ctx.restore();
     }
 
@@ -795,8 +815,8 @@
             var cls = 'bw-ladder-slot' + (bomb ? ' is-bomb' : '') + (owner ? ' is-taken' : '');
             var color = owner ? COLORS[(owner - 1) % COLORS.length] : 'transparent';
             html += '<div class="' + cls + '" style="--col-color:' + color + '">' +
-                '<span class="bw-ladder-slot-tag">' + (bomb ? '꽝' : '안전') + '</span>' +
-                '<span class="bw-ladder-slot-who">' + (owner ? owner + '번' : '—') + '</span>' +
+                '<span class="bw-ladder-slot-tag">' + (bomb ? T.slotBomb : T.slotSafe) + '</span>' +
+                '<span class="bw-ladder-slot-who">' + (owner ? fmt(T.slotWho, owner) : '—') + '</span>' +
                 '</div>';
         }
         el.slots.innerHTML = html;
@@ -841,7 +861,7 @@
             var m = !sfx.isMuted();
             sfx.setMuted(m);
             if (bgm) { if (m) { bgm.pause(); } else { startBgm(); } }
-            el.mute.textContent = m ? '소리 꺼짐' : '소리 켜짐';
+            el.mute.textContent = m ? T.soundOff : T.soundOn;
             el.mute.setAttribute('aria-pressed', String(!m));
         });
 
