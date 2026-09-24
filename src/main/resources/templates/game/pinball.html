@@ -78,7 +78,7 @@
     <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
     <script th:src="@{/js/theme.js}"></script>
-    <link rel="stylesheet" th:href="@{/css/pinball.css}">
+    <link rel="stylesheet" th:href="@{/css/pinball.css(v=20260925)}">
 
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
@@ -108,20 +108,58 @@
         <p class="game-desc" th:text="#{pinball.ui.lead}">공 하나가 끝까지 어디로 떨어질지 모릅니다. 커피내기·점심내기·벌칙뽑기에 딱!</p>
 
         <div class="game-bgm">
-            <button id="bgmToggle" th:text="#{pinball.ui.bgmToggle}">BGM 켜기/끄기</button>
+            <button id="bgmToggle" type="button" aria-pressed="true" th:text="#{pinball.ui.bgmOn}">🔊 BGM 켜짐</button>
             <label for="volumeControl" th:text="#{pinball.ui.bgmVolume}">BGM 볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="100">
-            <button id="fsToggle" title="전체화면 전환" th:title="#{pinball.ui.fsToggleTip}" th:text="#{pinball.ui.fsToggle}">전체화면</button>
+            <button id="fsToggle" type="button" title="전체화면 전환" th:title="#{pinball.ui.fsToggleTip}" th:text="#{pinball.ui.fsToggle}">전체화면</button>
         </div>
 
-        <div id="game-container"></div>
+        <!--/* 게임 박스. 캔버스(#pb-canvas)는 보여주기만 하고, 입력·결과·버튼은 위에 겹친 HTML 이 맡는다 */-->
+        <div id="game-container" class="pb-stage pb-has-panel">
+            <div id="pb-canvas" role="img" aria-label="핀볼룰렛 게임 화면" th:aria-label="#{pinball.ui.canvasAria}"></div>
+
+            <div id="pb-setup" class="pb-panel">
+                <div class="pb-card pb-setup-card">
+                    <h2 class="pb-setup-title" th:text="#{pinball.js.setupTitle}">🎱 참가자 입력</h2>
+                    <label class="pb-setup-sub" for="pbNamesInput" th:text="#{pinball.js.subtitle}">이름을 한 줄에 한 명씩 입력하세요 (엔터로 줄바꿈, 쉼표로 구분해도 돼요)</label>
+                    <textarea id="pbNamesInput" rows="5"
+                        placeholder="엔터로 한 명씩:&#10;홍길동&#10;김철수&#10;이영희&#10;쉼표도 OK: 홍길동, 김철수, 이영희" th:placeholder="#{pinball.js.placeholder}"
+                        autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
+                    <div id="pbCount" class="pb-count" aria-live="polite"></div>
+                    <button type="button" id="pbStartBtn" class="pb-start" th:text="#{pinball.js.start}">🚀 게임 시작</button>
+                    <p id="pbMsg" class="pb-msg" role="alert"></p>
+                </div>
+            </div>
+
+            <!--/* 1등이 들어오면 경기 중에도 바로 다시 할 수 있게 */-->
+            <div id="pb-actions" class="pb-actions" hidden>
+                <button type="button" data-act="restart" th:text="#{pinball.js.restart}">🔁 다시하기</button>
+                <button type="button" data-act="setup" class="sub" th:text="#{pinball.js.btnNewSetup}">✏️ 새로 입력</button>
+            </div>
+
+            <div id="pb-result" class="pb-panel" hidden>
+                <div class="pb-card pb-result-card">
+                    <div class="pb-result-kicker" th:text="#{pinball.js.winnerTitle}">🏆 1등</div>
+                    <div class="pb-result-name"></div>
+                    <div class="pb-result-reason" th:text="#{pinball.js.congrats}">축하드립니다~!</div>
+                    <div class="pb-rank-title" th:text="#{pinball.js.finalRank}">🏁 최종 순위</div>
+                    <ol class="pb-rank-list"></ol>
+                    <div class="pb-result-actions">
+                        <button type="button" data-act="restart" th:text="#{pinball.js.btnRestart}">🔁 같은 참가자로 다시하기</button>
+                        <button type="button" data-act="setup" class="sub" th:text="#{pinball.js.btnNewSetup}">✏️ 새로 입력</button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="pbFsExitBtn" class="pb-fs-exit" th:text="#{pinball.ui.fsClose}">닫기 ✕</button>
+        </div>
 
         <div th:replace="~{fragments/share :: shareBar}"></div>
 
         <div class="description">
             <h2 th:text="#{pinball.help.title}">게임 방법</h2>
             <ol>
-                <li th:utext="#{pinball.help.step1}">참가 인원(최대 30명)을 정하고 닉네임을 입력합니다. (빈 칸은 자동으로 P1·P2…로 채워져요)</li>
+                <li th:utext="#{pinball.help.step1}">참가자 이름을 한 줄에 한 명씩(또는 쉼표로 구분해) 입력합니다. (2~30명)</li>
                 <li th:utext="#{pinball.help.step2}"><strong>게임 시작</strong>을 누르면 경주가 시작됩니다.</li>
                 <li th:utext="#{pinball.help.step3}">가장 먼저 도착한 사람이 1등으로 자동 기록되고, 순위판에 표시됩니다.</li>
                 <li th:utext="#{pinball.help.step4}"><strong>다시하기</strong>로 재경기, <strong>공유</strong> 버튼으로 링크를 친구들과 나눠보세요.</li>
@@ -154,114 +192,25 @@
     /*<![CDATA[*/
     // pinball.js 가 캔버스에 띄우는 문구 + 아래 전체화면 버튼 문구. 키는 messages*.properties 의 pinball.js.* / pinball.ui.*
     window.PINBALL_I18N = {
-        setupTitle:   [[#{pinball.js.setupTitle}]],
-        players:      [[#{pinball.js.players}]],
-        enterNames:   [[#{pinball.js.enterNames}]],
-        start:        [[#{pinball.js.start}]],
-        nameTitle:    [[#{pinball.js.nameTitle('{0}')}]],
-        dupNames:     [[#{pinball.js.dupNames}]],
-        error:        [[#{pinball.js.error}]],
-        winPre:       [[#{pinball.js.winPre}]],
-        winSuf:       [[#{pinball.js.winSuf}]],
-        congrats:     [[#{pinball.js.congrats}]],
+        count:        [[#{pinball.js.count('{0}')}]],
+        countMin:     [[#{pinball.js.countMin}]],
+        countMax:     [[#{pinball.js.countMax}]],
+        countOk:      [[#{pinball.js.countOk}]],
+        msgMin:       [[#{pinball.js.msgMin}]],
+        msgMax:       [[#{pinball.js.msgMax}]],
+        dupNames:     [[#{pinball.js.dupNames('{0}')}]],
         rankTitle:    [[#{pinball.js.rankTitle}]],
         rank:         [[#{pinball.js.rank('{0}')}]],
-        restart:      [[#{pinball.js.restart}]],
+        more:         [[#{pinball.js.more('{0}')}]],
+        bgmOn:        [[#{pinball.ui.bgmOn}]],
+        bgmOff:       [[#{pinball.ui.bgmOff}]],
         fsToggle:     [[#{pinball.ui.fsToggle}]],
-        fsToggleExit: [[#{pinball.ui.fsToggleExit}]],
-        fsClose:      [[#{pinball.ui.fsClose}]]
+        fsToggleExit: [[#{pinball.ui.fsToggleExit}]]
     };
     /*]]>*/
 </script>
 <script th:src="@{/js/phaser.min.js}"></script>
-<script th:src="@{/js/plugins/rexinputtextplugin.min.js}"></script>
-<script th:src="@{/js/pinball.js}"></script>
-<script>
-    const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-
-    document.addEventListener('DOMContentLoaded', function () {
-        // 1. 햄버거 메뉴 토글
-        const toggleBtn = document.querySelector('.nav-toggle');
-        const nav = document.querySelector('.nav-links');
-
-        if (toggleBtn && nav) {
-            toggleBtn.addEventListener('click', () => {
-                toggleBtn.classList.toggle('active');
-                nav.classList.toggle('open');
-            });
-        }
-
-        // 2. 테마 토글은 공통 스크립트(/js/theme.js)가 처리한다.
-    });
-
-    const gc = document.getElementById('game-container');
-
-    function isMobile(){ return matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; }
-    function nativeFSOK(){ return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
-    function isFS(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); }
-    function reqFS(el){ const f = el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen; return f? f.call(el): Promise.reject(); }
-    function exitFS(){ const f = document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; return f? f.call(document): Promise.reject(); }
-
-    async function enterFullscreen(){
-        try{
-            if(nativeFSOK()){
-                await reqFS(gc);
-                if(isMobile() && screen.orientation?.lock){ screen.orientation.lock('landscape').catch(()=>{}); }
-            }else{
-                gc.classList.add('fake-fullscreen');
-                document.documentElement.style.overflow='hidden';
-                document.body.style.overflow='hidden';
-            }
-        }catch(e){
-            gc.classList.add('fake-fullscreen');
-            document.documentElement.style.overflow='hidden';
-            document.body.style.overflow='hidden';
-        }
-        ensureExitButton();
-        updateBtn();
-    }
-    async function exitFullscreenAll(){
-        if(isFS()){ try{ await exitFS(); }catch(e){} }
-        gc.classList.remove('fake-fullscreen');
-        document.documentElement.style.overflow='';
-        document.body.style.overflow='';
-        try{ screen.orientation?.unlock?.(); }catch(e){}
-        updateBtn();
-    }
-    function toggleFS(){ (isFS() || gc.classList.contains('fake-fullscreen')) ? exitFullscreenAll() : enterFullscreen(); }
-    function updateBtn(){
-        const b = document.getElementById('fsToggle'); if(!b) return;
-        const on = isFS() || gc.classList.contains('fake-fullscreen');
-        b.textContent = on ? PINBALL_I18N.fsToggleExit : PINBALL_I18N.fsToggle;
-    }
-
-    // 모바일에서만 닫기 버튼 DOM 생성(표시는 CSS가 전체화면 때만)
-    function ensureExitButton(){
-        if(!isMobile()) return;
-        if(gc.querySelector('.fs-exit')) return;
-        const btn = document.createElement('button');
-        btn.className = 'fs-exit'; btn.type = 'button'; btn.textContent = PINBALL_I18N.fsClose;
-        btn.addEventListener('click', exitFullscreenAll);
-        gc.appendChild(btn);
-    }
-
-    document.addEventListener('DOMContentLoaded', ()=>{
-        document.getElementById('fsToggle')?.addEventListener('click', toggleFS);
-        ensureExitButton();             // 모바일 전용 닫기 버튼 생성
-        updateBtn();
-    });
-    ['fullscreenchange','webkitfullscreenchange','msfullscreenchange']
-        .forEach(ev=>document.addEventListener(ev, updateBtn));
-
-    // 필요하면 외부에서 호출 가능
-    window.toggleFullscreen = toggleFS;
-    window.exitFullscreenAll = exitFullscreenAll;
-
-    // 방명록 //
-// 방명록 끝 //
-
-
-</script>
+<script th:src="@{/js/pinball.js(v=20260925)}"></script>
 
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>

@@ -90,9 +90,9 @@ const PERSONALITY = [
 // 템플릿(mugunghwa.html)이 messages*.properties 에서 읽어 window.MUGUNGHWA_I18N 으로 넘긴다. 없으면 한국어 기본값.
 const T = Object.assign({
     count:       '{0}명 입력됨',
-    countMin:    '(최소 2명)',
+    countMin:    '(최소 2명 · 최대 30명)',
     countMax:    '(최대 30명 초과!)',
-    countOk:     '✓',
+    countOk:     '✓ (최대 30명)',
     modeWinnerShort: '🏆 1등 뽑기',
     modeLoserShort:  '💣 꼴찌 뽑기',
     msgMin:      '최소 2명 이상 입력해주세요!',

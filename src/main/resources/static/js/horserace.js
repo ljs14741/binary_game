@@ -14,9 +14,9 @@
 // ============================================================
 const T = Object.assign({
     count:           '{0}명 입력됨',
-    countMin:        '(최소 2명)',
+    countMin:        '(최소 2명 · 최대 30명)',
     countMax:        '(최대 30명 초과!)',
-    countOk:         '✓',
+    countOk:         '✓ (최대 30명)',
     modeWinner:      '🏆 1등 우승 뽑기',
     modeLoser:       '💣 꼴찌 벌칙 뽑기',
     modeHintLoser:   '▲ 꼴찌로 들어온 말의 주인이 벌칙!',
