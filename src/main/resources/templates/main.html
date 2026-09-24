@@ -90,19 +90,24 @@
 
     <section id="games" class="bw-game-section">
         <!--/*
-          목록의 출처는 GameCatalog 하나다 (순서·묶음·신작 모두).
-          카드는 전부 같은 크기다. 예전에 무궁화만 크게 띄웠더니 나머지가 들러리로 보였다.
-          그래서 신작은 큰 카드가 아니라 얇은 가로 띠로만 올린다.
+          목록의 출처는 GameCatalog 하나다 (순서·묶음·새로 나온 게임 모두).
+          카드는 전부 같은 모양이다. 예전에 무궁화만 크게 띄웠더니 나머지가 들러리로 보였고,
+          신작을 테두리·배지 띠로 올렸더니 광고처럼 보였다. 그래서 새 게임도 같은 카드에 소제목만 따로 둔다.
         */-->
-        <a th:if="${featuredGame != null}" th:href="@{${featuredGame.path}}" class="bw-game-featured">
-            <img th:src="@{${featuredGame.card}}" th:alt="${featuredGame.name}" width="600" height="400" decoding="async" loading="eager">
-            <div class="bw-game-featured-body">
-                <span class="bw-game-featured-badge">NEW</span>
-                <h2 th:text="${featuredGame.name}">펭귄 키우기</h2>
-                <p th:text="${featuredGame.tagline}">한 줄 설명</p>
+        <div class="bw-game-group" th:if="${featuredGame != null}">
+            <div class="bw-game-group-head">
+                <h2>새로 나온 게임</h2>
             </div>
-            <span class="bw-game-featured-go" aria-hidden="true">›</span>
-        </a>
+            <a th:href="@{${featuredGame.path}}" class="bw-game-card bw-game-card-wide">
+                <img th:src="@{${featuredGame.card}}" th:alt="${featuredGame.name}"
+                     width="600" height="400" decoding="async" loading="eager">
+                <div class="bw-game-card-body">
+                    <span class="bw-game-card-kicker"><b class="bw-game-new">NEW</b> <span th:text="${featuredGame.kicker}">Aquarium</span></span>
+                    <h3 th:text="${featuredGame.name}">펭귄 키우기</h3>
+                    <p th:text="${featuredGame.tagline}">한 줄 설명</p>
+                </div>
+            </a>
+        </div>
 
         <div class="bw-game-group">
             <div class="bw-game-group-head">
@@ -115,7 +120,7 @@
                          width="600" height="400" decoding="async"
                          th:attr="loading=${s.first} ? 'eager' : 'lazy'">
                     <div class="bw-game-card-body">
-                        <span class="bw-game-card-kicker" th:text="${g.kicker}">Pick</span>
+                        <span class="bw-game-card-kicker"><b class="bw-game-new" th:if="${g.isNew()}">NEW</b> <span th:text="${g.kicker}">Pick</span></span>
                         <h3 th:text="${g.name}">게임 이름</h3>
                         <p th:text="${g.tagline}">한 줄 설명</p>
                     </div>
@@ -134,7 +139,7 @@
                          width="600" height="400" decoding="async"
                          th:attr="loading=${false} ? 'eager' : 'lazy'">
                     <div class="bw-game-card-body">
-                        <span class="bw-game-card-kicker" th:text="${g.kicker}">Pick</span>
+                        <span class="bw-game-card-kicker"><b class="bw-game-new" th:if="${g.isNew()}">NEW</b> <span th:text="${g.kicker}">Pick</span></span>
                         <h3 th:text="${g.name}">게임 이름</h3>
                         <p th:text="${g.tagline}">한 줄 설명</p>
                     </div>

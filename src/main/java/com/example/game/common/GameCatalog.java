@@ -53,6 +53,11 @@ public final class GameCatalog {
             return SOLO.contains(path);
         }
 
+        /** 메인 "새로 나온 게임" 칸의 게임인지. 카드에 NEW 표시 */
+        public boolean isNew() {
+            return FEATURED.equals(path);
+        }
+
         /**
          * 카드 썸네일. 600x400(3:2) 로 통일돼 있다.
          * 기본은 WebP 이고, PNG_CARDS 에 든 것만 PNG 다.
@@ -73,7 +78,7 @@ public final class GameCatalog {
     /** 혼자 즐기는 게임 (키우기·리듬·아케이드). 메인에서 "내기·복불복"과 나눠 보여줌. 여기 없는 건 전부 내기·복불복 */
     static final Set<String> SOLO = Set.of("/penguin", "/rhythm", "/kimchi", "/dodge");
 
-    /** 메인 맨 위 "신작" 띠에 올릴 게임. 새 게임이 나오면 여기만 바꿈. 이 게임은 아래 묶음에서 빠짐 */
+    /** 메인 맨 위 "새로 나온 게임" 칸. 새 게임이 나오면 여기만 바꿈. 아래 묶음에도 그대로 나옴 */
     public static final String FEATURED = "/penguin";
 
     static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel", "/rhythm", "/press", "/pinball", "/penguin");
@@ -112,14 +117,14 @@ public final class GameCatalog {
             //         "늦게 펼수록 이긴다 · 혼자 기록 도전 · 담력 복불복", "2026-09-01"),
     );
 
-    /** 메인 "내기·복불복" 묶음. {@link #GAMES} 순서, 신작 띠 게임은 뺌 */
+    /** 메인 "내기·복불복" 묶음. {@link #GAMES} 순서 */
     public static List<Game> betGames() {
-        return GAMES.stream().filter(g -> !g.solo() && !g.path().equals(FEATURED)).toList();
+        return GAMES.stream().filter(g -> !g.solo()).toList();
     }
 
-    /** 메인 "혼자 즐기기" 묶음. {@link #GAMES} 순서, 신작 띠 게임은 뺌 */
+    /** 메인 "혼자 즐기기" 묶음. {@link #GAMES} 순서 */
     public static List<Game> soloGames() {
-        return GAMES.stream().filter(g -> g.solo() && !g.path().equals(FEATURED)).toList();
+        return GAMES.stream().filter(Game::solo).toList();
     }
 
     /** 경로로 하나 찾는다. 없으면 null. */

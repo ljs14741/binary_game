@@ -28,7 +28,7 @@ public class GameCatalogAdvice {
         return GameCatalog.GAMES;
     }
 
-    /** 메인: 신작 띠 · 내기·복불복 · 혼자 즐기기 */
+    /** 메인: 새로 나온 게임 · 내기·복불복 · 혼자 즐기기 */
     @ModelAttribute("featuredGame")
     public GameCatalog.Game featuredGame() {
         return GameCatalog.byPath(GameCatalog.FEATURED);
