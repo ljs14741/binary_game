@@ -65,10 +65,12 @@ public final class GameCatalog {
      * 그림은 docs/art/card.js 가 순수 Node 로 굽는다 — 그래서 PNG 다.
      * 나중에 도구가 생기면 WebP 로 다시 구워 여기서 지우면 된다.
      */
-    static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel", "/rhythm", "/press", "/pinball");
+    static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel", "/rhythm", "/press", "/pinball", "/penguin");
 
     /** 표시 순서 = 이 목록의 순서. 유입이 많은 게임을 위로 둔다. */
     public static final List<Game> GAMES = List.of(
+            new Game("/penguin", "펭귄 키우기", "Aquarium",
+                    "추억의 물고기 키우기를 펭귄으로 · 먹이 주고 코인 줍고 천적 막기", "2026-09-24"),
             new Game("/rhythm", "뿌셔뿌셔 리듬게임", "Rhythm",
                     "리듬 듣고 똑같이 따라 쳐서 벽·창문·굴뚝 부수기 · 버튼 하나 리듬게임", "2026-09-21", Set.of("en", "ja")),
             new Game("/mugunghwa", "무궁화 꽃이 피었습니다", "Pick",

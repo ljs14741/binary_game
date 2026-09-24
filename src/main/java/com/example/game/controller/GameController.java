@@ -29,6 +29,11 @@ public class GameController {
         return "game/rhythm";
     }
 
+    @GetMapping("/penguin")
+    public String penguin(Model model, HttpSession session) {
+        return "game/penguin";
+    }
+
     @GetMapping("/dodge")
     public String dodge(Model model, HttpSession session) {
         ZoneId seoul = ZoneId.of("Asia/Seoul");
