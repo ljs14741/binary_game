@@ -78,366 +78,7 @@
     <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
     <script th:src="@{/js/theme.js}"></script>
 
-    <!-- 게임 캔버스 & BGM 컨트롤 스타일 -->
-    <style>
-        /* 스크롤바 하나만: html은 스크롤 비활성화, body만 스크롤 (이중 스크롤 제거) */
-        html { overflow: hidden; }
-        body { overflow-y: auto; overflow-x: hidden; min-height: 100vh; }
-
-        /* 제목 → BGM → 게임 순서, 겹치지 않게 */
-        #horserace-fullscreen-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 1000px;
-            margin: 0 auto 8px auto;
-        }
-        #horserace-fullscreen-wrap .game-bgm {
-            flex-shrink: 0;
-            width: 100%;
-            margin: 0 0 16px 0;
-            box-sizing: border-box;
-        }
-
-        #game-container {
-            flex-shrink: 0;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: stretch;
-            width: 100%;
-            max-width: 1000px;
-            margin: 0;
-            padding: 0;
-            background: #060614;
-            border-radius: 10px;
-            overflow: visible;
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.12);
-            min-height: 400px;
-            aspect-ratio: 1000 / 720;
-            /* 캔버스가 화면보다 길면 결승 순간·결과가 접힘 아래로 내려간다.
-               높이가 아니라 폭을 줄여 비율(1000:720)을 지킨다 — 이름 입력 오버레이가 컨테이너 % 좌표라
-               비율이 깨지면 캔버스 그림과 어긋난다. 위쪽 헤더·제목·BGM 바 몫으로 약 300px 를 뺀다. */
-            width: min(100%, calc((100vh - 300px) * 1000 / 720));
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* ── 참가자 이름 입력 오버레이 (Phaser DOM 불필요, 순수 HTML) ── */
-        #hr-setup-overlay {
-            display: none;
-            position: absolute;
-            top: 21%;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 20;
-            width: 58%;
-            height: 18%;
-            pointer-events: none;
-        }
-        #hr-setup-overlay.active { display: block; }
-        #hrNamesInput {
-            width: 100%;
-            height: 100%;
-            min-height: 56px;
-            background: #0a0a1e;
-            border: 2px solid #2e2e5a;
-            border-radius: 12px;
-            color: #d8d8ff;
-            font-size: 17px;
-            line-height: 1.7;
-            padding: 12px 18px;
-            font-family: 'Pretendard', Arial, sans-serif;
-            resize: none;
-            outline: none;
-            box-sizing: border-box;
-            pointer-events: auto;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #hrNamesInput:focus { border-color: #FFD700; }
-
-        /* 전체화면: BGM·볼륨·전체화면 버튼 숨김(게임 내부 우측상단 '닫기'만 사용) */
-        #horserace-fullscreen-wrap:fullscreen .game-bgm,
-        #horserace-fullscreen-wrap:-webkit-full-screen .game-bgm,
-        #horserace-fullscreen-wrap:-moz-full-screen .game-bgm,
-        #horserace-fullscreen-wrap:-ms-fullscreen .game-bgm,
-        #horserace-fullscreen-wrap.hr-fullscreen-active .game-bgm {
-            display: none !important;
-        }
-        #horserace-fullscreen-wrap:fullscreen,
-        #horserace-fullscreen-wrap:-webkit-full-screen,
-        #horserace-fullscreen-wrap:-moz-full-screen,
-        #horserace-fullscreen-wrap:-ms-fullscreen,
-        #horserace-fullscreen-wrap.hr-fullscreen-active {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            padding-bottom: env(safe-area-inset-bottom);
-            box-sizing: border-box !important;
-            background: #060614 !important;
-            display: flex !important;
-            flex-direction: column !important;
-        }
-        /* 게임 영역: BGM 바 아래 flex로 채움 → 버튼 클릭 영역과 겹치지 않음 */
-        /* 전체화면 시 항상 보이는 나가기 버튼 (모바일에서 BGM 바가 잘려도 사용 가능) */
-        #horserace-fullscreen-wrap {
-            position: relative;
-        }
-        .hr-fs-exit-btn {
-            display: none;
-            position: absolute;
-            top: max(10px, env(safe-area-inset-top));
-            right: max(10px, env(safe-area-inset-right));
-            z-index: 9999;
-            min-width: 44px;
-            min-height: 44px;
-            padding: 10px 14px;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            background: rgba(0,0,0,0.75);
-            color: #fff;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        }
-        #horserace-fullscreen-wrap:fullscreen .hr-fs-exit-btn,
-        #horserace-fullscreen-wrap:-webkit-full-screen .hr-fs-exit-btn,
-        #horserace-fullscreen-wrap:-moz-full-screen .hr-fs-exit-btn,
-        #horserace-fullscreen-wrap:-ms-fullscreen .hr-fs-exit-btn,
-        #horserace-fullscreen-wrap.hr-fullscreen-active .hr-fs-exit-btn {
-            display: inline-flex !important;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* 전체화면: 게임 영역을 모니터 전체에 꽉 채움(픽셀 단위로 고정) */
-        #horserace-fullscreen-wrap:fullscreen #game-container,
-        #horserace-fullscreen-wrap:-webkit-full-screen #game-container,
-        #horserace-fullscreen-wrap:-moz-full-screen #game-container,
-        #horserace-fullscreen-wrap:-ms-fullscreen #game-container,
-        #horserace-fullscreen-wrap.hr-fullscreen-active #game-container {
-            flex: 1 1 auto;
-            min-height: 0;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            aspect-ratio: unset !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            background: #060614 !important;
-            pointer-events: auto !important;
-            z-index: 1;
-        }
-
-        #game-container canvas {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
-            max-width: 100%;
-            object-fit: contain;
-        }
-        /* 전체화면: 캔버스를 뷰포트 전체(100vw×100vh)로 채우고 contain으로 게임 최대 확대·중앙 */
-        #horserace-fullscreen-wrap:fullscreen #game-container canvas,
-        #horserace-fullscreen-wrap:-webkit-full-screen #game-container canvas,
-        #horserace-fullscreen-wrap:-moz-full-screen #game-container canvas,
-        #horserace-fullscreen-wrap:-ms-fullscreen #game-container canvas,
-        #horserace-fullscreen-wrap.hr-fullscreen-active #game-container canvas {
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: 100vw !important;
-            max-height: 100vh !important;
-            margin: 0 !important;
-            object-fit: contain !important;
-            object-position: center center !important;
-            pointer-events: auto !important;
-        }
-        /* 전체화면: 오버레이 위치·크기는 horserace.js의 fixFullscreenDomOverlay()가 inline style로 처리 */
-        /* Phaser 래퍼: 부모 전체를 채워서 캔버스가 중앙·최대 크기로 나오게 */
-        #horserace-fullscreen-wrap:fullscreen #game-container > div,
-        #horserace-fullscreen-wrap:-webkit-full-screen #game-container > div,
-        #horserace-fullscreen-wrap:-moz-full-screen #game-container > div,
-        #horserace-fullscreen-wrap:-ms-fullscreen #game-container > div,
-        #horserace-fullscreen-wrap.hr-fullscreen-active #game-container > div {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-        /* 캔버스 래퍼: 터치 수신 */
-        #game-container > div:has(canvas) {
-            pointer-events: auto !important;
-            z-index: 1;
-            transform: none !important;
-        }
-        #game-container > div {
-            overflow: visible !important;
-            max-height: none !important;
-        }
-
-        /* iOS 등 전체화면 API 미지원 시 가상 전체화면 (브라우저 창 전체 덮기) */
-        #game-container.fullscreen-fallback {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: none !important;
-            min-height: 100vh !important;
-            z-index: 9999 !important;
-            border-radius: 0 !important;
-        }
-        #game-container.fullscreen-fallback canvas {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: contain !important;
-        }
-
-        /* 모바일 전용: 전체화면일 때 하단에 '전체화면 종료' 버튼 (가로 권장 알림 제거, 이 자리로 대체) */
-        .hr-mobile-fs-exit {
-            display: none;
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            padding: 14px 16px;
-            padding-bottom: max(14px, env(safe-area-inset-bottom));
-            background: rgba(10, 10, 24, 0.95);
-            border-top: 1px solid rgba(255, 215, 0, 0.4);
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        /* 기본적으로는 숨겨두고, JS에서 hr-fullscreen-active + 모바일 기기일 때 display:flex로 토글 */
-        .hr-mobile-fs-exit button {
-            padding: 12px 24px;
-            border: 1px solid rgba(255, 215, 0, 0.5);
-            border-radius: 8px;
-            background: rgba(255, 215, 0, 0.2);
-            color: #FFD700;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            min-height: 44px;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .hr-mobile-fs-exit button:hover { background: rgba(255, 215, 0, 0.3); }
-        .hr-mobile-fs-exit button:active { background: rgba(255, 215, 0, 0.4); }
-
-        .game-bgm {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            padding: 12px 16px;
-            background: rgba(6, 6, 20, 0.95);
-            border-radius: 8px;
-            touch-action: manipulation;
-        }
-        .game-bgm button {
-            min-height: 44px;
-            padding: 10px 14px;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 6px;
-            background: rgba(255,255,255,0.06);
-            color: #cccccc;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background 0.2s;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .game-bgm button:hover { background: rgba(255,255,255,0.14); }
-
-        .game-bgm label {
-            font-size: 13px;
-            color: #888;
-        }
-
-        .game-bgm input[type=range] {
-            width: 90px;
-            min-height: 44px;
-            accent-color: #FFD700;
-            touch-action: none;
-            pointer-events: auto;
-        }
-        /* 모바일: 좁은 화면에서 레이아웃·터치 영역 보정 */
-        @media (max-width: 640px) {
-            #horserace-fullscreen-wrap {
-                padding: 0 8px;
-                max-width: 100%;
-            }
-            #horserace-fullscreen-wrap #game-container {
-                max-width: 100%;
-                border-radius: 8px;
-                min-height: 0 !important;
-            }
-            .game-bgm {
-                padding: 10px 12px;
-                gap: 8px;
-            }
-            .game-bgm button {
-                font-size: 12px;
-                padding: 10px 12px;
-            }
-            #hr-setup-overlay {
-                top: 22%;
-                width: 84%;
-                height: 28%;
-            }
-            #hrNamesInput {
-                font-size: 18px;
-                padding: 10px 14px;
-            }
-        }
-        @media (max-width: 385px) {
-            #hr-setup-overlay { top: 24%; width: 88%; height: 28%; }
-            #hrNamesInput { font-size: 17px; }
-        }
-
-        .hr-description h2 {
-            font-size: 17px;
-            color: #FFD700;
-            margin: 22px 0 8px;
-        }
-
-        .hr-description p, .hr-description li {
-            font-size: 14px;
-            color: var(--bw-text);
-            line-height: 1.7;
-        }
-
-        .hr-description strong {
-            color: var(--bw-text);
-            font-weight: 800;
-        }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/horserace.css(v=20260925)}">
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
             crossorigin="anonymous"></script>
@@ -465,27 +106,52 @@
         <h1 class="game-title" th:text="#{horserace.ui.title}">말달리자 경마내기게임</h1>
         <p class="game-desc" th:text="#{horserace.ui.lead}">말 하나 골라놓고 결승선까지 조마조마. 커피내기·점심내기·벌칙뽑기에 딱!</p>
 
-        <div id="horserace-fullscreen-wrap">
-        <button type="button" id="hrFsExitBtn" class="hr-fs-exit-btn" aria-label="전체화면 나가기" th:aria-label="#{horserace.ui.fsExitAria}" th:text="#{horserace.ui.fsExit}">✕ 나가기</button>
-        <div id="hr-mobile-fs-exit" class="hr-mobile-fs-exit" aria-hidden="true">
-            <button type="button" id="hrMobileFsExitBtn" aria-label="전체화면 종료" th:aria-label="#{horserace.ui.mobileFsExitAria}" th:text="#{horserace.ui.mobileFsExit}">✕ 전체화면 종료</button>
-        </div>
-        <div class="game-bgm">
-            <button id="bgmToggle" th:text="#{horserace.ui.bgmOn}">🔊 BGM 켜짐</button>
+        <div class="game-bgm hr-bar">
+            <button id="bgmToggle" type="button" aria-pressed="true" th:text="#{horserace.ui.bgmOn}">🔊 소리 켜짐</button>
             <label for="volumeControl" th:text="#{horserace.ui.volume}">볼륨:</label>
             <input type="range" id="volumeControl" min="0" max="100" value="30">
-            <button id="fsToggle" title="전체화면 전환" th:title="#{horserace.ui.fsToggleTip}" th:text="#{horserace.ui.fsToggle}">전체화면</button>
+            <button id="fsToggle" type="button" title="전체화면 전환" th:title="#{horserace.ui.fsToggleTip}" th:text="#{horserace.ui.fsToggle}">⛶ 전체화면</button>
         </div>
 
-        <div id="game-container">
-            <div id="hr-setup-overlay">
-                <textarea id="hrNamesInput"
-                    placeholder="홍길동&#10;이순신&#10;강감찬" th:placeholder="#{horserace.ui.namesPlaceholder}"
-                    autocomplete="off" autocorrect="off"
-                    autocapitalize="none" spellcheck="false"></textarea>
+        <!--/* 게임 박스. 캔버스(#hr-canvas)는 보여주기만 하고, 입력·결과는 위에 겹친 HTML 패널이 맡는다 */-->
+        <div id="game-container" class="hr-stage">
+            <div id="hr-canvas" role="img" aria-label="말달리자 경주 화면" th:aria-label="#{horserace.ui.canvasAria}"></div>
+
+            <div id="hr-setup" class="hr-panel">
+                <div class="hr-card hr-setup-card">
+                    <h2 class="hr-setup-title" th:text="#{horserace.js.title}">🏇 말달리자</h2>
+                    <label class="hr-setup-sub" for="hrNamesInput" th:text="#{horserace.js.subtitle}">이름을 한 줄에 한 명씩 입력하세요 (엔터로 줄바꿈, 쉼표로 구분해도 돼요)</label>
+                    <textarea id="hrNamesInput" rows="5"
+                        placeholder="엔터로 한 명씩:&#10;홍길동&#10;김철수&#10;이영희&#10;쉼표도 OK: 홍길동, 김철수, 이영희" th:placeholder="#{horserace.js.placeholder}"
+                        autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
+                    <div id="hrCount" class="hr-count" aria-live="polite"></div>
+                    <div class="hr-mode" role="radiogroup" aria-label="게임 모드 선택" th:aria-label="#{horserace.js.modeLabel}">
+                        <button type="button" role="radio" data-mode="loser" aria-checked="true" th:text="#{horserace.js.modeLoser}">💣 꼴찌 벌칙 뽑기</button>
+                        <button type="button" role="radio" data-mode="winner" aria-checked="false" th:text="#{horserace.js.modeWinner}">🏆 1등 우승 뽑기</button>
+                    </div>
+                    <p id="hrModeHint" class="hr-mode-hint" th:text="#{horserace.js.modeHintLoser}">▲ 꼴찌로 들어온 말의 주인이 벌칙!</p>
+                    <button type="button" id="hrStartBtn" class="hr-start" th:text="#{horserace.js.startBtn}">🏁 경주 시작!</button>
+                    <p id="hrMsg" class="hr-msg" role="alert"></p>
+                </div>
             </div>
+
+            <div id="hr-result" class="hr-panel" hidden>
+                <div class="hr-card hr-result-card">
+                    <div class="hr-result-kicker"></div>
+                    <div class="hr-result-horse" aria-hidden="true"></div>
+                    <div class="hr-result-name"></div>
+                    <div class="hr-result-reason"></div>
+                    <div class="hr-rank-title" th:text="#{horserace.js.finalRank}">🏁 최종 순위</div>
+                    <ol class="hr-rank-list"></ol>
+                    <div class="hr-result-actions">
+                        <button type="button" data-act="restart" th:text="#{horserace.js.btnRestart}">🔄 같은 참가자로 재시작</button>
+                        <button type="button" data-act="setup" class="sub" th:text="#{horserace.js.btnNewSetup}">✏️ 새로 설정</button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="hrFsExitBtn" class="hr-fs-exit" aria-label="전체화면 나가기" th:aria-label="#{horserace.ui.fsExitAria}" th:text="#{horserace.ui.fsExit}">✕ 나가기</button>
         </div>
-        </div><!-- /#horserace-fullscreen-wrap -->
 
         <!-- 소개 & 사용법 -->
         <div class="hr-description">
@@ -520,25 +186,18 @@
     /*<![CDATA[*/
     // horserace.js 가 캔버스·버튼에 띄우는 문구. 키는 messages*.properties 의 horserace.js.* / horserace.ui.*
     window.HORSERACE_I18N = {
-        title:           [[#{horserace.js.title}]],
-        subtitle:        [[#{horserace.js.subtitle}]],
-        placeholder:     [[#{horserace.js.placeholder}]],
         count:           [[#{horserace.js.count('{0}')}]],
         countMin:        [[#{horserace.js.countMin}]],
         countMax:        [[#{horserace.js.countMax}]],
         countOk:         [[#{horserace.js.countOk}]],
-        modeLabel:       [[#{horserace.js.modeLabel}]],
         modeWinner:      [[#{horserace.js.modeWinner}]],
         modeLoser:       [[#{horserace.js.modeLoser}]],
         modeHintLoser:   [[#{horserace.js.modeHintLoser}]],
         modeHintWinner:  [[#{horserace.js.modeHintWinner}]],
-        startBtn:        [[#{horserace.js.startBtn}]],
         msgMin:          [[#{horserace.js.msgMin}]],
         msgMax:          [[#{horserace.js.msgMax}]],
-        footerPromo:     [[#{horserace.js.footerPromo}]],
         defaultName1:    [[#{horserace.js.defaultName1}]],
         defaultName2:    [[#{horserace.js.defaultName2}]],
-        fsExitLabel:     [[#{horserace.js.fsExitLabel}]],
         leaderboard:     [[#{horserace.js.leaderboard}]],
         rank:            [[#{horserace.js.rank('{0}')}]],
         finalSpurt:      [[#{horserace.js.finalSpurt}]],
@@ -547,29 +206,20 @@
         puddleHit:       [[#{horserace.js.puddleHit}]],
         resultWin:       [[#{horserace.js.resultWin}]],
         resultLose:      [[#{horserace.js.resultLose}]],
-        btnRestart:      [[#{horserace.js.btnRestart}]],
-        btnNewSetup:     [[#{horserace.js.btnNewSetup}]],
+        reasonWin:       [[#{horserace.js.reasonWin}]],
+        reasonLose:      [[#{horserace.js.reasonLose}]],
         bgmOn:           [[#{horserace.ui.bgmOn}]],
         bgmOff:          [[#{horserace.ui.bgmOff}]],
-        domFsToggle:     [[#{horserace.ui.fsToggle}]],
-        domFsToggleExit: [[#{horserace.ui.fsToggleExit}]],
-        domFsToggleTip:  [[#{horserace.ui.fsToggleTip}]],
-        domFsExitTip:    [[#{horserace.ui.fsExitTip}]],
-        mobileFsBlockTitle:   [[#{horserace.js.mobileFsTitle}]],
-        mobileFsBlockMessage: [[#{horserace.js.mobileFsMessage}]],
-        mobileFsBlockOk:      [[#{horserace.js.mobileFsOk}]]
+        fsToggle:        [[#{horserace.ui.fsToggle}]],
+        fsToggleExit:    [[#{horserace.ui.fsToggleExit}]],
+        fsToggleTip:     [[#{horserace.ui.fsToggleTip}]],
+        fsExitTip:       [[#{horserace.ui.fsExitTip}]]
     };
     /*]]>*/
 </script>
 <script th:src="@{/js/phaser.min.js}"></script>
-<script th:src="@{/js/horserace-art.js}"></script>
-<script th:src="@{/js/horserace.js}"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // 공통 GNB/방명록 스크립트가 메뉴와 방명록을 담당합니다.
-    });
-</script>
+<script th:src="@{/js/horserace-art.js(v=20260925)}"></script>
+<script th:src="@{/js/horserace.js(v=20260925)}"></script>
 
 <script src="https://binaryworld.kr/common/header.js" defer></script>
 <script src="https://binaryworld.kr/common/footer.js" defer></script>

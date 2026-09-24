@@ -13,52 +13,94 @@
 // 서버 렌더(/en/horserace, /ja/horserace)로 바꿨다. 언어는 주소가 정한다.
 // ============================================================
 const T = Object.assign({
-    // SetupScene
-    title:           '🏇 말달리자',
-    subtitle:        '참가자 이름을  쉼표( , )  또는  줄바꿈으로 구분하여 입력하세요',
-    placeholder:     '예시:\n홍길동, 김철수, 이영희\n또는 한 줄에 한 명씩 입력',
     count:           '{0}명 입력됨',
     countMin:        '(최소 2명)',
     countMax:        '(최대 30명 초과!)',
     countOk:         '✓',
-    modeLabel:       '게임 모드 선택',
     modeWinner:      '🏆 1등 우승 뽑기',
     modeLoser:       '💣 꼴찌 벌칙 뽑기',
-    modeHintLoser:   '▲ 결승선에 마지막으로 들어오는 말의 주인이 벌칙!',
-    modeHintWinner:  '▲ 결승선에 제일 먼저 들어오는 말의 주인이 우승!',
-    startBtn:        '🏁  경주 시작!',
+    modeHintLoser:   '▲ 꼴찌로 들어온 말의 주인이 벌칙!',
+    modeHintWinner:  '▲ 1등으로 들어온 말의 주인이 우승!',
     msgMin:          '최소 2명 이상 입력해주세요!',
     msgMax:          '최대 30명까지 가능합니다!',
-    footerPromo:     '내기 · 추첨 · 이벤트에 딱!  사다리타기 · 룰렛 · 핀볼 대신 말달리자 🐎',
     defaultName1:    '참가자1',
     defaultName2:    '참가자2',
-    // In-game UI (Phaser)
-    fsExitLabel:     '⛶ 닫기(전체화면 종료)',
     leaderboard:     '🏆 실시간 순위',
     rank:            '{0}위',
     finalSpurt:      '🔥 마지막 스퍼트! 🔥',
     carrotEat:       '🥕 냠냠!',
     rockHit:         '🪨 쿵!',
     puddleHit:       '💧 첨벙!',
-    resultWin:       '🎉  우승!  🎉',
-    resultLose:      '💣  당첨(벌칙)!  💣',
-    btnRestart:      '🔄 같은 참가자로 재시작',
-    btnNewSetup:     '✏️ 새로 설정',
-    // HTML DOM (상태에 따라 바뀌는 버튼만)
-    bgmOn:           '🔊 BGM 켜짐',
-    bgmOff:          '🔇 BGM 꺼짐',
-    domFsToggle:     '⛶ 전체화면',
-    domFsToggleExit: '⛶ 전체화면 종료',
-    domFsToggleTip:  '전체화면 전환',
-    domFsExitTip:    '전체화면 나가기',
-    mobileFsBlockTitle:   '모바일 전체화면 안내',
-    mobileFsBlockMessage: '모바일 기기에서는 전체화면 모드에서\n일부 기기에서 터치 또는 화면 레이아웃 문제가 발생할 수 있습니다.\n\n화면이 조금 작더라도 기본 보기(전체화면 아님)를 권장합니다.\n\n※ 효과음을 위해 BGM을 켜고 플레이하는 것을 추천합니다!',
-    mobileFsBlockOk:      '알겠어요',
+    resultWin:       '🏆 우승!',
+    resultLose:      '💣 벌칙 당첨!',
+    reasonWin:       '결승선에 제일 먼저 들어왔어요',
+    reasonLose:      '결승선에 마지막으로 들어왔어요',
+    bgmOn:           '🔊 소리 켜짐',
+    bgmOff:          '🔇 소리 꺼짐',
+    fsToggle:        '⛶ 전체화면',
+    fsToggleExit:    '⛶ 전체화면 종료',
+    fsToggleTip:     '전체화면 전환',
+    fsExitTip:       '전체화면 나가기',
 }, (typeof window !== 'undefined' && window.HORSERACE_I18N) || {});
 function fmt(t, v) { return t.replace('{0}', String(v)); }
 
-const HR_W      = 1000;
-const HR_H      = 720;
+// ── 화면 배치: PC 는 가로형, 폭 600px 이하 폰은 세로형 ─────────
+// 높이(720)는 같아서 레인 폭·회피 거리 등 경주 계산은 배치와 상관없이 똑같다. 보이는 폭만 다름.
+// lbW = 순위표 폭, camOff = 선두 말을 화면 폭의 어디에 둘지, fs = 글자 배율
+const HR_LAYOUTS = {
+    wide: { key: 'wide', W: 1000, H: 720, lbW: 190, camOff: 0.65, fs: 1 },
+    tall: { key: 'tall', W: 540,  H: 720, lbW: 172, camOff: 0.4,  fs: 1.3 },
+};
+const HR_TALL_MQ = '(max-width: 600px)';
+
+function hrPickLayout() {
+    return window.matchMedia && window.matchMedia(HR_TALL_MQ).matches ? HR_LAYOUTS.tall : HR_LAYOUTS.wide;
+}
+// 캔버스 해상도 배율 (고해상도 화면에서 흐리지 않게, 최대 2)
+function hrRenderScale(L) {
+    const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    const box = document.getElementById('game-container');
+    const cssW = box && box.clientWidth ? box.clientWidth : L.W;
+    return Math.max(1, Math.min(2, Math.round(dpr * cssW / L.W * 4) / 4));
+}
+let HR_L = hrPickLayout();
+let HR_K = hrRenderScale(HR_L);
+
+// 모든 텍스트를 캔버스 배율 해상도로 렌더
+{
+    const origText = Phaser.GameObjects.GameObjectFactory.prototype.text;
+    Phaser.GameObjects.GameObjectFactory.prototype.text = function (x, y, t, style) {
+        return origText.call(this, x, y, t, Object.assign({ resolution: HR_K }, style || {}));
+    };
+}
+
+const HR_FONT = "system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Hiragino Sans', sans-serif";
+
+// 로컬 저장 (사생활 모드 등에서 실패해도 무시)
+const store = {
+    get(k, d) { try { const v = localStorage.getItem('hr.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('hr.' + k, JSON.stringify(v)); } catch (e) { /* 무시 */ } },
+};
+
+// 카메라: 원점을 왼쪽 위로 두고 배율만큼 확대 → 좌표는 논리 크기(HR_L.W × HR_L.H) 그대로 쓴다
+function hrSetupCamera(scene) {
+    scene.cameras.main.setOrigin(0, 0).setZoom(HR_K);
+}
+// 화면 폭이 바뀌어 배치가 달라졌으면 게임 크기를 새로 잡는다 (씬 시작 때만)
+function hrEnsureLayout(scene) {
+    const want = hrPickLayout();
+    const k = hrRenderScale(want);
+    if (want === HR_L && k === HR_K) return;
+    HR_L = want;
+    HR_K = k;
+    scene.scale.setGameSize(Math.round(HR_L.W * HR_K), Math.round(HR_L.H * HR_K));
+}
+// 글자가 폭을 넘으면 줄임
+function hrFitText(t, maxW) {
+    if (t.width > maxW) t.setScale(maxW / t.width);
+    return t;
+}
+
 const TRACK_LEN = 10000;
 const FINISH_X  = 9500;
 const MM_H      = 28;
@@ -168,359 +210,62 @@ class PreloadScene extends Phaser.Scene {
 }
 
 // ============================================================
-// SetupScene – 참가자 설정 화면
+// SetupScene – 참가자 입력 대기 화면. 입력은 HTML 패널(#hr-setup)이 받고, 캔버스는 배경만
 // ============================================================
 class SetupScene extends Phaser.Scene {
     constructor() { super({ key: 'SetupScene' }); }
 
     create() {
-        const W = this.scale.width, H = this.scale.height;
-        const cx = W / 2;
-        const MARGIN_TOP = 52;
-        const MARGIN_SIDE = 20;
-
+        hrEnsureLayout(this);
+        hrSetupCamera(this);
+        const { W, H } = HR_L;
         this.cameras.main.setBackgroundColor('#060614');
 
-        // 배경 그라디언트 (여백 고려)
         this.add.graphics()
-            .fillGradientStyle(0x0b0b20, 0x0b0b20, 0x141432, 0x141432, 1)
+            .fillGradientStyle(0x07071a, 0x07071a, 0x141432, 0x141432, 1)
             .fillRect(0, 0, W, H);
-
-        // 별
-        for (let i = 0; i < 130; i++) {
-            this.add.circle(
-                Phaser.Math.Between(MARGIN_SIDE, W - MARGIN_SIDE),
-                Phaser.Math.Between(MARGIN_TOP, Math.floor(H * 0.72)),
-                Math.random() * 1.4 + 0.2,
-                0xffffff,
-                Math.random() * 0.55 + 0.25
-            );
+        for (let i = 0; i < 90; i++) {
+            this.add.circle(Phaser.Math.Between(0, W), Phaser.Math.Between(0, 150), Math.random() * 1.3 + 0.3, 0xffffff, Math.random() * 0.5 + 0.25);
         }
 
-        // 타이틀 (캔버스 상단에 안 짤리도록 여백 확보) + 가독성 그림자
-        const titleY = MARGIN_TOP + 28;
-        const textShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
-        this.add.text(cx, titleY, T.title, {
-            fontFamily: '"Orbitron","Pretendard",Arial',
-            fontSize: '44px', color: '#FFD700',
-            stroke: '#2a1500', strokeThickness: 6,
-            shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true },
-        }).setOrigin(0.5);
-
-        this.add.text(cx, titleY + 58, T.subtitle, {
-            fontFamily: '"Pretendard",Arial', fontSize: '18px', color: '#EEEEEE', fontStyle: 'bold',
-            shadow: textShadow,
-        }).setOrigin(0.5);
-
-        // CSS 미디어 쿼리와 동일한 기준(viewport 너비)으로 layoutOffset 계산
-        const vw = window.innerWidth || W;
-        const layoutOffset = vw < 386 ? 180 : (vw <= 640 ? 90 : 0);
-        this._modeLabelY = titleY + 228 + layoutOffset;
-        this._startBtnY = this._modeLabelY + 130;
-
-        // 순수 HTML 오버레이 방식 – Phaser DOM 미사용 (모바일 호환성)
-        const overlay = document.getElementById('hr-setup-overlay');
-        if (overlay) overlay.classList.add('active');
-        const phEl = document.getElementById('hrNamesInput');
-        if (phEl) phEl.placeholder = T.placeholder;
-
-        // Phaser 이벤트로 shutdown 훅 등록 (씬 전환 시 오버레이 확실히 숨김)
-        this.events.once('shutdown', () => {
-            if (overlay) overlay.classList.remove('active');
-            const ta = document.getElementById('hrNamesInput');
-            if (ta && this._taInputHandler) {
-                ta.removeEventListener('input', this._taInputHandler);
-                this._taInputHandler = null;
-            }
-        });
-
-        // "몇명 입력됨" → 내기·추첨 문구 바로 위, 글자 크기 키움
-        const FOOT_H = 36;
-        this.countText = this.add.text(cx, H - FOOT_H - 22, fmt(T.count, 0), {
-            fontFamily: '"Pretendard",Arial', fontSize: '21px', color: '#8888aa',
-            shadow: textShadow,
-        }).setOrigin(0.5);
-
-        const taEl = document.getElementById('hrNamesInput');
-        if (taEl) {
-            this._taInputHandler = () => this._updateCount(taEl.value);
-            taEl.addEventListener('input', this._taInputHandler);
-            const last = this.registry.get('lastNames');
-            if (last && last.length) { taEl.value = last.join('\n'); this._updateCount(taEl.value); }
+        // 출발선에 선 말 5마리 (제자리에서 들썩임)
+        const n = 5, top = 170, laneH = (H - top - 40) / n;
+        const gfx = this.add.graphics();
+        for (let i = 0; i < n; i++) {
+            gfx.fillStyle(i % 2 === 0 ? 0x3c7828 : 0x326420, 1).fillRect(0, top + i * laneH, W, laneH);
         }
-
-        // 모드 선택 라벨 (닉네임 입력 아래, 버튼 위에 배치)
-        this.add.text(cx, this._modeLabelY, T.modeLabel, {
-            fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#b0b0dd', fontStyle: 'bold',
-            shadow: textShadow,
-        }).setOrigin(0.5);
-
-        // 모드 토글 버튼 생성 (닉네임 입력·라벨 아래에 고정 배치)
-        // 기본은 꼴찌 벌칙 뽑기. 내기 용도가 대부분이라 "누가 쏘냐"가 먼저다
-        this.gameMode = this.registry.get('gameMode') || 'loser';
-        this._createModeButtons();
-
-        // 시작 버튼 (모드 버튼 아래에 배치)
-        const startBg  = this.add.graphics();
-        const SBY = this._startBtnY;
-        const SBX = cx - 132, SBW = 264, SBH = 50;
-        const drawStartBtn = (c) => {
-            startBg.clear();
-            startBg.fillStyle(c, 1);
-            startBg.fillRoundedRect(SBX, SBY, SBW, SBH, 12);
-        };
-        drawStartBtn(0xFFD700);
-        this.add.text(cx, SBY + SBH / 2, T.startBtn, {
-            fontFamily: '"Orbitron",Arial',
-            fontSize: '23px',
-            color: '#ffffff',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 4,
-            shadow: textShadow,
-        }).setOrigin(0.5);
-        this.add.rectangle(cx, SBY + SBH / 2, SBW, SBH)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerover',  () => drawStartBtn(0xFFA500))
-            .on('pointerout',   () => drawStartBtn(0xFFD700))
-            .on('pointerdown',  () => {
-                const ta    = document.getElementById('hrNamesInput');
-                const names = this._parseNames(ta ? ta.value : '');
-                if (names.length < 2)  return this._showMsg(T.msgMin);
-                if (names.length > 30) return this._showMsg(T.msgMax);
-                // 게임 시작 즉시 오버레이 숨기기 (씬 전환 전에 반드시 처리)
-                const ov = document.getElementById('hr-setup-overlay');
-                if (ov) ov.classList.remove('active');
-                this.registry.set('lastNames', names);
-                this.registry.set('gameMode', this.gameMode);
-                this.scene.start('GameScene', { names, mode: this.gameMode });
-            });
-
-        // 오류 메시지 (몇명입력됨 위쪽에 표시) + 가독성 그림자
-        this.msgText = this.add.text(cx, H - FOOT_H - 48, '', {
-            fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#FF6B6B',
-            shadow: textShadow,
-        }).setOrigin(0.5);
-
-        // 하단 바 (여백 확보)
-        this.add.graphics().fillStyle(0x1a1a3a, 0.55).fillRect(0, H - FOOT_H, W, FOOT_H);
-        this.add.text(cx, H - FOOT_H / 2, T.footerPromo, {
-            fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#ffffff',
-            shadow: textShadow,
-        }).setOrigin(0.5);
-
+        gfx.lineStyle(2.5, 0xffffff, 0.5).lineBetween(0, top, W, top).lineBetween(0, top + n * laneH, W, top + n * laneH);
+        gfx.fillStyle(0xffffff, 0.8).fillRect(W * 0.2, top, 4, n * laneH);
+        const colors = pickDistinctColorsForCount(n);
+        this._idlers = [];
+        for (let i = 0; i < n; i++) {
+            const y = top + i * laneH + laneH / 2;
+            const x = W * 0.2 - 40 - Phaser.Math.Between(0, 14);
+            this.add.circle(x, y, laneH * 0.36, colors[i], 0.3);
+            const t = this.add.text(x, y, '🏇', { fontSize: `${Math.floor(laneH * 0.7)}px` }).setOrigin(0.5);
+            this._idlers.push({ t, y, ph: Math.random() * Math.PI * 2 });
+        }
 
         // BGM: Phaser Sound Manager 사용 (모바일/iOS에서 볼륨 슬라이더 정상 동작)
         if (!this.game.bgmSound) {
-            this.game.bgmSound = this.sound.add(BGM_KEY, { loop: true });
+            try { this.game.bgmSound = this.sound.add(BGM_KEY, { loop: true }); } catch (e) { /* 무시 */ }
         }
-        let vol = this.registry.get('bgmVolume');
-        if (vol === undefined) {
-            const volEl = document.getElementById('volumeControl');
-            vol = volEl ? Number(volEl.value) / 100 : 0.3;
-            this.registry.set('bgmVolume', vol);
-        }
-        this.game.bgmSound.volume = vol;
-        // BGM/효과음 통합: 레지스트리 값에 맞춰 mute 동기화 (SetupScene 진입 시점에 한 번)
-        const bgmOn = this.registry.get('bgmOn') !== false; // undefined 또는 true이면 켜짐
+        const vol = this.registry.get('bgmVolume');
+        if (this.game.bgmSound) this.game.bgmSound.volume = vol === undefined ? 0.3 : vol;
+        const bgmOn = this.registry.get('bgmOn') !== false;
         this.sound.mute = !bgmOn;
-        if (bgmOn) { try { if (!this.game.bgmSound.isPlaying) this.game.bgmSound.play(); } catch (e) {} }
+        if (bgmOn && this.game.bgmSound) { try { if (!this.game.bgmSound.isPlaying) this.game.bgmSound.play(); } catch (e) { /* 무시 */ } }
 
-        // 전체화면 시 씬 내부 '닫기' 버튼 (모바일에서 HTML 버튼이 보이지 않을 때 대비)
-        this._createFullscreenExitButton();
+        if (window.hrUI) window.hrUI.showSetup();
     }
 
-    _createFullscreenExitButton() {
-        const camW = this.cameras.main.width;
-        const btnW = 140, btnH = 40;
-        const bx = camW - btnW / 2 - 16;
-        const by = 36;
-        const bg = this.add.graphics().setScrollFactor(0).setDepth(9999);
-        const drawBg = (c) => {
-            bg.clear();
-            bg.fillStyle(c, 0.95);
-            bg.fillRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
-            bg.lineStyle(2, 0xFFD700, 1);
-            bg.strokeRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
-        };
-        drawBg(0x1a1a3a);
-        const lbl = this.add.text(bx, by, T.fsExitLabel, {
-            fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#FFD700',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(10000);
-        const hit = this.add.rectangle(bx, by, btnW, btnH).setScrollFactor(0).setDepth(10001)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerover', () => drawBg(0x2a2a5a))
-            .on('pointerout', () => drawBg(0x1a1a3a))
-            .on('pointerdown', () => { if (this.scale.isFullscreen) this.scale.stopFullscreen(); });
-        this._fsExitContainer = [bg, lbl, hit];
-        this._fsExitContainer.forEach(o => o.setVisible(false));
-        this._onFsEnter = () => this._fsExitContainer.forEach(o => o.setVisible(true));
-        this._onFsLeave = () => this._fsExitContainer.forEach(o => o.setVisible(false));
-        this.scale.on('enterfullscreen', this._onFsEnter);
-        this.scale.on('leavefullscreen', this._onFsLeave);
-    }
-
-    _createModeButtons() {
-        const BW = 226, BH = 52, GAP = 18;
-        const cx = this.scale.width / 2;
-        const x1 = cx - BW - GAP / 2;
-        const x2 = cx + GAP / 2;
-        const modeLabelY = this._modeLabelY !== undefined ? this._modeLabelY : (52 + 28) + 228;
-        const BY = modeLabelY + 36;  // "게임 모드 선택" 라벨 바로 아래
-
-        this._modePos = { x1, x2, y: BY, w: BW, h: BH };
-        this.modeBtnGfx = this.add.graphics();
-
-        const lblShadow = { offsetX: 1, offsetY: 1, color: '#000000', blur: 4, fill: true };
-        // 왼쪽(x1)이 꼴찌 벌칙, 오른쪽(x2)이 1등 우승. 기본 선택이 꼴찌라 먼저 놓는다
-        const lblStyle = {
-            fontFamily: '"Pretendard",Arial',
-            fontSize: '18px',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3,
-            shadow: lblShadow,
-        };
-        this.modeLblLoser  = this.add.text(x1 + BW / 2, BY + BH / 2, '', lblStyle).setOrigin(0.5);
-        this.modeLblWinner = this.add.text(x2 + BW / 2, BY + BH / 2, '', lblStyle).setOrigin(0.5);
-        // 버튼 아래 한 줄: 지금 뭘 고른 상태인지 말로 한 번 더
-        this.modeHint = this.add.text(cx, BY + BH + 24, '', {
-            fontFamily: '"Pretendard",Arial',
-            fontSize: '14px',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3,
-            shadow: lblShadow,
-        }).setOrigin(0.5);
-
-        this.add.rectangle(x1 + BW / 2, BY + BH / 2, BW, BH)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => { this.gameMode = 'loser';  this._refreshModeButtons(); });
-        this.add.rectangle(x2 + BW / 2, BY + BH / 2, BW, BH)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => { this.gameMode = 'winner'; this._refreshModeButtons(); });
-
-        this._refreshModeButtons();
-    }
-
-    _refreshModeButtons() {
-        const { x1, x2, y, w, h } = this._modePos;
-        const isLoser = this.gameMode !== 'winner';
-        const L = T;
-        const g = this.modeBtnGfx;
-        g.clear();
-
-        // 모드 선택 영역 배경 (버튼이 잘 보이도록)
-        const pad = 14;
-        g.fillStyle(0x0f0f28, 0.92);
-        g.fillRoundedRect(x1 - pad, y - pad, (x2 - x1) + w + pad * 2, h + pad * 2, 16);
-        g.lineStyle(1.5, 0x4a4a88, 0.9);
-        g.strokeRoundedRect(x1 - pad, y - pad, (x2 - x1) + w + pad * 2, h + pad * 2, 16);
-
-        // 선택된 쪽: 진한 색 + 바깥 글로우 링 두 겹 + 흰 테두리. 비선택: 어둡고 흐리게.
-        // 예전엔 둘 다 색이 진해서 뭐가 눌린 건지 한눈에 안 들어왔다.
-        const drawBtn = (x, selected, colFill, colGlow, colDim, colDimLine) => {
-            if (selected) {
-                g.lineStyle(10, colGlow, 0.18); g.strokeRoundedRect(x - 5, y - 5, w + 10, h + 10, 16);
-                g.lineStyle(5,  colGlow, 0.35); g.strokeRoundedRect(x - 2, y - 2, w + 4,  h + 4,  14);
-                g.fillStyle(colFill, 1);        g.fillRoundedRect(x, y, w, h, 12);
-                g.lineStyle(3, 0xffffff, 0.95); g.strokeRoundedRect(x, y, w, h, 12);
-            } else {
-                g.fillStyle(colDim, 0.6);       g.fillRoundedRect(x, y, w, h, 12);
-                g.lineStyle(1.5, colDimLine, 0.7); g.strokeRoundedRect(x, y, w, h, 12);
-            }
-        };
-        drawBtn(x1,  isLoser, 0xE53935, 0xFF6B6B, 0x352828, 0xaa5555);   // 꼴찌 벌칙 (빨강)
-        drawBtn(x2, !isLoser, 0xE0A800, 0xFFD700, 0x2a2a1a, 0xaaa055);   // 1등 우승 (금색)
-
-        // 선택된 쪽은 ✓ 를 붙이고 흰색, 비선택은 흐린 글자
-        this.modeLblLoser.setText((isLoser ? '✓ ' : '') + L.modeLoser).setColor(isLoser ? '#ffffff' : '#b09090').setAlpha(isLoser ? 1 : 0.75);
-        this.modeLblWinner.setText((!isLoser ? '✓ ' : '') + L.modeWinner).setColor(!isLoser ? '#ffffff' : '#b0a880').setAlpha(!isLoser ? 1 : 0.75);
-        this.modeHint.setText(isLoser ? L.modeHintLoser : L.modeHintWinner).setColor(isLoser ? '#FF8A80' : '#FFE082');
-    }
-
-    _parseNames(text) {
-        if (!text || typeof text !== 'string') return [];
-        return text
-            .replace(/\r\n/g, '\n')
-            .replace(/\r/g, '\n')
-            .split(/[\n,]+/)
-            .map(n => n.trim())
-            .filter(n => n.length > 0);
-    }
-    _updateCount(val) {
-        const n = this._parseNames(val).length;
-        const col = (n > 0 && n < 2) || n > 30 ? '#FF4444' : n >= 2 ? '#00FF88' : '#8888aa';
-        const sfx = (n > 0 && n < 2) ? T.countMin : n > 30 ? T.countMax : n >= 2 ? T.countOk : '';
-        this.countText.setText(fmt(T.count, n) + (sfx ? ' ' + sfx : '')).setColor(col);
-    }
-    _showMsg(msg) {
-        // 기존 하단 빨간 안내 문구는 PC에서도 계속 사용
-        this.msgText.setText(msg).setColor('#FF6B6B');
-        this.time.delayedCall(3000, () => this.msgText.setText(''));
-
-        // 모바일·PC 공통: 화면 중앙에 짧게 뜨는 모달 형태 경고
-        if (this._errModal && this._errModal.active) {
-            this._errModal.destroy();
-            this._errModal = null;
+    update(time) {
+        if (!this._idlers) return;
+        for (const o of this._idlers) {
+            const g = time * 0.006 + o.ph;
+            o.t.y = o.y + Math.sin(g) * 3;
+            o.t.rotation = Math.sin(g + Math.PI / 2) * 0.05;
         }
-
-        const W = this.scale.width;
-        const H = this.scale.height;
-        const modal = this.add.container(0, 0);
-
-        const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.65);
-        dim.setInteractive({ useHandCursor: true });
-
-        const panelW = Math.min(520, W - 60);
-        const panelH = 170;
-        const panel = this.add.rectangle(W / 2, H / 2, panelW, panelH, 0x1a0b2a, 0.96);
-        panel.setStrokeStyle(2, 0xFF6666, 1);
-
-        const textStyle = {
-            fontFamily: '"Pretendard",Arial',
-            fontSize: '22px',
-            color: '#ff8888',
-            align: 'center',
-            wordWrap: { width: panelW - 40, useAdvancedWrap: true }
-        };
-        const label = this.add.text(W / 2, H / 2 - 18, msg, textStyle).setOrigin(0.5);
-
-        const btnW = 120;
-        const btnH = 40;
-        const btnY = H / 2 + panelH / 2 - 32;
-        const btnBg = this.add.rectangle(W / 2, btnY, btnW, btnH, 0xFF6666, 1);
-        btnBg.setStrokeStyle(1.5, 0xffffff, 0.9);
-        const btnLabel = this.add.text(W / 2, btnY, '확인', {
-            fontFamily: '"Pretendard",Arial',
-            fontSize: '18px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-        btnBg.setInteractive({ useHandCursor: true });
-
-        const closeModal = () => {
-            if (modal && modal.active) {
-                modal.destroy();
-                this._errModal = null;
-            }
-        };
-        dim.on('pointerdown', closeModal);
-        btnBg.on('pointerdown', closeModal);
-
-        modal.add([dim, panel, label, btnBg, btnLabel]);
-        modal.setDepth(100);
-        this._errModal = modal;
-
-        // 자동으로도 사라지도록 3초 타이머
-        this.time.delayedCall(3000, closeModal);
-    }
-
-    shutdown() {
-        // events.once('shutdown') 훅이 주 경로, 여기는 안전망
-        const overlay = document.getElementById('hr-setup-overlay');
-        if (overlay) overlay.classList.remove('active');
-        if (this._onFsEnter) this.scale.off('enterfullscreen', this._onFsEnter);
-        if (this._onFsLeave) this.scale.off('leavefullscreen', this._onFsLeave);
     }
 }
 
@@ -548,13 +293,13 @@ class GameScene extends Phaser.Scene {
         this.sound.stopAll();
         this.tweens.killAll();
         if (this.time && typeof this.time.removeAllEvents === 'function') this.time.removeAllEvents();
-        if (this._onFsEnter) this.scale.off('enterfullscreen', this._onFsEnter);
-        if (this._onFsLeave) this.scale.off('leavefullscreen', this._onFsLeave);
     }
 
     create() {
-        const W = this.scale.width, H = this.scale.height;
-        const cx = W / 2, cy = H / 2;
+        hrEnsureLayout(this);
+        hrSetupCamera(this);
+        const { W, H, fs } = HR_L;
+        if (window.hrUI) window.hrUI.hidePanels();
 
         // 모바일 포함 효과음 잘 들리도록 마스터 볼륨 확보
         this.sound.volume = 1;
@@ -570,15 +315,13 @@ class GameScene extends Phaser.Scene {
         // 레인이 좁으면(대략 19명 이상) 이름표를 말 위가 아니라 말 뒤(왼쪽)에 붙인다.
         // 위에 두면 윗 레인 말과 겹치고, 그걸 피하려고 글자를 7px 까지 줄이면 읽을 수가 없었다.
         const NAME_BESIDE = LANE_H < 34;
+        // 폰(세로 배치)은 화면이 작게 줄어드니 글자를 fs 배만큼 키운다
         const FONT_SZ    = this.numHorses <= 10
-            ? Phaser.Math.Clamp(Math.floor(LANE_H * 0.52), 12, 22)
+            ? Phaser.Math.Clamp(Math.floor(LANE_H * 0.52), 12, Math.round(22 * fs))
             : NAME_BESIDE
-                ? Phaser.Math.Clamp(Math.floor(LANE_H * 0.6), 10, 14)
-                : Phaser.Math.Clamp(Math.floor(LANE_H * 0.42), 10, 14);
+                ? Phaser.Math.Clamp(Math.floor(LANE_H * 0.6), 10, Math.round(14 * fs))
+                : Phaser.Math.Clamp(Math.floor(LANE_H * 0.42), 10, Math.round(14 * fs));
         this.layout = { TRACK_TOP, TRACK_H, LANE_H, HORSE_FONT, FONT_SZ, NAME_BESIDE };
-
-        // ── 카메라 경계 ──────────────────────────────────────
-        this.cameras.main.setBounds(0, 0, TRACK_LEN + 600, HR_H);
 
         // ── Parallax 배경 레이어 (scrollFactor=0, 매 프레임 재드로우) ──
         this.skyGfx  = this.add.graphics().setScrollFactor(0).setDepth(0);
@@ -592,7 +335,7 @@ class GameScene extends Phaser.Scene {
         for (let i = 0; i < 80; i++) {
             this.skyGfx.fillStyle(0xffffff, Math.random() * 0.5 + 0.2);
             this.skyGfx.fillCircle(
-                Phaser.Math.Between(0, HR_W),
+                Phaser.Math.Between(0, W),
                 Phaser.Math.Between(0, Math.floor(TRACK_TOP * 0.85)),
                 Math.random() + 0.4
             );
@@ -666,14 +409,15 @@ class GameScene extends Phaser.Scene {
 
             this.nameLabels.push(
                 this.add.text(0, 0, this.names[i], {
-                    fontFamily: '"Pretendard",Arial,sans-serif',
+                    fontFamily: HR_FONT,
                     fontSize: `${FONT_SZ}px`,
+                    fontStyle: 'bold',
                     color: '#ffffff',
-                    stroke: '#000000', strokeThickness: 2,
+                    stroke: '#000000', strokeThickness: 3,
                 }).setOrigin(0.5).setDepth(11)
             );
 
-            const iconSz = Phaser.Math.Clamp(FONT_SZ + 6, 12, 24);
+            const iconSz = Phaser.Math.Clamp(FONT_SZ + 6, 12, Math.round(24 * fs));
             this.statusIcons.push(
                 this.add.image(0, 0, 'hr_ic_boost').setDisplaySize(iconSz, iconSz).setDepth(12).setVisible(false)
             );
@@ -681,20 +425,23 @@ class GameScene extends Phaser.Scene {
 
         // ── 순위표 (우측 상단, 상대 좌표 사용) ─────────────────
         this._createLeaderboard();
+        // 카운트다운 동안에도 내 말을 찾을 수 있게 이름표·순위표를 미리 그림
+        for (const h of this.horses) this._drawHorseVisuals(h);
+        this._updateLeaderboard(this.horses);
 
         // ── 모드 표시 라벨 ───────────────────────────────────
         const modeLabel = this.mode === 'winner' ? T.modeWinner : T.modeLoser;
         const modeColor = this.mode === 'winner' ? '#FFD700' : '#FF6666';
-        this.add.text(16, 8, modeLabel, {
-            fontFamily: '"Pretendard",Arial', fontSize: '12px',
-            color: modeColor, stroke: '#000', strokeThickness: 2,
+        this.add.text(12, 6, modeLabel, {
+            fontFamily: HR_FONT, fontStyle: 'bold', fontSize: `${Math.round(16 * fs)}px`,
+            color: modeColor, stroke: '#000', strokeThickness: 4,
         }).setScrollFactor(0).setDepth(52);
 
         // ── 미니맵 (하단, 안전 여백) ─────────────────────────
         this._createMinimap();
 
         // ── 마지막 스퍼트 연출용 오버레이 (숨김) ─────────────
-        const cw = this.cameras.main.width, ch = this.cameras.main.height;
+        const cw = W, ch = H;
         this.finalLapOverlay = this.add.rectangle(cw / 2, ch / 2, cw + 200, ch + 200, 0xFF0000, 0)
             .setScrollFactor(0).setDepth(88).setVisible(false);
 
@@ -702,49 +449,17 @@ class GameScene extends Phaser.Scene {
         this.slowMoOverlay = this.add.rectangle(cw / 2, ch / 2, cw + 200, ch + 200, 0x000033, 0)
             .setScrollFactor(0).setDepth(89).setVisible(false);
         this.slowMoText = this.add.text(cw / 2, ch * 0.28, '🐢  S · L · O · W', {
-            fontFamily: '"Orbitron","Pretendard",Arial',
+            fontFamily: HR_FONT,
             fontSize: '40px',
             color: '#00EEFF',
             stroke: '#003355',
             strokeThickness: 7,
             shadow: { offsetX: 0, offsetY: 0, color: '#0088FF', blur: 22, fill: true },
         }).setOrigin(0.5).setScrollFactor(0).setDepth(96).setAlpha(0).setVisible(false);
-
-        // 전체화면 시 씬 내부 '닫기' 버튼 (모바일에서 HTML 버튼이 보이지 않을 때 대비)
-        this._createFullscreenExitButton();
+        hrFitText(this.slowMoText, W - 40);
 
         // ── 카운트다운 ──────────────────────────────────────
         this.time.delayedCall(400, () => this._showCountdown());
-    }
-
-    _createFullscreenExitButton() {
-        const camW = this.cameras.main.width;
-        const btnW = 140, btnH = 40;
-        const bx = camW - btnW / 2 - 16;
-        const by = 36;
-        const bg = this.add.graphics().setScrollFactor(0).setDepth(9999);
-        const drawBg = (c) => {
-            bg.clear();
-            bg.fillStyle(c, 0.95);
-            bg.fillRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
-            bg.lineStyle(2, 0xFFD700, 1);
-            bg.strokeRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, 8);
-        };
-        drawBg(0x1a1a3a);
-        const lbl = this.add.text(bx, by, T.fsExitLabel, {
-            fontFamily: '"Pretendard",Arial', fontSize: '13px', color: '#FFD700',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(10000);
-        const hit = this.add.rectangle(bx, by, btnW, btnH).setScrollFactor(0).setDepth(10001)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerover', () => drawBg(0x2a2a5a))
-            .on('pointerout', () => drawBg(0x1a1a3a))
-            .on('pointerdown', () => { if (this.scale.isFullscreen) this.scale.stopFullscreen(); });
-        this._fsExitContainer = [bg, lbl, hit];
-        this._fsExitContainer.forEach(o => o.setVisible(false));
-        this._onFsEnter = () => this._fsExitContainer.forEach(o => o.setVisible(true));
-        this._onFsLeave = () => this._fsExitContainer.forEach(o => o.setVisible(false));
-        this.scale.on('enterfullscreen', this._onFsEnter);
-        this.scale.on('leavefullscreen', this._onFsLeave);
     }
 
     // ── Track ─────────────────────────────────────────────────
@@ -794,7 +509,7 @@ class GameScene extends Phaser.Scene {
         gfx.fillStyle(0x111111, 0.88);
         gfx.fillRoundedRect(FINISH_X - 24, TRACK_TOP - 56, 118, 28, 6);
         this.add.text(FINISH_X + 27, TRACK_TOP - 42, '🏁 FINISH', {
-            fontFamily: '"Orbitron",Arial', fontSize: '13px',
+            fontFamily: HR_FONT, fontSize: '13px',
             color: '#FFD700', stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5).setDepth(7);
     }
@@ -826,55 +541,52 @@ class GameScene extends Phaser.Scene {
     }
 
     // ── Leaderboard: 참가자 수에 맞춰 전원 표시, 짤림 방지 ─
+    // 행 높이는 글자에 맞추고(빈 칸으로 트랙 가리지 않게), 넘치면 미니맵 위까지만
     _createLeaderboard() {
-        const camW = this.cameras.main.width;
-        const camH = this.cameras.main.height;
-        const LBW  = 178;
-        const LBX  = camW - LBW - 20;
-        const LBY  = 14;  // 상단 여백 (1~4위 짤림 방지)
-        const HEADER_H = 28;
+        const { W: camW, H: camH, lbW: LBW, fs } = HR_L;
+        const n    = this.numHorses;
+        const LBX  = camW - LBW - 10;
+        const LBY  = 12;
+        const titleSz  = Math.round(13 * fs);
+        const HEADER_H = titleSz + 14;
 
-        // 미니맵 위까지 여유 공간 확보 (하단 30위 짤림 방지)
-        const mmTop = camH - MM_H - 8;
-        const LBH   = mmTop - LBY - 16;
-        const ROW_H = Math.max(12, Math.floor((LBH - HEADER_H) / this.numHorses));
+        const mmTop  = camH - MM_H - 8;
+        const maxH   = mmTop - LBY - 12;
+        const rowFit = Math.max(12, Math.floor((maxH - HEADER_H - 6) / n));
+        const lbFontSz = n <= 10
+            ? Phaser.Math.Clamp(rowFit - 4, 14, Math.round(17 * fs))
+            : Phaser.Math.Clamp(rowFit - 5, 9, Math.round(13 * fs));
+        const ROW_H = Math.min(rowFit, Math.round(lbFontSz * 1.5));
+        const LBH   = HEADER_H + ROW_H * n + 6;
 
         const bg = this.add.graphics().setScrollFactor(0).setDepth(50);
-        bg.fillStyle(0x05050e, 0.30);
-        bg.fillRoundedRect(LBX, LBY, LBW, LBH, 10);
-        bg.lineStyle(1.5, 0xFFD700, 0.65);
-        bg.strokeRoundedRect(LBX, LBY, LBW, LBH, 10);
         this.lbBg = bg;
+        this.lbX = LBX; this.lbY = LBY; this.lbW = LBW; this.lbH = LBH;
+        this._redrawLeaderboardBg(0.42);
 
-        this.lbTitle = this.add.text(LBX + LBW / 2, LBY + 12, T.leaderboard, {
-            fontSize: '11px', fontFamily: '"Pretendard",Arial',
+        this.lbTitle = this.add.text(LBX + LBW / 2, LBY + HEADER_H / 2, T.leaderboard, {
+            fontSize: `${titleSz}px`, fontFamily: HR_FONT,
             color: '#FFD700', fontStyle: 'bold',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
+        hrFitText(this.lbTitle, LBW - 12);
 
         this.lbTexts = [];
-        const lbFontSz = this.numHorses <= 10
-            ? Phaser.Math.Clamp(ROW_H - 2, 14, 18)
-            : Math.max(8, Math.min(11, ROW_H - 3));
-        let y0 = LBY + HEADER_H;
-        for (let i = 0; i < this.numHorses; i++) {
-            this.lbTexts.push(
-                this.add.text(LBX + 10, y0 + i * ROW_H + ROW_H / 2, `${fmt(T.rank, i + 1)}  -`, {
-                    fontSize: `${lbFontSz}px`, fontFamily: '"Pretendard",Arial', color: '#cccccc',
-                }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(51)
-            );
+        const y0 = LBY + HEADER_H;
+        for (let i = 0; i < n; i++) {
+            const t = this.add.text(LBX + 8, y0 + i * ROW_H + ROW_H / 2, `${fmt(T.rank, i + 1)}  -`, {
+                fontSize: `${lbFontSz}px`, fontFamily: HR_FONT, fontStyle: 'bold', color: '#cccccc',
+                stroke: '#000000', strokeThickness: 2,
+            }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(51);
+            t._last = '';
+            this.lbTexts.push(t);
         }
         this.lbFontSz = lbFontSz;
-
         this.lbRowH = ROW_H;
-        this.lbX = LBX;
-        this.lbY = LBY;
-        this.lbW = LBW;
-        this.lbH = LBH;
     }
 
     // ── Minimap (하단, 상대 좌표) ─────────────────────────────
     _createMinimap() {
-        const camW = this.cameras.main.width, camH = this.cameras.main.height;
+        const { W: camW, H: camH } = HR_L;
         const MMX = 2, MMY = camH - MM_H - 5, MMW = camW - 4;
 
         const bg = this.add.graphics().setScrollFactor(0).setDepth(50);
@@ -901,9 +613,9 @@ class GameScene extends Phaser.Scene {
 
     // ── Countdown ─────────────────────────────────────────────
     _showCountdown() {
-        const cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
+        const cx = HR_L.W / 2, cy = HR_L.H / 2;
         const cd = this.add.text(cx, cy, '', {
-            fontFamily: '"Orbitron",Arial', fontSize: '110px',
+            fontFamily: HR_FONT, fontSize: '110px',
             color: '#FFD700', stroke: '#000', strokeThickness: 8,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
@@ -930,7 +642,7 @@ class GameScene extends Phaser.Scene {
     // ── Parallax (매 프레임 scrollFactor=0 레이어 재드로우) ───
     _updateParallax(camX) {
         const baseY = this.layout.TRACK_TOP - 2;
-        const viewW = this.cameras.main.width;
+        const viewW = HR_L.W;
 
         this.mtGfx.clear();
         this.mtGfx.fillStyle(0x1c2845, 1);
@@ -1019,7 +731,7 @@ class GameScene extends Phaser.Scene {
         }
 
         // 카메라
-        this._updateCamera(sortedByX);
+        this._updateCamera(sortedByX, dt);
 
         // UI (순위는 완주 순·현재 위치 반영)
         this._updateLeaderboard(this._getRankDisplayOrder());
@@ -1027,42 +739,46 @@ class GameScene extends Phaser.Scene {
     }
 
     // ── Camera Follow: 선두 추적, 화면 우측(0.65)에 두어 후발 추격전이 잘 보이게 ─
-    _updateCamera(sortedByX) {
+    _updateCamera(sortedByX, dt) {
         const targetHorse = sortedByX[0];
-        const viewW       = this.cameras.main.width;
-        const offset      = 0.65;
+        const viewW       = HR_L.W;
+        const offset      = HR_L.camOff;
         const targetX     = Phaser.Math.Clamp(targetHorse.x - viewW * offset, 0, TRACK_LEN - viewW + 300);
-        this.cameras.main.scrollX = Phaser.Math.Linear(this.cameras.main.scrollX, targetX, 0.07);
+        // 프레임이 느린 폰에서도 같은 속도로 따라가게 dt 반영
+        this.cameras.main.scrollX = Phaser.Math.Linear(this.cameras.main.scrollX, targetX, 1 - Math.pow(0.93, dt || 1));
     }
 
     _triggerFinalLap(time) {
         this.finalLapTriggered = true;
         this.finalLapUntil    = time + 3000;
 
-        const cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
+        const cx = HR_L.W / 2, cy = HR_L.H / 2;
 
         const popup = this.add.text(cx, cy, T.finalSpurt, {
-            fontFamily: '"Orbitron","Pretendard",Arial',
+            fontFamily: HR_FONT,
             fontSize: '52px',
             color: '#FFDD00',
             stroke: '#CC0000',
             strokeThickness: 8,
             shadow: { offsetX: 0, offsetY: 0, color: '#FF4400', blur: 20, fill: true },
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(95).setAlpha(0).setScale(0.5);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(95).setAlpha(0);
+        // 폰 폭에 맞춰 줄이고, 그 크기를 기준으로 튀어나오게
+        const k = Math.min(1, (HR_L.W - 60) / (popup.width * 1.35));
+        popup.setScale(0.5 * k);
 
         this.tweens.add({
             targets: popup,
             alpha: 1,
-            scaleX: 1.15,
-            scaleY: 1.15,
+            scaleX: 1.15 * k,
+            scaleY: 1.15 * k,
             duration: 280,
             ease: 'Back.easeOut',
         });
         this.tweens.add({
             targets: popup,
             alpha: 0,
-            scaleX: 1.35,
-            scaleY: 1.35,
+            scaleX: 1.35 * k,
+            scaleY: 1.35 * k,
             duration: 600,
             delay: 1400,
             ease: 'Power2',
@@ -1218,7 +934,7 @@ class GameScene extends Phaser.Scene {
                     horse.obstacleDecisions.set(obs.id, 'dodge');
                     horse.isDodging = true;
                     const cam = this.cameras.main;
-                    const inViewForJump = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + cam.width);
+                    const inViewForJump = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + HR_L.W);
                     if (inViewForJump) {
                         this.sound.play(SFX_JUMP);
                     }
@@ -1245,7 +961,7 @@ class GameScene extends Phaser.Scene {
     _applyObstacleEffect(horse, obs) {
         // 카메라 시점에 있을 때만 효과음 재생 (사람이 보는 화면 안에서만)
         const cam = this.cameras.main;
-        const inView = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + cam.width);
+        const inView = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + HR_L.W);
         if (inView) {
             if (obs.type === 'rock')   this.sound.play(SFX_ROCK);
             if (obs.type === 'puddle') this.sound.play(SFX_PUDDLE);
@@ -1283,8 +999,8 @@ class GameScene extends Phaser.Scene {
 
     _spawnPopupText(x, y, text, color) {
         const t = this.add.text(x, y - 20, text, {
-            fontFamily: '"Pretendard",Arial', fontSize: '17px',
-            color, stroke: '#000', strokeThickness: 3,
+            fontFamily: HR_FONT, fontStyle: 'bold', fontSize: `${Math.round(17 * HR_L.fs)}px`,
+            color, stroke: '#000', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(15);
         this.tweens.add({
             targets: t, y: y - 72, alpha: 0, duration: 1200, ease: 'Power1',
@@ -1328,7 +1044,6 @@ class GameScene extends Phaser.Scene {
 
         // 이름 라벨 배경: 텍스트 실제 width + 좌우 12px 패딩 (width 미갱신 시 폴백)
         const nm = String(horse.name || '').trim() || '?';
-        nl.setFontSize(`${FONT_SZ}px`);
         nl.setText(nm);
         const PADDING = 14;
         const w = nl.width || 0;
@@ -1362,7 +1077,8 @@ class GameScene extends Phaser.Scene {
 
         nl.setPosition(lx, ly - lblH / 2).setOrigin(0.5);
         const nameColor = '#' + ((horse.color & 0xFFFFFF).toString(16).padStart(6, '0')).toUpperCase();
-        nl.setColor(horse.isBoosting ? '#FFD700' : nameColor);
+        const nc = horse.isBoosting ? '#FFD700' : nameColor;
+        if (nl._col !== nc) { nl._col = nc; nl.setColor(nc); }
 
         // 부스터 발광 링 (말 고유 색상 톤)
         if (horse.isBoosting) {
@@ -1454,7 +1170,7 @@ class GameScene extends Phaser.Scene {
     // ── Race Finish ───────────────────────────────────────────
     _onHorseFinish(horse) {
         const cam = this.cameras.main;
-        const inView = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + cam.width);
+        const inView = (horse.x >= cam.scrollX && horse.x <= cam.scrollX + HR_L.W);
         if (inView) {
             this.sound.play(SFX_FINISH);
         }
@@ -1471,7 +1187,7 @@ class GameScene extends Phaser.Scene {
 
     _onRaceFinish() {
         this.raceFinished = true;
-        const viewW = this.cameras.main.width;
+        const viewW = HR_L.W;
 
         // 슬로우모션 UI 즉시 숨김
         if (this.slowMoOverlay) this.slowMoOverlay.setVisible(false);
@@ -1479,6 +1195,7 @@ class GameScene extends Phaser.Scene {
 
         // 나머지 말들 슬로우모션
         for (const h of this.horses) { if (!h.finished) h.baseSpeed *= 0.22; }
+        this._updateLeaderboard(this._getRankDisplayOrder());
 
         const targetX = Phaser.Math.Clamp(this.winner.x - viewW / 2, 0, TRACK_LEN - viewW + 300);
         this.tweens.add({
@@ -1486,25 +1203,26 @@ class GameScene extends Phaser.Scene {
             onComplete: () => {
                 this._launchConfetti();
                 this.time.delayedCall(350, () => {
-                    this.sound.play(SFX_FANFARE);  // 우승/꼴찌 패널 뜰 때 fanfare (finish와 겹치지 않게)
-                    this._showResultPanel(this.winner);
+                    this.sound.play(SFX_FANFARE);  // 결과 카드 뜰 때 fanfare (finish와 겹치지 않게)
+                    this._showResult(this.winner);
                 });
             },
         });
     }
 
     _launchConfetti() {
-        const viewW = this.cameras.main.width, viewH = this.cameras.main.height;
+        const viewW = HR_L.W, viewH = HR_L.H;
 
         // 꼴찌 모드는 붉은 계열 색상으로 장난스러운 연출
         const cols = this.mode === 'loser'
             ? [0xFF4444, 0xFF7777, 0xCC0000, 0xFF2222, 0xFFAAAA, 0x880000, 0xFF6666]
             : [0xFF6B6B, 0x4ECDC4, 0xFFD700, 0x45B7D1, 0xFF8C00, 0x7B68EE, 0x90EE90];
+        const per = Math.round(28 * viewW / 1000) + 6;
 
         for (let burst = 0; burst < 7; burst++) {
             this.time.delayedCall(burst * 260, () => {
-                for (let i = 0; i < 28; i++) {
-                    const cx  = Phaser.Math.Between(40, viewW - 40);
+                for (let i = 0; i < per; i++) {
+                    const cx  = Phaser.Math.Between(20, viewW - 20);
                     const col = cols[Math.floor(Math.random() * cols.length)];
                     const p   = this.add.rectangle(
                         cx, -18, Phaser.Math.Between(6, 14), Phaser.Math.Between(4, 9), col
@@ -1522,79 +1240,22 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    _showResultPanel(subject) {
-        const cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
-        const viewW = this.cameras.main.width, viewH = this.cameras.main.height;
-        const pw = 590, ph = 330;
-        const isWinner   = this.mode === 'winner';
-        const accentHex  = isWinner ? 0xFFD700 : 0xFF4444;
-        const accentStr  = isWinner ? '#FFD700' : '#FF4444';
+    // 결과는 HTML 카드(#hr-result). 캔버스는 어둡게만
+    _showResult(subject) {
+        const dim = this.add.rectangle(HR_L.W / 2, HR_L.H / 2, HR_L.W, HR_L.H, 0x000000, 0.55)
+            .setScrollFactor(0).setDepth(150).setAlpha(0);
+        this.tweens.add({ targets: dim, alpha: 1, duration: 300 });
 
-        this._elevateLeaderboardForResult();
-        this._updateLeaderboard(this._getRankDisplayOrder());
-
-        // 어두운 오버레이
-        this.add.rectangle(cx, cy, viewW, viewH, 0x000000, 0.70)
-            .setScrollFactor(0).setDepth(150);
-
-        // 패널 배경
-        const panBg = this.add.graphics().setScrollFactor(0).setDepth(151);
-        panBg.fillStyle(0x0a0a26, 1);
-        panBg.fillRoundedRect(cx - pw / 2, cy - ph / 2, pw, ph, 22);
-        panBg.lineStyle(2.5, accentHex, 1);
-        panBg.strokeRoundedRect(cx - pw / 2, cy - ph / 2, pw, ph, 22);
-
-        // 아이콘 팝업
-        const icon = this.add.text(cx, cy - 122, isWinner ? '🏆' : '💣', { fontSize: '66px' })
-            .setOrigin(0.5).setScrollFactor(0).setDepth(152).setScale(0);
-        this.tweens.add({ targets: icon, scaleX: 1, scaleY: 1, duration: 520, ease: 'Back.easeOut' });
-
-        // 결과 라벨
-        const lbl = isWinner ? T.resultWin : T.resultLose;
-        const mainLbl = this.add.text(cx, cy - 44, lbl, {
-            fontFamily: '"Orbitron",Arial', fontSize: '31px',
-            color: accentStr, stroke: '#000', strokeThickness: 5,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(152).setScale(0);
-        this.tweens.add({ targets: mainLbl, scaleX: 1, scaleY: 1, delay: 220, duration: 500, ease: 'Back.easeOut' });
-
-        // 참가자 이름 페이드인
-        const fsz   = Math.min(50, Math.max(24, Math.floor(360 / Math.max(1, subject.name.length))));
-        const nameT = this.add.text(cx, cy + 20, subject.name, {
-            fontFamily: '"Orbitron","Pretendard",Arial',
-            fontSize: `${fsz}px`, color: '#ffffff',
-            stroke: accentStr, strokeThickness: 4,
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(152).setAlpha(0);
-        this.tweens.add({ targets: nameT, alpha: 1, y: cy + 14, delay: 420, duration: 650, ease: 'Power2' });
-
-        // 구분선
-        this.add.graphics().setScrollFactor(0).setDepth(152)
-            .lineStyle(1, accentHex, 0.35)
-            .lineBetween(cx - 215, cy + 60, cx + 215, cy + 60);
-
-        // 버튼
-        const btnY = cy + 112;
-        this._makeBtn(cx - 148, btnY, T.btnRestart, 0x4ECDC4, 0x30a898, () => {
-            this.scene.restart({ names: this.names, mode: this.mode });
-        });
-        this._makeBtn(cx + 118, btnY, T.btnNewSetup, 0xFFD700, 0xFFA500, () => {
-            this.scene.start('SetupScene');
-        });
-    }
-
-    _makeBtn(x, y, label, colNormal, colHover, onClick) {
-        const bw = 210, bh = 46;
-        const bg = this.add.graphics().setScrollFactor(0).setDepth(153);
-        const draw = (c) => { bg.clear(); bg.fillStyle(c, 1); bg.fillRoundedRect(x - bw / 2, y - bh / 2, bw, bh, 10); };
-        draw(colNormal);
-        this.add.text(x, y, label, {
-            fontFamily: '"Pretendard",Arial', fontSize: '14px', color: '#111111', fontStyle: 'bold',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(154);
-        this.add.rectangle(x, y, bw, bh)
-            .setScrollFactor(0).setDepth(155)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerover',  () => draw(colHover))
-            .on('pointerout',   () => draw(colNormal))
-            .on('pointerdown',  onClick);
+        const hex = (c) => '#' + (c & 0xFFFFFF).toString(16).padStart(6, '0');
+        const ranking = this._getRankDisplayOrder().map((h, i) => ({
+            rank: i + 1, name: h.name, color: hex(h.color), emoji: h.emoji, finished: h.finished,
+        }));
+        const data = {
+            type: this.mode === 'winner' ? 'winner' : 'loser',
+            name: subject.name, color: hex(subject.color), emoji: subject.emoji,
+            ranking,
+        };
+        if (window.hrUI) window.hrUI.showResult(data);
     }
 
     // 완주자는 도착 순서, 주행 중은 x 기준 (결승선 동일 x에서도 순위가 맞음)
@@ -1617,24 +1278,12 @@ class GameScene extends Phaser.Scene {
         this.lbBg.strokeRoundedRect(x, y, w, h, 10);
     }
 
-    // 결과 패널·딤 위에 순위표가 보이도록 (컨페티 depth 200보다 위)
-    _elevateLeaderboardForResult() {
-        const d = 220;
-        if (this.lbBg) {
-            this.lbBg.setDepth(d);
-            this._redrawLeaderboardBg(0.82);
-        }
-        if (this.lbTitle) this.lbTitle.setDepth(d + 1);
-        if (this.lbTexts) {
-            for (const t of this.lbTexts) t.setDepth(d + 1);
-        }
-    }
-
     // ── UI Update: 참가자 전원 순위표 ───────────────────────────
     _updateLeaderboard(sortedByX) {
         const n = sortedByX.length;
 
-        const maxLen = this.numHorses <= 10 ? 8 : this.numHorses <= 20 ? 6 : 5;
+        const maxLen = HR_L.key === 'tall' ? 5 : this.numHorses <= 10 ? 8 : this.numHorses <= 20 ? 6 : 5;
+        const maxW = this.lbW - 14;
 
         for (let i = 0; i < n && i < this.lbTexts.length; i++) {
             const h   = sortedByX[i];
@@ -1643,7 +1292,13 @@ class GameScene extends Phaser.Scene {
             // 닉네임·아이콘 모두 말 고유 색상 유지 (아이템에 따라 색 바꾸지 않음)
             const horseColorCss = '#' + ((h.color & 0xFFFFFF).toString(16).padStart(6, '0')).toUpperCase();
             const col = h.finished ? '#FFD700' : horseColorCss;
-            this.lbTexts[i].setText(`${fmt(T.rank, i + 1)}  ${nm}${sfx}`).setColor(col);
+            // 글자 텍스처를 매 프레임 다시 그리지 않게 바뀔 때만
+            const t = this.lbTexts[i];
+            const str = `${fmt(T.rank, i + 1)}  ${nm}${sfx}`;
+            if (t._last === str + col) continue;
+            t._last = str + col;
+            t.setText(str).setColor(col).setScale(1);
+            hrFitText(t, maxW);
         }
     }
 
@@ -1657,423 +1312,232 @@ class GameScene extends Phaser.Scene {
 }
 
 // ============================================================
-// Phaser 게임 인스턴스
+// Phaser 게임 인스턴스 (입력 없음 – 조작은 HTML 버튼)
 // ============================================================
-const horseRaceConfig = {
+const horseRaceGame = new Phaser.Game({
     type:            Phaser.AUTO,
-    width:           HR_W,
-    height:          HR_H,
-    parent:          'game-container',
+    width:           Math.round(HR_L.W * HR_K),
+    height:          Math.round(HR_L.H * HR_K),
+    parent:          'hr-canvas',
     backgroundColor: '#060614',
-    scale: {
-        mode:       Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-    },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    input: { keyboard: false, mouse: false, touch: false, gamepad: false },
+    render: { antialias: true },
     scene: [PreloadScene, SetupScene, GameScene],
-};
-
-const horseRaceGame = new Phaser.Game(horseRaceConfig);
+});
 
 // ============================================================
-// 외부 UI (BGM 토글·볼륨은 Phaser Sound로 제어, 전체화면)
+// HTML UI (참가자 입력 · 결과 카드 · 소리 · 전체화면)
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-    const bgmToggle  = document.getElementById('bgmToggle');
-    const volumeCtrl = document.getElementById('volumeControl');
-    const fsToggle   = document.getElementById('fsToggle');
-    const fullscreenWrap = document.getElementById('horserace-fullscreen-wrap');
-    const mobileFsExitBar = document.getElementById('hr-mobile-fs-exit');
-    let hrMobileFsBlocked = false;
+(() => {
+    const $ = (id) => document.getElementById(id);
+    const game = horseRaceGame;
+    const stage = $('game-container');
+    const setupEl = $('hr-setup');
+    const resultEl = $('hr-result');
+    const namesEl = $('hrNamesInput');
+    const countEl = $('hrCount');
+    const msgEl = $('hrMsg');
+    const hintEl = $('hrModeHint');
+    const startBtn = $('hrStartBtn');
+    const modeBtns = Array.from(document.querySelectorAll('#hr-setup [data-mode]'));
+    // 기본은 꼴찌 벌칙 뽑기. 내기 용도가 대부분이라 "누가 쏘냐"가 먼저다
+    let mode = store.get('mode', 'loser') === 'winner' ? 'winner' : 'loser';
+    let lastNames = [];
+    let msgTimer = 0;
 
-    // HTML 쪽 글자(설명·버튼)는 서버가 messages*.properties 로 렌더한다. 여기서는 상태에 따라 바뀌는 버튼만 만진다.
-    if (fsToggle) {
-        fsToggle.textContent = T.domFsToggle;
-        fsToggle.setAttribute('title', T.domFsToggleTip);
+    const parseNames = (raw) => String(raw || '').split(/[\n\r,，、]+/).map((s) => s.trim()).filter(Boolean);
+
+    function updateCount() {
+        const n = parseNames(namesEl.value).length;
+        const ok = n >= 2 && n <= 30;
+        countEl.textContent = fmt(T.count, n) + ' ' + (n < 2 ? T.countMin : n > 30 ? T.countMax : T.countOk);
+        countEl.classList.toggle('ok', ok);
+        countEl.classList.toggle('bad', n > 30);
+        startBtn.classList.toggle('ready', ok);
     }
-    if (bgmToggle) bgmToggle.textContent = T.bgmOn;
-    // bgmOn 레지스트리 명시적 초기화 (미설정 시 true로 켜진 상태로 시작)
-    if (horseRaceGame.registry.get('bgmOn') === undefined) {
-        horseRaceGame.registry.set('bgmOn', true);
+    function setMode(m) {
+        mode = m;
+        modeBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
+        hintEl.textContent = m === 'winner' ? T.modeHintWinner : T.modeHintLoser;
+        hintEl.classList.toggle('is-winner', m === 'winner');
     }
-    // ─────────────────────────────────────────────────────────
-    const isMobileDevice = () => {
-        if (typeof navigator === 'undefined' || !navigator.userAgent) return false;
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
-    };
-    const _isMobile = isMobileDevice();
-    if (fullscreenWrap && _isMobile) {
-        fullscreenWrap.classList.add('hr-mobile-device');
-        // 모바일: 레이아웃 확정 후 입력 좌표계 동기화 (버튼 터치 히트 보정)
-        const syncMobileInput = () => {
-            if (horseRaceGame && horseRaceGame.scale) {
-                if (typeof horseRaceGame.scale.updateBounds === 'function') horseRaceGame.scale.updateBounds();
-                horseRaceGame.scale.refresh();
-            }
-        };
-        setTimeout(syncMobileInput, 100);
-        setTimeout(syncMobileInput, 400);
+    function showMsg(text) {
+        msgEl.textContent = text;
+        clearTimeout(msgTimer);
+        msgTimer = setTimeout(() => { msgEl.textContent = ''; }, 2600);
     }
 
-    // ── 모바일: 전체화면 비권장 안내 모달 + 버튼 비활성화 ─────
-    if (_isMobile) {
-        hrMobileFsBlocked = true;
-        if (fsToggle) fsToggle.style.display = 'none';
-        const overlay = document.createElement('div');
-        overlay.id = 'hr-mobile-fs-block';
-        overlay.style.position = 'fixed';
-        overlay.style.left = '0';
-        overlay.style.top = '0';
-        overlay.style.right = '0';
-        overlay.style.bottom = '0';
-        overlay.style.zIndex = '99999';
-        overlay.style.background = 'rgba(0,0,0,0.78)';
-        overlay.style.display = 'flex';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
-        overlay.style.padding = '16px';
-        overlay.style.boxSizing = 'border-box';
-        const box = document.createElement('div');
-        box.style.maxWidth = '420px';
-        box.style.width = '100%';
-        box.style.background = 'rgba(10,10,30,0.96)';
-        box.style.border = '1px solid rgba(255,215,0,0.6)';
-        box.style.borderRadius = '10px';
-        box.style.padding = '18px 20px 16px';
-        box.style.color = '#dddddd';
-        box.style.fontFamily = '\"Pretendard\", system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-        box.style.fontSize = '13px';
-        box.style.lineHeight = '1.6';
-        const titleEl = document.createElement('div');
-        titleEl.textContent = T.mobileFsBlockTitle;
-        titleEl.style.fontSize = '14px';
-        titleEl.style.fontWeight = '700';
-        titleEl.style.color = '#FFD700';
-        titleEl.style.marginBottom = '8px';
-        const msgEl = document.createElement('div');
-        msgEl.textContent = T.mobileFsBlockMessage;
-        msgEl.style.whiteSpace = 'pre-line';
-        msgEl.style.marginBottom = '14px';
-        const btnWrap = document.createElement('div');
-        btnWrap.style.display = 'flex';
-        btnWrap.style.justifyContent = 'flex-end';
-        const okBtn = document.createElement('button');
-        okBtn.type = 'button';
-        okBtn.textContent = T.mobileFsBlockOk;
-        okBtn.style.minWidth = '84px';
-        okBtn.style.padding = '8px 14px';
-        okBtn.style.borderRadius = '6px';
-        okBtn.style.border = '1px solid rgba(255,215,0,0.8)';
-        okBtn.style.background = 'rgba(255,215,0,0.15)';
-        okBtn.style.color = '#FFD700';
-        okBtn.style.fontSize = '13px';
-        okBtn.style.fontWeight = '600';
-        okBtn.style.cursor = 'pointer';
-        okBtn.style.webkitTapHighlightColor = 'transparent';
-        okBtn.addEventListener('click', () => {
-            if (overlay && overlay.parentNode) {
-                overlay.parentNode.removeChild(overlay);
-            }
+    function startGame(names, m) {
+        lastNames = names;
+        store.set('names', names);
+        store.set('mode', m);
+        hidePanels();
+        // 시작 버튼(사용자 동작)에서 오디오 잠금 해제
+        try { if (game.sound.context && game.sound.context.state !== 'running') game.sound.context.resume(); } catch (e) { /* 무시 */ }
+        const sm = game.scene;
+        if (sm.isActive('SetupScene')) sm.stop('SetupScene');
+        if (sm.isActive('GameScene') || sm.isPaused('GameScene')) sm.getScene('GameScene').scene.restart({ names, mode: m });
+        else sm.start('GameScene', { names, mode: m });
+    }
+
+    function hidePanels() {
+        setupEl.hidden = true;
+        resultEl.hidden = true;
+    }
+    function showSetup() {
+        resultEl.hidden = true;
+        setupEl.hidden = false;
+        updateCount();
+    }
+
+    function showResult(d) {
+        const card = resultEl.querySelector('.hr-result-card');
+        card.className = 'hr-card hr-result-card ' + (d.type === 'winner' ? 'is-winner' : 'is-loser') + (d.ranking.length > 5 ? ' long' : '');
+        resultEl.querySelector('.hr-result-kicker').textContent = d.type === 'winner' ? T.resultWin : T.resultLose;
+        resultEl.querySelector('.hr-result-horse').textContent = d.emoji || '🏇';
+        const nameEl = resultEl.querySelector('.hr-result-name');
+        nameEl.textContent = d.name;
+        nameEl.style.setProperty('--hr-c', d.color);
+        resultEl.querySelector('.hr-result-reason').textContent = d.type === 'winner' ? T.reasonWin : T.reasonLose;
+        const list = resultEl.querySelector('.hr-rank-list');
+        list.innerHTML = '';
+        const lastRank = d.ranking.length;
+        d.ranking.forEach((r) => {
+            const li = document.createElement('li');
+            if (r.rank <= 3) li.className = 'top' + r.rank;
+            if (d.type === 'loser' && r.rank === lastRank) li.className = 'pick';
+            const rk = document.createElement('span'); rk.className = 'rk'; rk.textContent = fmt(T.rank, r.rank);
+            const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = r.color;
+            const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.name;
+            const st = document.createElement('span'); st.className = 'st'; st.textContent = (r.emoji && r.emoji !== '🏇' ? r.emoji : '') + (r.finished ? '🏁' : '');
+            li.append(rk, dot, nm, st);
+            list.appendChild(li);
         });
-        btnWrap.appendChild(okBtn);
-        box.appendChild(titleEl);
-        box.appendChild(msgEl);
-        box.appendChild(btnWrap);
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
+        setupEl.hidden = true;
+        resultEl.hidden = false;
+        // 꼴찌 뽑기면 목록 끝(당첨자)이 보이게
+        list.scrollTop = d.type === 'loser' ? list.scrollHeight : 0;
+        const first = resultEl.querySelector('[data-act="restart"]');
+        if (first && !matchMedia('(pointer: coarse)').matches) first.focus({ preventScroll: true });
     }
 
-    // 모바일: 사용자 상호작용 시 AudioContext 잠금 해제 후 BGM 재생 시도 (자동재생 차단 대응)
-    let audioJustUnlocked = false;
+    window.hrUI = { showSetup, showResult, hidePanels };
+
+    // ── 참가자 입력 ──
+    const saved = store.get('names', null);
+    if (Array.isArray(saved) && saved.length) namesEl.value = saved.join('\n');
+    setMode(mode);
+    updateCount();
+    namesEl.addEventListener('input', updateCount);
+    namesEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); startBtn.click(); }
+    });
+    modeBtns.forEach((b) => b.addEventListener('click', () => { setMode(b.dataset.mode); store.set('mode', mode); }));
+    startBtn.addEventListener('click', () => {
+        const names = parseNames(namesEl.value);
+        if (names.length < 2) return showMsg(T.msgMin);
+        if (names.length > 30) return showMsg(T.msgMax);
+        startGame(names, mode);
+    });
+    resultEl.addEventListener('click', (e) => {
+        const act = e.target.closest('[data-act]');
+        if (!act) return;
+        if (act.dataset.act === 'restart') {
+            startGame(lastNames.length ? lastNames : parseNames(namesEl.value), mode);
+        } else {
+            const sm = game.scene;
+            if (sm.isActive('GameScene')) sm.stop('GameScene');
+            sm.start('SetupScene');
+        }
+    });
+
+    // ── 소리 (켜기/끄기는 효과음까지, 볼륨은 BGM) ──
+    const bgmToggle = $('bgmToggle');
+    const volumeCtrl = $('volumeControl');
+    game.registry.set('bgmOn', store.get('sound', true) !== false);
+    const savedVol = Number(store.get('volume', 0.3));
+    game.registry.set('bgmVolume', Phaser.Math.Clamp(Number.isFinite(savedVol) ? savedVol : 0.3, 0, 1));
+    if (volumeCtrl) volumeCtrl.value = String(Math.round(game.registry.get('bgmVolume') * 100));
+
+    const applySound = () => {
+        const on = game.registry.get('bgmOn') !== false;
+        if (bgmToggle) {
+            bgmToggle.textContent = on ? T.bgmOn : T.bgmOff;
+            bgmToggle.setAttribute('aria-pressed', String(on));
+        }
+        if (!game.sound) return;
+        game.sound.mute = !on;
+        const s = game.bgmSound;
+        if (s) {
+            s.volume = game.registry.get('bgmVolume');
+            if (on && !s.isPlaying) { try { s.play(); } catch (e) { /* 무시 */ } }
+            if (!on && s.isPlaying) s.pause();
+        }
+    };
+    applySound();
+    // 자동재생 차단 대응: 첫 터치/클릭에 오디오 잠금 해제 후 BGM 재생
     const unlockAudio = () => {
-        if (horseRaceGame.sound && horseRaceGame.sound.context && horseRaceGame.sound.context.state === 'suspended') {
-            horseRaceGame.sound.context.resume();
-        }
-        const s = horseRaceGame.bgmSound;
-        if (s && horseRaceGame.registry.get('bgmOn', true)) {
-            try { s.play(); } catch (e) {}
-            audioJustUnlocked = true;
-            setTimeout(() => { audioJustUnlocked = false; }, 100);
-        }
+        try { if (game.sound && game.sound.context && game.sound.context.state === 'suspended') game.sound.context.resume(); } catch (e) { /* 무시 */ }
+        applySound();
     };
-    document.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
-    document.addEventListener('click', unlockAudio, { once: true, capture: true }); // capture로 BGM 버튼 클릭보다 먼저 실행
+    document.addEventListener('touchend', unlockAudio, { passive: true, once: true });
+    document.addEventListener('click', unlockAudio, { once: true, capture: true });
 
-    if (bgmToggle) {
-        function updateBgmUI() {
-            const on = horseRaceGame.registry.get('bgmOn', true);
-            bgmToggle.textContent = on ? T.bgmOn : T.bgmOff;
-        }
-        updateBgmUI();
-
-        bgmToggle.addEventListener('click', () => {
-            if (audioJustUnlocked) return; // 첫 클릭은 잠금 해제만, 토글 무시
-            const on = !horseRaceGame.registry.get('bgmOn', true);
-            horseRaceGame.registry.set('bgmOn', on);
-            bgmToggle.textContent = on ? T.bgmOn : T.bgmOff;
-            if (horseRaceGame.sound) horseRaceGame.sound.mute = !on;
-            const s = horseRaceGame.bgmSound;
-            if (s) {
-                if (on) {
-                    if (horseRaceGame.sound.context && horseRaceGame.sound.context.state === 'suspended') {
-                        horseRaceGame.sound.context.resume();
-                    }
-                    try { s.play(); } catch (e) {}
-                } else {
-                    s.pause();
-                }
-            }
-        });
-    }
+    if (bgmToggle) bgmToggle.addEventListener('click', () => {
+        const on = !(game.registry.get('bgmOn') !== false);
+        game.registry.set('bgmOn', on);
+        store.set('sound', on);
+        try { if (on && game.sound.context && game.sound.context.state !== 'running') game.sound.context.resume(); } catch (e) { /* 무시 */ }
+        applySound();
+    });
     if (volumeCtrl) {
-        const applyVolume = () => {
-            const v = volumeCtrl.value / 100;
-            horseRaceGame.registry.set('bgmVolume', v);
-            if (horseRaceGame.bgmSound) horseRaceGame.bgmSound.volume = v;
+        const onVol = () => {
+            const v = Number(volumeCtrl.value) / 100;
+            game.registry.set('bgmVolume', v);
+            store.set('volume', v);
+            if (game.bgmSound) game.bgmSound.volume = v;
         };
-        applyVolume();
-        volumeCtrl.addEventListener('input', applyVolume);
-        volumeCtrl.addEventListener('change', applyVolume);
-        volumeCtrl.addEventListener('touchend', applyVolume);
+        volumeCtrl.addEventListener('input', onVol);
+        volumeCtrl.addEventListener('change', onVol);
     }
-    // 전체화면: Phaser 네이티브 API 사용, iOS 등 미지원 시 CSS 폴백
-    const gameContainer = document.getElementById('game-container');
 
-    const isFullscreen = () => {
-        const doc = document;
-        return !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
-    };
-    const exitFullscreen = () => {
-        const doc = document;
-        if (doc.exitFullscreen) doc.exitFullscreen();
-        else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
-        else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
-        else if (doc.msExitFullscreen) doc.msExitFullscreen();
-    };
-    const hrFsExitBtn = document.getElementById('hrFsExitBtn');
-    const updateFullscreenButton = () => {
-        const fs = isFullscreen();
+    // ── 전체화면 (게임 박스만). 아이폰처럼 지원 안 하면 버튼을 숨김 ──
+    const fsToggle = $('fsToggle');
+    const fsExit = $('hrFsExitBtn');
+    const fsEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    const isFS = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const refresh = () => requestAnimationFrame(() => { try { game.scale.refresh(); } catch (e) { /* 무시 */ } });
+    const onFsChange = () => {
+        const on = isFS();
         if (fsToggle) {
-            fsToggle.textContent = fs ? T.domFsToggleExit : T.domFsToggle;
-            fsToggle.setAttribute('title', fs ? T.domFsExitTip : T.domFsToggleTip);
+            fsToggle.textContent = on ? T.fsToggleExit : T.fsToggle;
+            fsToggle.title = on ? T.fsExitTip : T.fsToggleTip;
         }
-        if (fullscreenWrap) {
-            if (fs) fullscreenWrap.classList.add('hr-fullscreen-active');
-            else fullscreenWrap.classList.remove('hr-fullscreen-active');
-        }
-        if (mobileFsExitBar) {
-            const active = fullscreenWrap && fullscreenWrap.classList.contains('hr-fullscreen-active');
-            if (active && isMobileDevice()) {
-                mobileFsExitBar.style.display = 'flex';
-            } else {
-                mobileFsExitBar.style.display = 'none';
-            }
-        }
-        fixFullscreenDomOverlay();
+        stage.classList.toggle('is-fs', on);
+        refresh();
+        setTimeout(refresh, 250);
     };
-
-    if (fullscreenWrap && horseRaceGame.scale) {
-        horseRaceGame.scale.fullscreenTarget = fullscreenWrap;
-    }
-    const forceFullscreenFill = () => {
-        if (!gameContainer || !isFullscreen()) return;
-        // 모바일 기기에서는 Phaser의 FIT 스케일에만 맡기고, 추가 CSS 스케일은 건너뛰어 터치 좌표를 맞춘다.
-        if (fullscreenWrap && fullscreenWrap.classList.contains('hr-mobile-device')) {
-            fixFullscreenDomOverlay();
-            return;
-        }
-        gameContainer.style.position = 'absolute';
-        gameContainer.style.top = '0';
-        gameContainer.style.left = '0';
-        gameContainer.style.right = '0';
-        gameContainer.style.bottom = '0';
-        gameContainer.style.width = '100vw';
-        gameContainer.style.height = '100vh';
-        gameContainer.style.display = 'flex';
-        gameContainer.style.alignItems = 'center';
-        gameContainer.style.justifyContent = 'center';
-        const wrapper = gameContainer.querySelector(':scope > div:not(#hr-setup-overlay)');
-        if (wrapper) {
-            wrapper.style.position = 'absolute';
-            wrapper.style.top = '0';
-            wrapper.style.left = '0';
-            wrapper.style.right = '0';
-            wrapper.style.bottom = '0';
-            wrapper.style.width = '100%';
-            wrapper.style.height = '100%';
-            wrapper.style.display = 'flex';
-            wrapper.style.alignItems = 'center';
-            wrapper.style.justifyContent = 'center';
-        }
-        const canvas = gameContainer.querySelector('canvas');
-        if (canvas) {
-            canvas.style.width = '100vw';
-            canvas.style.height = '100vh';
-            canvas.style.maxWidth = '100vw';
-            canvas.style.maxHeight = '100vh';
-            canvas.style.objectFit = 'contain';
-            canvas.style.objectPosition = 'center center';
-        }
-        fixFullscreenDomOverlay();
-    };
-    const fixFullscreenDomOverlay = () => {
-        const overlay = document.getElementById('hr-setup-overlay');
-        if (!overlay) return;
-        const active = isFullscreen() || (fullscreenWrap && fullscreenWrap.classList.contains('hr-fullscreen-active'));
-        if (active) {
-            const scW = window.innerWidth, scH = window.innerHeight;
-            const scale = Math.min(scW / HR_W, scH / HR_H);
-            const contentW = HR_W * scale;
-            const contentH = HR_H * scale;
-            const offsetX = (scW - contentW) / 2;
-            const offsetY = (scH - contentH) / 2;
-            overlay.style.position  = 'absolute';
-            overlay.style.width     = (HR_W * 0.58 * scale) + 'px';
-            overlay.style.height    = (HR_H * 0.18 * scale) + 'px';
-            overlay.style.top       = (offsetY + HR_H * 0.21 * scale) + 'px';
-            overlay.style.left      = (offsetX + contentW / 2) + 'px';
-            overlay.style.transform = 'translateX(-50%)';
-        } else {
-            overlay.style.position  = '';
-            overlay.style.width     = '';
-            overlay.style.height    = '';
-            overlay.style.top       = '';
-            overlay.style.left      = '';
-            overlay.style.transform = '';
-        }
-    };
-    const refreshScaleOnFullscreen = () => {
-        if (!gameContainer || !horseRaceGame.scale) return;
-        const doRefresh = () => {
-            forceFullscreenFill();
-            if (horseRaceGame.scale) horseRaceGame.scale.refresh();
-            forceFullscreenFill();
-        };
-        requestAnimationFrame(() => {
-            doRefresh();
-            requestAnimationFrame(() => doRefresh());
-            setTimeout(doRefresh, 50);
-            setTimeout(doRefresh, 150);
-            setTimeout(doRefresh, 400);
+    if (!fsEnabled) {
+        if (fsToggle) fsToggle.hidden = true;
+    } else {
+        if (fsToggle) fsToggle.addEventListener('click', () => {
+            if (isFS()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+            else (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage);
         });
-    };
-    horseRaceGame.scale.on('enterfullscreen', () => {
-        updateFullscreenButton();
-        refreshScaleOnFullscreen();
-    });
-    horseRaceGame.scale.on('fullscreenfailed', () => {
-        if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
-        if (fullscreenWrap) fullscreenWrap.classList.add('hr-fullscreen-active');
-        updateFullscreenButton();
-    });
-    horseRaceGame.scale.on('fullscreenunsupported', () => {
-        if (gameContainer) gameContainer.classList.add('fullscreen-fallback');
-        if (fullscreenWrap) fullscreenWrap.classList.add('hr-fullscreen-active');
-        updateFullscreenButton();
-    });
-    const clearFullscreenStyles = () => {
-        if (!gameContainer) return;
-        gameContainer.classList.remove('fullscreen-fallback');
-        gameContainer.style.width = '';
-        gameContainer.style.height = '';
-        gameContainer.style.position = '';
-        gameContainer.style.top = '';
-        gameContainer.style.left = '';
-        gameContainer.style.right = '';
-        gameContainer.style.bottom = '';
-        gameContainer.style.display = '';
-        gameContainer.style.alignItems = '';
-        gameContainer.style.justifyContent = '';
-        const wrapper = gameContainer.querySelector(':scope > div:not(#hr-setup-overlay)');
-        if (wrapper) {
-            wrapper.style.position = '';
-            wrapper.style.top = '';
-            wrapper.style.left = '';
-            wrapper.style.right = '';
-            wrapper.style.bottom = '';
-            wrapper.style.width = '';
-            wrapper.style.height = '';
-            wrapper.style.display = '';
-            wrapper.style.alignItems = '';
-            wrapper.style.justifyContent = '';
-        }
-        const canvas = gameContainer.querySelector('canvas');
-        if (canvas) {
-            canvas.style.width = '';
-            canvas.style.height = '';
-            canvas.style.maxWidth = '';
-            canvas.style.maxHeight = '';
-            canvas.style.objectFit = '';
-            canvas.style.objectPosition = '';
-        }
-        fixFullscreenDomOverlay();
-    };
-    horseRaceGame.scale.on('leavefullscreen', () => {
-        clearFullscreenStyles();
-        updateFullscreenButton();
-    });
-    const onFullscreenChange = () => {
-        updateFullscreenButton();
-        if (!isFullscreen()) {
-            clearFullscreenStyles();
-        } else {
-            refreshScaleOnFullscreen();
-        }
-    };
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-    document.addEventListener('mozfullscreenchange', onFullscreenChange);
-    document.addEventListener('MSFullscreenChange', onFullscreenChange);
-
-    if (fsToggle) {
-        fsToggle.addEventListener('click', () => {
-            // 모바일에서는 전체화면 진입 자체를 막는다 (DOMContentLoaded 상단에서 버튼도 숨김)
-            if (typeof isMobileDevice === 'function' && isMobileDevice()) {
-                return;
-            }
-            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
-                gameContainer.classList.remove('fullscreen-fallback');
-                updateFullscreenButton();
-            } else if (isFullscreen()) {
-                exitFullscreen();
-            } else {
-                horseRaceGame.scale.toggleFullscreen();
-            }
-        });
+        if (fsExit) fsExit.addEventListener('click', () => { if (isFS()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); });
+        document.addEventListener('fullscreenchange', onFsChange);
+        document.addEventListener('webkitfullscreenchange', onFsChange);
     }
-    if (hrFsExitBtn) {
-        hrFsExitBtn.addEventListener('click', () => {
-            if (isFullscreen()) exitFullscreen();
-            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
-                gameContainer.classList.remove('fullscreen-fallback');
-                updateFullscreenButton();
-            }
-        });
-    }
-    const hrMobileFsExitBtn = document.getElementById('hrMobileFsExitBtn');
-    if (hrMobileFsExitBtn) {
-        hrMobileFsExitBtn.addEventListener('click', () => {
-            if (isFullscreen()) exitFullscreen();
-            if (gameContainer && gameContainer.classList.contains('fullscreen-fallback')) {
-                gameContainer.classList.remove('fullscreen-fallback');
-                updateFullscreenButton();
-            }
-        });
-    }
-
-    // 창 크기/회전 시 캔버스·입력 좌표계 동기화 (모바일 터치 히트박스 정렬)
-    const refreshScale = () => {
-        if (!horseRaceGame.scale) return;
-        if (typeof horseRaceGame.scale.updateBounds === 'function') horseRaceGame.scale.updateBounds();
-        horseRaceGame.scale.refresh();
-    };
+    // 폰 회전 등으로 배치가 바뀌면 대기 화면은 바로 다시 그림 (경주 중이면 다음 판부터)
     let resizeTimer = 0;
     window.addEventListener('resize', () => {
+        refresh();
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(refreshScale, 50);
+        resizeTimer = setTimeout(() => {
+            if (game.scene.isActive('SetupScene') && (hrPickLayout() !== HR_L || hrRenderScale(hrPickLayout()) !== HR_K)) {
+                game.scene.getScene('SetupScene').scene.restart();
+            }
+        }, 250);
     });
-    window.addEventListener('orientationchange', () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(refreshScale, 150);
-    });
-
-});
+})();

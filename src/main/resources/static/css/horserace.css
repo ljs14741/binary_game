@@ -1,0 +1,503 @@
+/*
+  말달리자 — 게임 박스와 HTML 패널(참가자 입력·결과). 무궁화(mugunghwa.css)와 같은 틀.
+
+  캔버스(#hr-canvas)는 입력을 받지 않는다. 그래서 폰에서 게임 화면 위를 밀어도 페이지가 스크롤된다.
+  박스 비율은 horserace.js 의 배치와 같은 기준(폭 600px)으로 바뀐다: PC 1000:720, 폰 540:720.
+  높이는 보이는 화면(dvh)보다 작게 잡아 위아래로 스크롤할 여백을 남긴다.
+*/
+
+#game-container.hr-stage {
+    --hr-gold: #ffd23f;
+    --hr-gold-hi: #ffe27a;
+    --hr-gold-lo: #a67c00;
+    --hr-red: #e5484d;
+    --hr-red-lo: #8e1f25;
+    --hr-font: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Hiragino Sans', sans-serif;
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: min(1000px, calc((100vh - 96px) * 1000 / 720));
+    max-width: min(1000px, calc((100dvh - 96px) * 1000 / 720));
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 1000 / 720;
+    margin: 0 auto 1.25rem;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--bw-border);
+    border-radius: 1.1rem;
+    background: #0b0b20;
+    box-shadow: var(--bw-shadow);
+    touch-action: pan-y;
+    -webkit-tap-highlight-color: transparent;
+    font-family: var(--hr-font);
+}
+
+/* 폰에선 세로 배치 */
+@media (max-width: 600px) {
+    #game-container.hr-stage {
+        max-width: calc(80vh * 540 / 720);
+        max-width: calc(80dvh * 540 / 720);
+        aspect-ratio: 540 / 720;
+        border-radius: 0.9rem;
+    }
+}
+
+#hr-canvas {
+    position: absolute;
+    inset: 0;
+}
+
+#hr-canvas canvas {
+    display: block;
+}
+
+/* ── 전체화면: 게임 박스만 키운다 ── */
+#game-container.hr-stage:fullscreen,
+#game-container.hr-stage:-webkit-full-screen {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    aspect-ratio: auto;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: #060614;
+}
+
+.hr-fs-exit {
+    display: none;
+    position: absolute;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    z-index: 6;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    background: rgba(6, 6, 20, 0.75);
+    color: #fff;
+    font: 700 14px var(--hr-font);
+    cursor: pointer;
+}
+
+#game-container.hr-stage.is-fs .hr-fs-exit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── 패널 공통 ── */
+.hr-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    box-sizing: border-box;
+}
+
+.hr-panel[hidden] {
+    display: none;
+}
+
+#hr-setup {
+    background: radial-gradient(ellipse at 50% 45%, rgba(6, 6, 20, 0.2), rgba(6, 6, 20, 0.6));
+}
+
+.hr-card {
+    width: min(520px, 100%);
+    max-height: 100%;
+    box-sizing: border-box;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 18px 20px;
+    border: 1px solid rgba(255, 210, 63, 0.4);
+    border-radius: 18px;
+    background: rgba(12, 12, 34, 0.92);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+    color: #f1f1f8;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+.hr-card button {
+    font-family: var(--hr-font);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.hr-card button:focus-visible,
+#hrNamesInput:focus-visible {
+    outline: 3px solid #7cc4ff;
+    outline-offset: 2px;
+}
+
+/* ── 참가자 입력 ── */
+.hr-setup-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.hr-setup-title {
+    margin: 0;
+    color: var(--hr-gold);
+    font-size: clamp(1.15rem, 3.2vw, 1.6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-align: center;
+}
+
+.hr-setup-sub {
+    color: #cfd0e6;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: center;
+    word-break: keep-all;
+}
+
+#hrNamesInput {
+    width: 100%;
+    /* 예시(엔터 3줄 + 쉼표 1줄)가 다 보이게 5줄 */
+    height: 9.3em;
+    min-height: 92px;
+    box-sizing: border-box;
+    padding: 10px 14px;
+    border: 2px solid #2e2e5a;
+    border-radius: 12px;
+    background: #070718;
+    color: #eef0ff;
+    /* 16px 미만이면 아이폰이 입력할 때 화면을 확대함 */
+    font: 600 16px/1.55 var(--hr-font);
+    resize: none;
+    outline: none;
+}
+
+#hrNamesInput::placeholder {
+    color: #767aa0;
+}
+
+#hrNamesInput:focus {
+    border-color: var(--hr-gold);
+    box-shadow: 0 0 0 3px rgba(255, 210, 63, 0.22);
+}
+
+.hr-count {
+    color: #a2a4c4;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.hr-count.ok {
+    color: #6ee7a0;
+}
+
+.hr-count.bad {
+    color: #ff7a8a;
+}
+
+.hr-mode {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.hr-mode button {
+    min-height: 46px;
+    padding: 6px 8px;
+    border: 2px solid #2e2e5a;
+    border-radius: 12px;
+    background: #14142e;
+    color: #c9cae4;
+    font-size: 0.93rem;
+    font-weight: 700;
+    word-break: keep-all;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.hr-mode button[data-mode="loser"][aria-checked="true"] {
+    border-color: #ff8a8e;
+    background: var(--hr-red);
+    color: #fff;
+    box-shadow: 0 4px 0 var(--hr-red-lo);
+}
+
+.hr-mode button[data-mode="winner"][aria-checked="true"] {
+    border-color: var(--hr-gold-hi);
+    background: #e0a800;
+    color: #1a1400;
+    box-shadow: 0 4px 0 var(--hr-gold-lo);
+}
+
+.hr-mode-hint {
+    margin: -2px 0 0;
+    color: #ff9a9e;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    word-break: keep-all;
+}
+
+.hr-mode-hint.is-winner {
+    color: var(--hr-gold-hi);
+}
+
+.hr-start {
+    min-height: 54px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffe066, #f5b800);
+    color: #1f1600;
+    font-size: 1.18rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    box-shadow: 0 5px 0 var(--hr-gold-lo);
+    transition: transform 0.12s, box-shadow 0.12s, filter 0.2s;
+}
+
+.hr-start:not(.ready) {
+    filter: saturate(0.5) brightness(0.78);
+}
+
+.hr-start:active,
+.hr-mode button:active,
+.hr-result-actions button:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 var(--hr-gold-lo);
+}
+
+.hr-msg {
+    min-height: 1.2em;
+    margin: 0;
+    color: #ff7a8a;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.hr-msg:empty {
+    min-height: 0;
+    margin-top: -10px;
+}
+
+/* ── 결과 카드 ── */
+.hr-result-card {
+    display: flex;
+    max-height: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    animation: hr-pop 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+.hr-result-card.is-winner {
+    border-color: rgba(255, 210, 63, 0.7);
+}
+
+.hr-result-card.is-loser {
+    border-color: rgba(229, 72, 77, 0.8);
+}
+
+.hr-result-kicker {
+    color: var(--hr-gold);
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.is-loser .hr-result-kicker {
+    color: #ff7479;
+}
+
+.hr-result-horse {
+    font-size: 52px;
+    line-height: 1.1;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+    animation: hr-bounce 0.9s ease-in-out infinite;
+}
+
+.hr-result-name {
+    max-width: 100%;
+    color: #fff;
+    font-size: clamp(1.8rem, 7vw, 2.6rem);
+    font-weight: 900;
+    line-height: 1.1;
+    text-shadow: 0 3px 0 var(--hr-c, #ffd23f), 0 6px 14px rgba(0, 0, 0, 0.5);
+    overflow-wrap: anywhere;
+}
+
+.hr-result-reason {
+    color: #cfd0e6;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.hr-rank-title {
+    margin-top: 4px;
+    color: var(--hr-gold);
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.hr-rank-list {
+    display: grid;
+    flex: 0 1 auto;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+    align-content: start;
+    gap: 2px 10px;
+    width: 100%;
+    min-height: 4.6em;
+    max-height: 16em;
+    margin: 0;
+    padding: 8px;
+    box-sizing: border-box;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    list-style: none;
+}
+
+.hr-rank-list li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 3px 4px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: left;
+}
+
+.hr-rank-list .rk {
+    flex: none;
+    min-width: 2.6em;
+    color: #b3b5cf;
+}
+
+.hr-rank-list .dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.hr-rank-list .nm {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hr-rank-list .st {
+    flex: none;
+    font-size: 0.85em;
+}
+
+.hr-rank-list li.top1 .rk,
+.hr-rank-list li.top1 .nm { color: var(--hr-gold); }
+.hr-rank-list li.top2 .rk { color: #e4e4ea; }
+.hr-rank-list li.top3 .rk { color: #e3a15f; }
+.hr-rank-list li.pick .rk,
+.hr-rank-list li.pick .nm { color: #ff8a8e; }
+
+.hr-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.hr-result-actions button {
+    flex: 1 1 180px;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffe066, #f5b800);
+    color: #1f1600;
+    font-size: 1rem;
+    font-weight: 800;
+    box-shadow: 0 4px 0 var(--hr-gold-lo);
+}
+
+.hr-result-actions button.sub {
+    background: #23234a;
+    color: #e6e7f7;
+    box-shadow: 0 4px 0 #0c0c22;
+}
+
+@keyframes hr-pop {
+    from { opacity: 0; transform: scale(0.72) translateY(12px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes hr-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+}
+
+@media (max-width: 600px) {
+    .hr-panel { padding: 10px; }
+    .hr-card { padding: 12px 13px; border-radius: 16px; }
+    .hr-setup-card { gap: 6px; }
+    .hr-msg:empty { margin-top: -6px; }
+    .hr-mode button { font-size: 0.88rem; line-height: 1.25; }
+    .hr-mode-hint { margin: 0; font-size: 0.82rem; }
+    .hr-result-card { gap: 4px; }
+    /* 폰은 순위 목록 자리가 먼저 */
+    .hr-result-horse { display: none; }
+    .hr-result-name { font-size: 1.9rem; }
+    .hr-rank-list { max-height: none; }
+    .hr-rank-list li { padding: 2px 4px; }
+    .hr-result-card.long .hr-rank-list { grid-template-columns: 1fr 1fr; gap: 0 6px; }
+    .hr-result-card.long .hr-rank-list li { gap: 4px; font-size: 0.88rem; }
+    .hr-result-card.long .hr-rank-list .rk { min-width: 2.1em; }
+    .hr-result-actions { margin-top: 4px; }
+    .hr-result-actions button { min-height: 44px; }
+}
+
+/* 세로가 짧은 폰(아이폰 SE 등): 시작 버튼이 카드 안에 보이게 */
+@media (max-width: 600px) and (max-height: 640px) {
+    .hr-setup-title { font-size: 1.05rem; }
+    .hr-setup-sub { font-size: 0.8rem; line-height: 1.35; }
+    .hr-mode button { min-height: 42px; }
+    .hr-start { min-height: 48px; font-size: 1.08rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hr-result-card,
+    .hr-result-horse {
+        animation: none;
+    }
+}
+
+/* ── 설명 본문 ── */
+.hr-description h2 {
+    margin: 22px 0 8px;
+    color: #ffd23f;
+    font-size: 17px;
+}
+
+.hr-description p,
+.hr-description li {
+    color: var(--bw-text);
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.hr-description strong {
+    color: var(--bw-text);
+    font-weight: 800;
+}
