@@ -197,6 +197,37 @@
     color: #6ee7a0;
 }
 
+.pb-mode {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.pb-mode button {
+    min-height: 46px;
+    padding: 6px 8px;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    background: #111a2e;
+    color: #e2e8f0;
+    font-size: 0.93rem;
+    font-weight: 700;
+    word-break: keep-all;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.pb-mode button[aria-checked="true"] {
+    border-color: var(--pb-accent);
+    background: rgba(45, 212, 191, 0.18);
+    color: #fff;
+    box-shadow: 0 4px 0 rgba(45, 212, 191, 0.35);
+}
+
+.pb-mode button:active {
+    transform: translateY(3px);
+}
+
 .pb-start {
     min-height: 54px;
     border: 0;
@@ -359,6 +390,14 @@
 
 .pb-rank-list li.top1 .rk,
 .pb-rank-list li.top1 .nm { color: #facc15; }
+/* 꼴찌 뽑기 당첨 줄 */
+.pb-rank-list li.loser {
+    border-radius: 8px;
+    background: rgba(244, 63, 94, 0.18);
+}
+.pb-rank-list li.loser .rk,
+.pb-rank-list li.loser .nm { color: #fb7185; }
+.pb-result-card.is-loser .pb-result-kicker { color: #fb7185; }
 .pb-rank-list li.top2 .rk { color: #e2e8f0; }
 .pb-rank-list li.top3 .rk { color: #fb923c; }
 

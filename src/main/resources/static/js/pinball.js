@@ -9,6 +9,11 @@ const T = Object.assign({
     msgMax:     "최대 30명까지 가능합니다!",
     dupNames:   "같은 이름이 있어요: {0}",
     rankTitle:  "📜 순위",
+    rankTitleLoser: "💣 꼴찌 뽑기 · 순위",
+    winnerTitle: "🏆 오늘의 1등",
+    congrats:   "축하드립니다~!",
+    loserTitle: "💣 벌칙 당첨",
+    loserReason: "마지막까지 남은 공!",
     rank:       "{0}등",
     more:       "외 {0}명",
     bgmOn:      "🔊 BGM 켜짐",
@@ -58,6 +63,7 @@ let playerCount = 0;
 let playerNicknames = [];
 let players = [];
 let pendingNames = null;     // 씬 준비 전에 시작을 누르면 여기 뒀다가 create 에서 시작
+let pbMode = 'winner';       // winner: 1등 우승 뽑기 / loser: 꼴찌 벌칙 뽑기 (공 하나 남으면 그 공이 꼴찌)
 let backgroundMusic;
 const NICK_MAX = 10;         // 공 위 이름표 길이 제한
 const BALL_RADIUS = 15;
@@ -988,8 +994,8 @@ function onPlayerFinish(scene, p, name) {
     // 화면 밖으로
     p.body.setPosition(-10000, -10000);
 
-    // 1등 HUD (게임은 계속 진행)
-    if (p.rank === 1) {
+    // 1등 HUD (게임은 계속 진행). 꼴찌 뽑기에선 1등은 조용히 넘어감
+    if (p.rank === 1 && pbMode === 'winner') {
         scene.winner = p;
         pbUI.showActions();
         showWinnerUI(scene, name);
@@ -997,10 +1003,20 @@ function onPlayerFinish(scene, p, name) {
 
     updateLeaderboard(scene);
 
-    // ✅ 전원 골인했으면 엔드 메시지 + 무한 컨페티
     if (scene.finishOrder.length === players.length) {
-        showAllFinishedMessage(scene);  // ← 아래 새 함수
+        showAllFinishedMessage(scene);
+    } else if (pbMode === 'loser' && scene.finishOrder.length === players.length - 1) {
+        // 공이 하나만 남으면 그 공이 꼴찌로 확정. 끼어 있어도 기다리지 않고 바로 결과
+        showLoserResult(scene, players.find(q => !q.finished));
     }
+}
+
+function showLoserResult(scene, loser) {
+    if (scene._raceOverShown || !loser) return;
+    scene._raceOverShown = true;
+    const ranking = scene.finishOrder.map(p => ({ rank: p.rank, name: p.name, color: hexToCss(p.color || 0xffffff) }));
+    ranking.push({ rank: players.length, name: loser.name, color: hexToCss(loser.color || 0xffffff) });
+    scene.time.delayedCall(700, () => pbUI.showResult(ranking));
 }
 
 function showAllFinishedMessage(scene) {
@@ -1064,7 +1080,7 @@ function createLeaderboard(scene) {
     scene._lbNameMaxW = Math.round(160 * k);
 
     // 제목 텍스트
-    const title = scene.add.text(scene._lbRightX, 8, T.rankTitle, {
+    const title = scene.add.text(scene._lbRightX, 8, pbMode === 'loser' ? T.rankTitleLoser : T.rankTitle, {
         fontSize: fpx(16, 13) + 'px',
         fontFamily: UI_FONT,
         color: '#e2e8f0',
@@ -1564,14 +1580,19 @@ const pbUI = (() => {
     function showResult(ranking) {
         const list = resultEl.querySelector('.pb-rank-list');
         const nameEl = resultEl.querySelector('.pb-result-name');
-        const top = ranking[0];
-        nameEl.textContent = top ? top.name : '—';
-        nameEl.style.setProperty('--pb-c', top ? top.color : '#2dd4bf');
+        const loser = pbMode === 'loser';
+        const pick = loser ? ranking[ranking.length - 1] : ranking[0];
+        resultEl.querySelector('.pb-result-kicker').textContent = loser ? T.loserTitle : T.winnerTitle;
+        resultEl.querySelector('.pb-result-reason').textContent = loser ? T.loserReason : T.congrats;
+        resultEl.querySelector('.pb-result-card').classList.toggle('is-loser', loser);
+        nameEl.textContent = pick ? pick.name : '—';
+        nameEl.style.setProperty('--pb-c', pick ? pick.color : '#2dd4bf');
         resultEl.querySelector('.pb-result-card').classList.toggle('long', ranking.length > 8);
         list.innerHTML = '';
         ranking.forEach((r) => {
             const li = document.createElement('li');
-            if (r.rank <= 3) li.className = 'top' + r.rank;
+            if (loser && r === pick) li.className = 'loser';
+            else if (r.rank <= 3) li.className = 'top' + r.rank;
             const rk = document.createElement('span'); rk.className = 'rk'; rk.textContent = fmt(T.rank, r.rank);
             const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = r.color;
             const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.name;
@@ -1582,6 +1603,8 @@ const pbUI = (() => {
         setupEl.hidden = true;
         resultEl.hidden = false;
         stage.classList.add('pb-has-panel');
+        // 꼴찌 뽑기면 당첨자(맨 아래)가 보이게
+        if (loser) list.scrollTop = list.scrollHeight;
         const first = resultEl.querySelector('[data-act="restart"]');
         if (first && !matchMedia('(pointer: coarse)').matches) first.focus({ preventScroll: true });
     }
@@ -1602,6 +1625,15 @@ const pbUI = (() => {
             if (scene) softRestart(scene);
         }
     }
+
+    // ── 모드 (1등 / 꼴찌) ──
+    const modeBtns = [...setupEl.querySelectorAll('.pb-mode [data-mode]')];
+    const setMode = (m) => {
+        pbMode = m === 'loser' ? 'loser' : 'winner';
+        modeBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === pbMode)));
+    };
+    setMode(store.get('mode', 'winner'));
+    modeBtns.forEach((b) => b.addEventListener('click', () => { setMode(b.dataset.mode); store.set('mode', pbMode); }));
 
     // ── 참가자 입력 ──
     const saved = store.get('names', null);

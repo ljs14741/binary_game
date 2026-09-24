@@ -126,6 +126,10 @@
                         placeholder="엔터로 한 명씩:&#10;홍길동&#10;김철수&#10;이영희&#10;쉼표도 OK: 홍길동, 김철수, 이영희" th:placeholder="#{pinball.js.placeholder}"
                         autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
                     <div id="pbCount" class="pb-count" aria-live="polite"></div>
+                    <div class="pb-mode" role="radiogroup" aria-label="게임 모드 선택" th:aria-label="#{pinball.js.modeLabel}">
+                        <button type="button" role="radio" data-mode="winner" aria-checked="true" th:text="#{pinball.js.modeWinner}">🏆 1등 우승 뽑기</button>
+                        <button type="button" role="radio" data-mode="loser" aria-checked="false" th:text="#{pinball.js.modeLoser}">💣 꼴찌 벌칙 뽑기</button>
+                    </div>
                     <button type="button" id="pbStartBtn" class="pb-start" th:text="#{pinball.js.start}">🚀 게임 시작</button>
                     <p id="pbMsg" class="pb-msg" role="alert"></p>
                 </div>
@@ -200,6 +204,11 @@
         msgMax:       [[#{pinball.js.msgMax}]],
         dupNames:     [[#{pinball.js.dupNames('{0}')}]],
         rankTitle:    [[#{pinball.js.rankTitle}]],
+        rankTitleLoser: [[#{pinball.js.rankTitleLoser}]],
+        winnerTitle:  [[#{pinball.js.winnerTitle}]],
+        congrats:     [[#{pinball.js.congrats}]],
+        loserTitle:   [[#{pinball.js.loserTitle}]],
+        loserReason:  [[#{pinball.js.loserReason}]],
         rank:         [[#{pinball.js.rank('{0}')}]],
         more:         [[#{pinball.js.more('{0}')}]],
         bgmOn:        [[#{pinball.ui.bgmOn}]],
