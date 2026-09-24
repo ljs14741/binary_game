@@ -110,7 +110,7 @@
 }
 
 .bw-penguin-stage #pause-overlay button {
-  min-width: 220px;
+  min-width: min(300px, calc(100% - 32px));
   padding: 16px;
   background: #ffb400;
   color: #2b2733;
@@ -121,6 +121,24 @@
 .bw-penguin-stage #pause-overlay button.sub {
   background: #fff;
   box-shadow: 0 5px 0 #bbb;
+}
+
+/* 계속하기만 크게, 나머지는 두 칸씩 (작은 폰에서 버튼 6개가 넘치지 않게) */
+.bw-penguin-stage #pause-overlay .pause-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: min(300px, calc(100% - 32px));
+}
+
+.bw-penguin-stage #pause-overlay .pause-grid button {
+  min-width: 0;
+  padding: 12px 6px;
+  font-size: 17px;
+}
+
+.bw-penguin-stage #pause-overlay .pause-grid button.wide {
+  grid-column: 1 / -1;
 }
 
 /* 터치 기기가 가로일 때 (세로 전용 게임). 리듬게임과 같은 방식.
@@ -188,7 +206,8 @@
 }
 
 .bw-penguin-stage #hud #btn-help-close,
-.bw-penguin-stage #hud #btn-dex-close {
+.bw-penguin-stage #hud #btn-dex-close,
+.bw-penguin-stage #hud #btn-sound-close {
   width: 40px;
   height: 40px;
   background: #eef2f8;
@@ -248,6 +267,42 @@
 .bw-penguin-stage .medal-dot.gold { background: #ffc21a; }
 .bw-penguin-stage .medal-dot.silver { background: #b9c6d8; }
 .bw-penguin-stage .medal-dot.bronze { background: #e0925f; }
+
+/* 소리 설정 */
+.bw-penguin-stage .sound-card {
+  width: min(360px, 100%);
+}
+
+.bw-penguin-stage .sound-body {
+  display: grid;
+  gap: 6px;
+  padding: 14px 20px 20px;
+}
+
+.bw-penguin-stage .sound-body label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.bw-penguin-stage .sound-body output {
+  color: #2a5db0;
+}
+
+.bw-penguin-stage .sound-body input[type="range"] {
+  width: 100%;
+  height: 32px;
+  accent-color: #ffb400;
+  touch-action: none;
+}
+
+.bw-penguin-stage .sound-body p {
+  margin: 10px 0 0;
+  color: #6b778c;
+  font-size: 13px;
+}
 
 /* 도감 */
 .bw-penguin-stage .dex-count {
@@ -318,6 +373,15 @@
 
 .bw-penguin-stage .dex-item.locked b {
   color: #9aa6b8;
+}
+
+/* 방명록 바로 위 한 줄 */
+.bw-penguin-guest {
+  width: min(960px, calc(100% - 1rem));
+  margin: 1.5rem auto 0.5rem;
+  color: var(--bw-muted);
+  font-size: 0.95rem;
+  text-align: center;
 }
 
 /* ── 설명 본문 ── */

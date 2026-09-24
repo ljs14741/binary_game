@@ -8,10 +8,12 @@ import { Sound } from './core/audio.js';
 import { loadSave, save } from './meta/save.js';
 import { openHelp } from './scenes/ui.js';
 import { openDex } from './scenes/dex.js';
+import { openSound } from './scenes/ui.js';
 
 loadSave();
-Sound.muted = save.muted;
-Sound.musicMuted = !!save.musicOff;
+// 예전 저장(소리 끔/배경음 끔)은 음량 0 으로 옮김
+if (!save.vol && (save.muted || save.musicOff)) save.vol = { music: 0, sfx: save.muted ? 0 : Sound.vol.sfx };
+if (save.vol) Object.assign(Sound.vol, save.vol);
 
 // 게임은 페이지 안의 #bw-penguin-stage 박스에 들어감 (공통 헤더·푸터·광고와 같이 삶).
 // 논리 세로는 기본 960. 박스가 작은 폰은 960 이면 절반 이하로 축소돼 글씨가 안 읽혀서,
@@ -79,7 +81,9 @@ document.getElementById('btn-quit').addEventListener('click', () => { const t = 
 document.getElementById('btn-help').addEventListener('click', () => openHelp(game.textures));
 document.getElementById('btn-help-close').addEventListener('click', () => { document.getElementById('help-overlay').style.display = 'none'; });
 document.getElementById('btn-dex').addEventListener('click', () => openDex(game.textures));
+document.getElementById('btn-sound').addEventListener('click', () => openSound());
 document.getElementById('btn-dex-close').addEventListener('click', () => { document.getElementById('dex-overlay').style.display = 'none'; });
+document.getElementById('btn-sound-close').addEventListener('click', () => { document.getElementById('sound-overlay').style.display = 'none'; });
 // 게임 방법·도감 창이 떠 있으면 ESC 는 창만 닫음 (Phaser 키 처리보다 먼저 받음)
 window.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;

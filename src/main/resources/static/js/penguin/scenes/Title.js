@@ -6,7 +6,7 @@ import { Sound } from '../core/audio.js';
 import { save, persist } from '../meta/save.js';
 import { T } from '../meta/i18n.js';
 import { drawWater } from './water.js';
-import { button, text, openHelp, sheetOpen } from './ui.js';
+import { button, text, openHelp, sheetOpen, openSound } from './ui.js';
 import { openDex } from './dex.js';
 import * as C from '../core/config.js';
 
@@ -48,15 +48,7 @@ export class Title extends Phaser.Scene {
     const allDone = save.cleared >= C.LEVELS.length && !save.snap;
     const label = save.cleared === 0 && !save.snap ? T.start : allDone ? T.map : T.continue;
     button(this, W / 2, H - 250, label, () => this.go(), { primary: true, w: 340, h: 76, size: 30, depth: 50 });
-    // 소리 켬 → 배경음 끔 → 소리 끔
-    const soundState = () => save.muted ? 2 : save.musicOff ? 1 : 0;
-    const soundLabel = () => [T.soundOn, T.musicOff, T.soundOff][soundState()];
-    this.muteBtn = button(this, W / 2 - 170, H - 160, soundLabel(), () => {
-      const next = (soundState() + 1) % 3;
-      save.muted = next === 2; save.musicOff = next >= 1; persist();
-      Sound.setMuted(save.muted); Sound.setMusicMuted(save.musicOff);
-      this.muteBtn.setLabel(soundLabel());
-    }, { w: 156, h: 56, size: 19, depth: 50 });
+    button(this, W / 2 - 170, H - 160, T.sound, () => openSound(), { w: 156, h: 56, size: 19, depth: 50 });
     button(this, W / 2, H - 160, T.help, () => openHelp(this.textures), { w: 156, h: 56, size: 19, depth: 50 });
     button(this, W / 2 + 170, H - 160, T.dex, () => openDex(this.textures), { w: 156, h: 56, size: 19, depth: 50 });
 

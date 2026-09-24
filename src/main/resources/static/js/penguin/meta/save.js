@@ -6,8 +6,7 @@ export const save = {
   cleared: 0,          // 깬 레벨 수 (0 이면 Lv1 만 열림)
   best: {},            // 레벨 번호(0부터) → 가장 빠른 클리어 초
   totalTime: 0,        // 클리어한 판들의 시간 합
-  muted: false,
-  musicOff: false,     // 배경음만 끔
+  vol: null,           // { music, sfx } 0~1. null 이면 기본값 (core/audio.js DEFAULT_VOL)
   seenTutorial: false,
   seenPets: [],        // 이름표를 이미 보여준 친구
   snap: null           // 하던 판 (레벨 중간 이어하기)

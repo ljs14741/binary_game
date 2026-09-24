@@ -9,7 +9,7 @@ import { setupCamera, PS } from '../art/dpr.js';
 import { P, WORLDS, css, INK } from '../art/palette.js';
 import { penguinKey, FOOD_KEYS } from '../art/textures.js';
 import { drawWater } from './water.js';
-import { button, text, panel, dim, hudReserve } from './ui.js';
+import { button, text, panel, dim, hudReserve, goGuestbook } from './ui.js';
 import { levelCard, startBonus, medalName } from './levelCard.js';
 
 const SHOP = ['gentoo', 'chinstrap', 'emperor', 'macaroni', 'rainbow', 'food', 'foodCount', 'weapon', 'otter'];
@@ -963,6 +963,7 @@ export class Tank extends Phaser.Scene {
     } else {
       button(this, W / 2, by, T.map, () => this.scene.start('Map'), { primary: true, w: pw - 60, h: 60, depth: d + 2 });
     }
+    button(this, W / 2, by + 62, T.guestClear, goGuestbook, { w: Math.min(320, pw - 40), h: 42, size: 16, color: 0xdfeaff, depth: d + 2 });
   }
 
   onLose() {
@@ -980,6 +981,7 @@ export class Tank extends Phaser.Scene {
       const pw = Math.min(440, W - 40);
       button(this, W / 2 - pw / 4 - 4, H * 0.7, T.map, () => this.scene.start('Map'), { w: pw / 2 - 16, h: 60, depth: d + 1 });
       button(this, W / 2 + pw / 4 + 4, H * 0.7, T.retry, () => this.scene.restart({ level: this.levelIdx, fromCard: true }), { primary: true, w: pw / 2 - 16, h: 60, depth: d + 1 });
+      button(this, W / 2, H * 0.7 + 62, T.guestLose, goGuestbook, { w: Math.min(320, pw - 40), h: 42, size: 16, color: 0xdfeaff, depth: d + 1 });
     });
   }
 }

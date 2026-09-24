@@ -90,10 +90,13 @@
             <div id="pause-overlay">
                 <h2 th:text="#{penguin.ui.paused}">일시정지</h2>
                 <button id="btn-resume" type="button" th:text="#{penguin.ui.resume}">계속하기</button>
-                <button id="btn-help" type="button" class="sub" th:text="#{penguin.ui.help}">게임 방법</button>
-                <button id="btn-dex" type="button" class="sub" th:text="#{penguin.ui.dex}">펭귄 도감</button>
-                <button id="btn-restart" type="button" class="sub" th:text="#{penguin.ui.restart}">처음부터</button>
-                <button id="btn-quit" type="button" class="sub" th:text="#{penguin.ui.quit}">지도로 (저장됨)</button>
+                <div class="pause-grid">
+                    <button id="btn-help" type="button" class="sub" th:text="#{penguin.ui.help}">게임 방법</button>
+                    <button id="btn-dex" type="button" class="sub" th:text="#{penguin.ui.dex}">펭귄 도감</button>
+                    <button id="btn-sound" type="button" class="sub" th:text="#{penguin.ui.sound}">소리</button>
+                    <button id="btn-restart" type="button" class="sub" th:text="#{penguin.ui.restart}">처음부터</button>
+                    <button id="btn-quit" type="button" class="sub wide" th:text="#{penguin.ui.quit}">지도로 (저장됨)</button>
+                </div>
             </div>
             <!--/* 게임 방법 창. img[data-tex] 는 열 때 게임 텍스처로 채움 (scenes/ui.js openHelp) */-->
             <div id="help-overlay" class="bw-sheet" role="dialog" aria-modal="true" aria-labelledby="help-title">
@@ -152,6 +155,22 @@
                     </div>
                 </div>
             </div>
+            <!--/* 소리 설정. 값은 js/penguin/scenes/ui.js openSound 가 채우고 저장 */-->
+            <div id="sound-overlay" class="bw-sheet" role="dialog" aria-modal="true" aria-labelledby="sound-title">
+                <div class="help-card sound-card">
+                    <div class="help-head">
+                        <h2 id="sound-title" th:text="#{penguin.ui.sound}">소리</h2>
+                        <button id="btn-sound-close" type="button" aria-label="닫기" th:aria-label="#{penguin.ui.close}">✕</button>
+                    </div>
+                    <div class="sound-body">
+                        <label for="vol-music"><span th:text="#{penguin.ui.music}">배경음</span><output id="vol-music-val">55</output></label>
+                        <input id="vol-music" type="range" min="0" max="100" step="5">
+                        <label for="vol-sfx"><span th:text="#{penguin.ui.sfx}">효과음</span><output id="vol-sfx-val">90</output></label>
+                        <input id="vol-sfx" type="range" min="0" max="100" step="5">
+                        <p th:text="#{penguin.ui.soundHint}">0 으로 내리면 꺼져요. 폰 볼륨도 같이 확인하세요.</p>
+                    </div>
+                </div>
+            </div>
             <!--/* 펭귄 도감. 내용은 js/penguin/scenes/dex.js 가 열 때마다 채움 (해금 상태 반영) */-->
             <div id="dex-overlay" class="bw-sheet" role="dialog" aria-modal="true" aria-labelledby="dex-title">
                 <div class="help-card">
@@ -190,6 +209,7 @@
     </section>
 </div>
 <div th:replace="~{fragments/other-games :: otherGames}"></div>
+<p class="bw-penguin-guest" th:text="#{penguin.ui.guestbook}">재밌었거나 아쉬운 점 있으면 방명록에 남겨주세요 :)</p>
 <div id="bw-guestbook" aria-label="방명록"></div>
 <footer id="global-footer" aria-label="Binary World 푸터"></footer>
 <script th:src="@{/js/phaser-3.90.min.js}" src="/js/phaser-3.90.min.js"></script>

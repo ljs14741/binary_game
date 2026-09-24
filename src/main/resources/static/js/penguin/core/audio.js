@@ -3,7 +3,11 @@
  */
 const PENTA = [0, 2, 4, 7, 9];
 const midi = n => 440 * Math.pow(2, (n - 69) / 12);
-const MUSIC_VOL = 0.2;
+/* 음량. 설정 창 슬라이더(0~1) × 최대값 = 버스 게인.
+ * 2026-09-24 측정: 예전(배경 0.2·효과 0.8)은 배경 -44.5dB·효과 -32dB 로 너무 작았음 → 최대값을 크게 잡고 압축기로 찢어짐만 막음 */
+const MUSIC_MAX = 2.2, SFX_MAX = 2.4;
+// 배경음은 효과음보다 조금 작게 (코인·타격 소리가 묻히지 않게)
+export const DEFAULT_VOL = { music: 0.55, sfx: 0.9 };
 
 /* 월드별 곡. 16마디(8분음표 8칸 × 16) = A 8마디 + B 8마디. chords 는 조성 기준 반음 간격.
  * 멜로디는 마디마다 모티프(화음 음 번호, -1 쉼)를 골라 화음을 따라가게 해서 어느 화음에서도 어울림 */
@@ -35,7 +39,7 @@ const SONGS = [
 ];
 
 export const Sound = {
-  ctx: null, master: null, sfx: null, music: null, muted: false, musicMuted: false, _noise: null, _last: {},
+  ctx: null, master: null, sfx: null, music: null, vol: { ...DEFAULT_VOL }, _noise: null, _last: {},
   _mode: null, _step: 0, _next: 0, _timer: null,
   world: 0,          // 월드별 곡
   intensity: 1,      // 0 멜로디만 · 1 +베이스 · 2 +드럼 · 3 +아르페지오 (판이 커질수록)
@@ -47,11 +51,13 @@ export const Sound = {
     if (!AC) return null;
     const ctx = new AC({ latencyHint: 'interactive' });
     this.ctx = ctx;
+    // 압축기는 소리를 줄이는 게 아니라 큰 소리가 겹칠 때 찢어지지 않게 잡는 용도
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ctx.destination);
-    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.9; this.master.connect(comp);
-    this.sfx = ctx.createGain(); this.sfx.gain.value = 0.8; this.sfx.connect(this.master);
-    this.music = ctx.createGain(); this.music.gain.value = this.musicMuted ? 0 : MUSIC_VOL; this.music.connect(this.master);
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.2;
+    comp.connect(ctx.destination);
+    this.master = ctx.createGain(); this.master.gain.value = 1; this.master.connect(comp);
+    this.sfx = ctx.createGain(); this.sfx.gain.value = this.vol.sfx * SFX_MAX; this.sfx.connect(this.master);
+    this.music = ctx.createGain(); this.music.gain.value = this.vol.music * MUSIC_MAX; this.music.connect(this.master);
     const len = ctx.sampleRate;
     const buf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -68,8 +74,12 @@ export const Sound = {
 
   get ready() { return this.ctx && this.ctx.state === 'running'; },
   now() { return this.ctx ? this.ctx.currentTime : 0; },
-  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.now(), 0.02); },
-  setMusicMuted(m) { this.musicMuted = m; if (this.music) this.music.gain.setTargetAtTime(m ? 0 : MUSIC_VOL, this.now(), 0.05); },
+  /** kind: 'music' | 'sfx', v: 0~1 (0 이면 꺼짐) */
+  setVolume(kind, v) {
+    this.vol[kind] = Math.max(0, Math.min(1, v));
+    const bus = kind === 'music' ? this.music : this.sfx;
+    if (bus) bus.gain.setTargetAtTime(this.vol[kind] * (kind === 'music' ? MUSIC_MAX : SFX_MAX), this.now(), 0.03);
+  },
   setWorld(w) { if (this.world !== w) { this.world = w; this._step = 0; } },
 
   // 같은 소리가 한 프레임에 몰리면 시끄러움

@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { FONT, P, css } from '../art/palette.js';
 import { Sound } from '../core/audio.js';
+import { save, persist } from '../meta/save.js';
 import { DPR } from '../art/dpr.js';
 
 export function text(scene, x, y, str, o = {}) {
@@ -86,4 +87,32 @@ export function hudReserve(scene) {
   // penguin.css: 일시정지 right 12, 전체화면 right 64, 둘 다 폭·높이 44, top 10
   const span = (full && !full.classList.contains('hidden') ? 108 : 56) + 8;
   return { w: Math.max(0, span - (sr.right - cr.right)) * k, h: Math.max(0, 60 - (cr.top - sr.top)) * k };
+}
+
+/** 소리 설정 창 (HTML #sound-overlay). 배경음·효과음 슬라이더, 0 이면 꺼짐. 바꾸는 즉시 저장 */
+export function openSound() {
+  const ov = document.getElementById('sound-overlay');
+  if (!ov) return;
+  for (const kind of ['music', 'sfx']) {
+    const input = document.getElementById('vol-' + kind), out = document.getElementById('vol-' + kind + '-val');
+    input.value = Math.round(Sound.vol[kind] * 100);
+    out.textContent = input.value;
+    input.oninput = () => {
+      out.textContent = input.value;
+      Sound.unlock();
+      Sound.setVolume(kind, input.value / 100);
+      save.vol = { ...Sound.vol }; persist();
+      // 효과음은 바로 들려줌
+      if (kind === 'sfx' && Sound.gate('volPreview', 120)) Sound.coin('gold');
+    };
+  }
+  ov.style.display = 'flex';
+}
+
+/** 페이지 아래 방명록으로. 전체화면이면 먼저 빠져나옴 */
+export function goGuestbook() {
+  const go = () => { const g = document.getElementById('bw-guestbook'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const fs = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fs) { const r = (document.exitFullscreen || document.webkitExitFullscreen).call(document); if (r && r.then) r.then(() => setTimeout(go, 150)); else setTimeout(go, 300); }
+  else go();
 }
