@@ -28,6 +28,22 @@ public class GameCatalogAdvice {
         return GameCatalog.GAMES;
     }
 
+    /** 메인: 신작 띠 · 내기·복불복 · 혼자 즐기기 */
+    @ModelAttribute("featuredGame")
+    public GameCatalog.Game featuredGame() {
+        return GameCatalog.byPath(GameCatalog.FEATURED);
+    }
+
+    @ModelAttribute("betGames")
+    public List<GameCatalog.Game> betGames() {
+        return GameCatalog.betGames();
+    }
+
+    @ModelAttribute("soloGames")
+    public List<GameCatalog.Game> soloGames() {
+        return GameCatalog.soloGames();
+    }
+
     /** 지금 보고 있는 게임. 게임 페이지가 아니면 null 이다. */
     @ModelAttribute("currentGame")
     public GameCatalog.Game currentGame(HttpServletRequest request) {

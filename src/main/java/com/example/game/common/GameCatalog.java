@@ -48,6 +48,11 @@ public final class GameCatalog {
             return langs.contains(lang);
         }
 
+        /** 혼자 즐기는 게임인지. 아니면 내기·복불복 */
+        public boolean solo() {
+            return SOLO.contains(path);
+        }
+
         /**
          * 카드 썸네일. 600x400(3:2) 로 통일돼 있다.
          * 기본은 WebP 이고, PNG_CARDS 에 든 것만 PNG 다.
@@ -65,37 +70,57 @@ public final class GameCatalog {
      * 그림은 docs/art/card.js 가 순수 Node 로 굽는다 — 그래서 PNG 다.
      * 나중에 도구가 생기면 WebP 로 다시 구워 여기서 지우면 된다.
      */
+    /** 혼자 즐기는 게임 (키우기·리듬·아케이드). 메인에서 "내기·복불복"과 나눠 보여줌. 여기 없는 건 전부 내기·복불복 */
+    static final Set<String> SOLO = Set.of("/penguin", "/rhythm", "/kimchi", "/dodge");
+
+    /** 메인 맨 위 "신작" 띠에 올릴 게임. 새 게임이 나오면 여기만 바꿈. 이 게임은 아래 묶음에서 빠짐 */
+    public static final String FEATURED = "/penguin";
+
     static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel", "/rhythm", "/press", "/pinball", "/penguin");
 
-    /** 표시 순서 = 이 목록의 순서. 유입이 많은 게임을 위로 둔다. */
+    /**
+     * 표시 순서 = 이 목록의 순서. 맨 앞은 키우는 게임(펭귄), 그다음 수익이 좋은 경마·핀볼·무궁화.
+     * 나머지는 주력인 복불복·내기 장르를 먼저, 액션은 뒤로. 앞 {@link #FIXED_OTHERS}개는 "다른 게임"에서도 늘 먼저 나온다.
+     */
     public static final List<Game> GAMES = List.of(
             new Game("/penguin", "펭귄 키우기", "Aquarium",
                     "추억의 물고기 키우기를 펭귄으로 · 먹이 주고 코인 줍고 천적 막기", "2026-09-24"),
-            new Game("/rhythm", "뿌셔뿌셔 리듬게임", "Rhythm",
-                    "리듬 듣고 똑같이 따라 쳐서 벽·창문·굴뚝 부수기 · 버튼 하나 리듬게임", "2026-09-21", Set.of("en", "ja")),
+            new Game("/horserace", "말달리자 경마내기게임", "Race",
+                    "말 하나 골라놓고 끝까지 조마조마 · 경마내기", "2026-09-21", Set.of("en", "ja")),
+            new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",
+                    "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", "2026-09-21", Set.of("en", "ja")),
             new Game("/mugunghwa", "무궁화 꽃이 피었습니다", "Pick",
                     "커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체", "2026-09-21", Set.of("en", "ja")),
+            new Game("/rhythm", "뿌셔뿌셔 리듬게임", "Rhythm",
+                    "리듬 듣고 똑같이 따라 쳐서 벽·창문·굴뚝 부수기 · 버튼 하나 리듬게임", "2026-09-21", Set.of("en", "ja")),
             new Game("/ladder", "사다리타기 워터슬라이드", "Ladder",
                     "물이 미끄럼틀을 타고 내려가는 사다리타기 · 커피내기·벌칙뽑기", "2026-09-21", Set.of("en", "ja")),
             new Game("/wheel", "해머 원판돌리기", "Wheel",
                     "이름 넣고 돌리는 온라인 돌림판 · 점심메뉴·커피내기·랜덤뽑기", "2026-09-21", Set.of("en", "ja")),
-            new Game("/press", "턱압프레스", "Press",
-                    "조진세가 생각나는 턱압프레스 · 수박 터뜨리기 복불복 룰렛", "2026-09-21", Set.of("en", "ja")),
-            // new Game("/parachute", "낙하산", "Nerve",
-            //         "늦게 펼수록 이긴다 · 혼자 기록 도전 · 담력 복불복", "2026-09-01"),
             new Game("/roulette", "물풍선 룰렛", "Roulette",
                     "러시안룰렛 · 돌아가며 펌프질 · 터뜨리면 물벼락", "2026-09-21", Set.of("en", "ja")),
             new Game("/wasabi", "와사비 룰렛", "Roulette",
                     "초밥 접시 중 와사비를 피하세요 · 커피내기·점심내기", "2026-09-20", Set.of("en", "ja")),
-            new Game("/pinball", "핀볼룰렛 랜덤공뽑기", "Roulette",
-                    "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", "2026-09-21", Set.of("en", "ja")),
-            new Game("/horserace", "말달리자 경마내기게임", "Race",
-                    "말 하나 골라놓고 끝까지 조마조마 · 경마내기", "2026-09-21", Set.of("en", "ja")),
-            new Game("/dodge", "총알 피하기", "Arcade",
-                    "랭킹 도전 · 오래 버틸수록 빨라지는 생존 아케이드", "2026-09-21", Set.of("en", "ja")),
+            new Game("/press", "턱압프레스", "Press",
+                    "조진세가 생각나는 턱압프레스 · 수박 터뜨리기 복불복 룰렛", "2026-09-21", Set.of("en", "ja")),
             new Game("/kimchi", "김치 랜덤 디펜스", "Defense",
-                    "뽑기 운으로 막는 랜덤 타워 디펜스", "2026-09-21", Set.of("en", "ja"))
+                    "뽑기 운으로 막는 랜덤 타워 디펜스", "2026-09-21", Set.of("en", "ja")),
+            new Game("/dodge", "총알 피하기", "Arcade",
+                    "랭킹 도전 · 오래 버틸수록 빨라지는 생존 아케이드", "2026-09-21", Set.of("en", "ja"))
+            // 숨김
+            // new Game("/parachute", "낙하산", "Nerve",
+            //         "늦게 펼수록 이긴다 · 혼자 기록 도전 · 담력 복불복", "2026-09-01"),
     );
+
+    /** 메인 "내기·복불복" 묶음. {@link #GAMES} 순서, 신작 띠 게임은 뺌 */
+    public static List<Game> betGames() {
+        return GAMES.stream().filter(g -> !g.solo() && !g.path().equals(FEATURED)).toList();
+    }
+
+    /** 메인 "혼자 즐기기" 묶음. {@link #GAMES} 순서, 신작 띠 게임은 뺌 */
+    public static List<Game> soloGames() {
+        return GAMES.stream().filter(g -> g.solo() && !g.path().equals(FEATURED)).toList();
+    }
 
     /** 경로로 하나 찾는다. 없으면 null. */
     public static Game byPath(String path) {
@@ -110,12 +135,16 @@ public final class GameCatalog {
         return null;
     }
 
+    /** "다른 게임" 섹션에서 늘 맨 앞에 두는 개수. 현재 게임을 뺀 목록의 앞에서부터 센다 */
+    static final int FIXED_OTHERS = 3;
+
     /**
      * 게임 페이지 하단 "다른 게임" 섹션에 뿌릴 목록.
      *
      * <p>현재 게임은 빼고, {@code limit} 개까지만 돌려준다.
      * 게임이 20개가 되면 19장을 전부 내리는 셈이라 개수 제한이 필요하다.
-     * 매번 순서를 섞어서 재방문자에게 다른 게임이 눈에 띄도록 한다.
+     * 앞 {@link #FIXED_OTHERS}개(키우는 게임·수익 게임)는 {@link #GAMES} 순서대로 늘 먼저 보이고,
+     * 나머지는 매번 섞어서 재방문자에게 다른 게임이 눈에 띄도록 한다.
      */
     public static List<Game> others(String currentPath, int limit) {
         List<Game> rest = new ArrayList<>(GAMES.size());
@@ -124,7 +153,8 @@ public final class GameCatalog {
                 rest.add(g);
             }
         }
-        Collections.shuffle(rest);
+        int fixed = Math.min(FIXED_OTHERS, rest.size());
+        Collections.shuffle(rest.subList(fixed, rest.size()));
         return rest.size() > limit ? rest.subList(0, limit) : rest;
     }
 }
