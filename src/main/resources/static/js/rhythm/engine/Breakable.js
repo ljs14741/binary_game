@@ -17,6 +17,7 @@ export class Breakable {
     this.stagger = o.stagger !== false;
     this.rows = Math.ceil(o.count / this.cols);
     this.bricks = [];
+    this.bodies = [];   // 날린 조각 (장난감 모드가 지나간 대상을 치울 때 씀)
     for (let r = 0; r < this.rows; r++) {
       const shift = this.stagger && r % 2 ? this.pw / 2 : 0;
       const inRow = Math.min(this.cols, o.count - r * this.cols);
@@ -54,6 +55,14 @@ export class Breakable {
     return pool.find(q => q.r === r) || pool[0];
   }
 
+  // 남은 조각·날린 조각을 모두 치움
+  destroy() {
+    for (const b of this.bricks) if (b.alive) b.img.destroy();
+    for (const b of this.bodies) if (b.scene) b.destroy();
+    this.bodies.length = 0;
+    if (this.deco) this.deco.destroy();
+  }
+
   // (x,y) 근처 조각 n개를 날린다. 실제 날린 수 반환.
   smash(x, y, n, power = 1, dir = 1) {
     if (n <= 0) return 0;
@@ -72,6 +81,7 @@ export class Breakable {
       body.setAngularVelocity(Phaser.Math.FloatBetween(-0.3, 0.3) * power);
       body.__born = s.time.now; body.__still = 0;
       s.debris.push(body);
+      this.bodies.push(body);
     }
     s.trimDebris();
     return picked.length;
@@ -91,7 +101,7 @@ export function settleDebris(scene, dt) {
   const list = scene.debris;
   for (let i = list.length - 1; i >= 0; i--) {
     const b = list[i];
-    if (!b.body) { list.splice(i, 1); continue; }
+    if (!b.body || !b.scene) { list.splice(i, 1); continue; }
     const v = b.body.velocity;
     const slow = Math.abs(v.x) + Math.abs(v.y) < 0.35;
     b.__still = slow ? b.__still + dt : 0;

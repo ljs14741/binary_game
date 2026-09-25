@@ -6,7 +6,7 @@ import { T } from '../meta/i18n.js';
 import { Conductor } from '../core/conductor.js';
 import { Judge, labelFor } from '../core/judge.js';
 import { AudioEngine as audio, chordFor } from '../core/audio.js';
-import { settings, saveRecord, countPlay } from '../meta/settings.js';
+import { settings, records, saveRecord, countPlay } from '../meta/settings.js';
 import { input } from '../core/inputSingleton.js';
 import { Bot } from './Bot.js';
 import { CameraFx } from './CameraFx.js';
@@ -32,17 +32,10 @@ export class StageScene extends Phaser.Scene {
     this.camFx = new CameraFx(this);
     this.marks = new Map();
     this.ringG = this.add.graphics().setDepth(20);
-    const mp = hud(this, W - 76, 110);
+    const mp = hud(this, 44, 112);   // 오른쪽은 하트 자리라 왼쪽에
     this.megaphone = this.add.image(mp.x, mp.y, 'megaphone').setScrollFactor(0).setDepth(50).setAlpha(0.35);
 
-    this.conductor = new Conductor(audio, this.chart);
-    this.judge = new Judge(this.conductor.notes, undefined, this.chart.lives || 0);
-    this.megaphoneOffset = 0;
-    this.cueK = this.conductor.cues.map((c, i) => this.conductor.cues.slice(0, i).filter(q => q.pattern === c.pattern).length);
-    this.conductor.onCue = (c, hitTime) => this.onCue(c, hitTime);
-    this.conductor.onBeat = b => this.onBeat(b);
-    this.conductor.onPhase = ph => this.onPhase(ph);
-    this.judge.onMiss = n => this.onAutoMiss(n);
+    this.setupRun();
 
     this.inputOffset = settings.inputOffset;
     this.visualOffset = settings.inputOffset;
@@ -59,7 +52,7 @@ export class StageScene extends Phaser.Scene {
     this.fx.setLives(this.judge.lives, this.judge.maxLives);
     // 처음 3판: 시범 듣는 동안 화면 아래에 조작법. 내 차례("부숴!")가 오면 걷는다.
     // 3판이면 충분히 손에 익고, 그 뒤로는 화면을 비워 둔다. 제목 화면엔 늘 있다.
-    if (countPlay() <= 3) {
+    if (!this.practice && countPlay() <= 3) {
       const { W, H } = logical(this);
       const p = hud(this, W / 2, H - 150);
       this.keyHintUi = keyHint(this, p.x, p.y, { scale: 0.9 }).setScrollFactor(0).setDepth(60).setAlpha(0);
@@ -67,6 +60,17 @@ export class StageScene extends Phaser.Scene {
     }
     audio.stopLoop();
     this.conductor.start(0.6);
+  }
+
+  // 채보 한 판(Conductor + Judge). 연습 모드는 레슨마다 다시 부름
+  setupRun() {
+    this.conductor = new Conductor(audio, this.chart);
+    this.judge = new Judge(this.conductor.notes, this.chart.windows, this.chart.lives || 0, this.chart.grace || 0);
+    this.cueK = this.conductor.cues.map((c, i) => this.conductor.cues.slice(0, i).filter(q => q.pattern === c.pattern).length);
+    this.conductor.onCue = (c, hitTime) => this.onCue(c, hitTime);
+    this.conductor.onBeat = b => this.onBeat(b);
+    this.conductor.onPhase = ph => this.onPhase(ph);
+    this.judge.onMiss = n => this.onAutoMiss(n);
   }
 
   /* ---------- 서브클래스가 채우는 것 ---------- */
@@ -190,6 +194,7 @@ export class StageScene extends Phaser.Scene {
     this.finished = true;
     this.conductor.stop();
     input.enabled = false;
+    this.endHud();
     for (const m of this.marks.values()) m.destroy();
     this.marks.clear();
     this.fx.setBanner(T.failed, css(P.miss));
@@ -200,6 +205,12 @@ export class StageScene extends Phaser.Scene {
     sum.demolished = this.demolishedRatio();
     sum.isNew = false;
     this.time.delayedCall(1100, () => this.scene.launch('Result', { summary: sum, chart: this.chart, stageKey: this.scene.key, stageId: this.chart.baseId || this.chart.id }));
+  }
+
+  // 결과 화면 뒤로 비치지 않게 콤보·일시정지 버튼을 걷음
+  endHud() {
+    this.tweens.add({ targets: this.fx.combo, alpha: 0, duration: 200 });
+    this.pauseBtn.style.display = 'none';
   }
 
   demolishedRatio() {
@@ -278,10 +289,12 @@ export class StageScene extends Phaser.Scene {
     this.conductor.stop();
     this.judge.flush();
     input.enabled = false;
+    this.endHud();
     for (const m of this.marks.values()) m.destroy();
     this.marks.clear();
     const sum = this.judge.summary();
     sum.demolished = this.demolishedRatio();
+    sum.prev = records[this.chart.id] ? { ...records[this.chart.id] } : null;
     sum.isNew = saveRecord(this.chart.id, sum);
     audio.fanfare(audio.now() + 0.3, sum.accuracy >= 0.7);
     const cam = this.cameras.main;

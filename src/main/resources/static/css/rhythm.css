@@ -88,9 +88,22 @@
 .bw-rhythm-stage #btn-full { right: 64px; }
 .bw-rhythm-stage #btn-full.hidden { display: none; }
 .bw-rhythm-stage #btn-pause { right: 12px; display: none; }
+/* 연습 중에만 보임 (TutorialScene). 연습엔 점수가 없어서 그 자리(왼쪽 위)에 둠 */
+.bw-rhythm-stage #btn-skip {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  display: none;
+  height: 44px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #2b2733;
+  font-size: 14px;
+}
 
 .bw-rhythm-stage:fullscreen #btn-full,
-.bw-rhythm-stage:fullscreen #btn-pause {
+.bw-rhythm-stage:fullscreen #btn-pause,
+.bw-rhythm-stage:fullscreen #btn-skip {
   top: calc(10px + env(safe-area-inset-top));
 }
 

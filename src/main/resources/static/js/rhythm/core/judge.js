@@ -2,14 +2,16 @@
  * 창(초): perfect ±0.05, good ±0.11, miss ±0.16 (대칭).
  * |d| ≤ miss 안의 탭은 가장 가까운 노트를 소모한다. 노트 시각 + miss 가 지나면 자동 MISS.
  * MISS의 방향은 delta 부호로 구분한다 (delta < 0 이르게, > 0 늦게, null 자동).
+ * grace: 앞쪽 몇 패턴은 MISS 여도 목숨을 안 깎음 (처음 감 잡는 구간)
  */
 import { T } from '../meta/i18n.js';
 export const WINDOWS = { perfect: 0.05, good: 0.11, miss: 0.16 };
 
 export class Judge {
-  constructor(notes, windows = WINDOWS, lives = 0) {
+  constructor(notes, windows = WINDOWS, lives = 0, grace = 0) {
     this.notes = notes;               // 시간순 정렬 가정
-    this.w = { ...windows };
+    this.w = { ...WINDOWS, ...(windows || {}) };
+    this.grace = grace;
     this.lives = lives; this.maxLives = lives;   // 0 이면 목숨 없음
     this.failed = false;
     this.score = 0; this.combo = 0; this.maxCombo = 0;
@@ -33,7 +35,7 @@ export class Judge {
     best.judged = true;
     best.delta = t - best.time;
     best.result = bestD <= this.w.perfect ? 'perfect' : bestD <= this.w.good ? 'good' : 'miss';
-    this._apply(best.result);
+    this._apply(best.result, best);
     return best;
   }
 
@@ -42,7 +44,7 @@ export class Judge {
       if (n.judged) continue;
       if (t <= n.time + this.w.miss) break;
       n.judged = true; n.result = 'miss'; n.delta = null;
-      this._apply('miss');
+      this._apply('miss', n);
       if (this.onMiss) this.onMiss(n);
     }
   }
@@ -52,11 +54,14 @@ export class Judge {
 
   whiff() { this.whiffs++; this.combo = 0; }
 
-  _apply(r) {
+  // 이 노트의 MISS 가 목숨을 깎는지
+  costsLife(note) { return this.maxLives > 0 && !(note && note.pattern < this.grace); }
+
+  _apply(r, note) {
     this.counts[r]++;
     if (r === 'miss') {
       this.combo = 0;
-      if (this.maxLives > 0 && this.lives > 0) { this.lives--; if (this.lives === 0) this.failed = true; }
+      if (this.costsLife(note) && this.lives > 0) { this.lives--; if (this.lives === 0) this.failed = true; }
       return;
     }
     this.combo++;

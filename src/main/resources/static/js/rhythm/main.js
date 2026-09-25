@@ -10,6 +10,8 @@ import { NailsScene } from './stages/w1/NailsScene.js';
 import { RemixScene } from './stages/w1/RemixScene.js';
 import { WorldMap } from './scenes/WorldMap.js';
 import { Toy } from './scenes/Toy.js';
+import { ToyEnd } from './scenes/ToyEnd.js';
+import { TutorialScene } from './stages/w1/TutorialScene.js';
 import { loadSettings, settings } from './meta/settings.js';
 import { AudioEngine as audio } from './core/audio.js';
 import './core/inputSingleton.js';
@@ -40,7 +42,7 @@ const game = new Phaser.Game({
   physics: { default: 'matter', matter: { gravity: { x: 0, y: 1.6 }, debug: false } },
   audio: { noAudio: true },
   render: { antialias: true, roundPixels: false },
-  scene: [Boot, Title, WorldMap, Calib, WallScene, WindowScene, ChimneyScene, NailsScene, RemixScene, Toy, Result]
+  scene: [Boot, Title, WorldMap, Calib, TutorialScene, WallScene, WindowScene, ChimneyScene, NailsScene, RemixScene, Toy, ToyEnd, Result]
 });
 
 // 박스 크기/회전이 바뀌면 가로 폭을 다시 정하고, 메뉴 화면이면 다시 배치
@@ -51,7 +53,7 @@ function onResize() {
   lastW = w;
   // resize() 는 FIT 의 표시 비율(displaySize.aspectRatio)을 안 건드려서 캔버스가 옛 비율로 눌린다. setGameSize() 는 건드린다.
   game.scale.setGameSize(w * DPR, BASE_H * DPR);
-  for (const key of ['Title', 'WorldMap', 'Calib', 'Result']) {
+  for (const key of ['Title', 'WorldMap', 'Calib', 'Result', 'ToyEnd']) {
     const sc = game.scene.getScene(key);
     if (sc && sc.scene.isActive()) sc.scene.restart(sc.scene.settings.data);
   }

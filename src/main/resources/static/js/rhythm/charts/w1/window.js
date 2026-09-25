@@ -1,8 +1,8 @@
 export default {
   "id": "w1-window", "world": 1, "title": "창문 깨기",
   "bpm": 124, "beatsPerBar": 4, "introBars": 2, "outroBars": 1,
-  "material": "glass", "lives": 3,
-  "hard": { "bpm": 148, "lives": 1 },
+  "material": "glass", "lives": 3, "grace": 1,
+  "hard": { "bpm": 148, "lives": 1, "grace": 0 },
   "patterns": [
     { "beats": [0, 2],                 "target": "win-a" },
     { "beats": [0, 0.5, 2],            "target": "win-a" },
