@@ -76,7 +76,7 @@ export const PENGUIN_LOOK = {
   'gentoo-0': { size: 40, body: P.babyGray, hi: P.babyHi, belly: 0xf4f7fb, face: 0xf4f7fb, fluff: 3, eye: 0.12, beak: P.beakLo, beakLen: 0.12, rx: 0.4, ry: 0.42, flipper: P.babyDark },
   'gentoo-1': { size: 52, body: 0x57637a, hi: 0x8793a8, belly: 0xffffff, brow: true, fluff: 2, eye: 0.1, beak: P.beak, beakLen: 0.14, flipper: 0x46506a },
   'gentoo-2': { size: 64, body: P.navy, hi: P.navyHi, belly: 0xffffff, brow: true, eye: 0.088, beak: P.beak, beakLen: 0.17, flipper: 0x1a2033 },
-  chinstrap: { size: 58, body: 0x2c3345, hi: 0x4a5572, belly: 0xffffff, face: 0xffffff, strap: true, eye: 0.09, beak: 0x2b2f3d, beakLen: 0.15, flipper: 0x1f2535 },
+  chinstrap: { size: 60, body: 0x3a4459, hi: 0x5f6c88, belly: 0xffffff, face: 0xffffff, strap: true, bag: true, eye: 0.09, beak: 0x2b2f3d, beakLen: 0.15, flipper: 0x2a3244 },
   emperor: { size: 88, body: P.emperorBack, hi: 0x55648a, belly: 0xffffff, chest: P.emperorChest, patch: P.emperorGold, eye: 0.075, beak: 0x333a4e, beakStripe: P.beak, beakLen: 0.2, rx: 0.34, ry: 0.46, flipper: 0x252f45 },
   macaroni: { size: 64, body: 0x262b3a, hi: 0x434a60, belly: 0xffffff, crest: true, eye: 0.09, beak: 0xe0502a, beakLen: 0.17, beakThick: 1.35, flipper: 0x1b1f2b },
   rainbow: { size: 66, bands: [0xff8fa3, 0xffb86b, 0xffe66b, 0x8fe8a4, 0x7fcfff, 0xb49bff], hi: 0xffffff, belly: 0xffffff, eye: 0.09, beak: P.gold, beakLen: 0.16, flipper: 0xb49bff, sparkle: true }
@@ -103,13 +103,27 @@ function penguin(scene, key, o, flap) {
   ell(gr, cx + rx * 0.24, cy + ry * 0.16, rx * 0.64, ry * 0.74, o.belly);
   ell(gr, cx + rx * 0.02, cy + ry * 0.4, rx * 0.34, ry * 0.3, P.bellyShade, 0.6);
   if (o.chest) ell(gr, cx + rx * 0.34, cy - ry * 0.14, rx * 0.5, ry * 0.3, o.chest);
-  if (o.face) ell(gr, cx + rx * 0.4, cy - ry * 0.46, rx * 0.55, ry * 0.36, o.face);
   if (o.strap) {
-    gr.lineStyle(Math.max(1.6, S * 0.03), INK);
-    gr.beginPath(); gr.arc(cx + rx * 0.42, cy - ry * 0.62, rx * 0.5, 0.35, 2.3); gr.strokePath();
-  }
+    // 턱끈펭귄: 머리 꼭대기만 검고 얼굴 전체가 하얌 + 굵은 턱끈
+    ell(gr, cx + rx * 0.28, cy - ry * 0.4, rx * 0.74, ry * 0.42, o.face);
+    gr.lineStyle(Math.max(2.4, S * 0.05), INK);
+    gr.beginPath(); gr.arc(cx + rx * 0.36, cy - ry * 0.66, rx * 0.62, 0.3, 2.45); gr.strokePath();
+  } else if (o.face) ell(gr, cx + rx * 0.4, cy - ry * 0.46, rx * 0.55, ry * 0.36, o.face);
   if (o.patch) { ell(gr, cx + rx * 0.02, cy - ry * 0.46, rx * 0.22, ry * 0.15, o.patch, 1, 0.9); ell(gr, cx + rx * 0.25, cy - ry * 0.22, rx * 0.3, ry * 0.1, o.patch, 0.7, 0.2); }
-  if (o.brow) ell(gr, cx + rx * 0.3, cy - ry * 0.7, rx * 0.34, ry * 0.085, 0xffffff, 1, -0.25);
+  if (o.brow) ell(gr, cx + rx * 0.28, cy - ry * 0.72, rx * 0.42, ry * 0.11, 0xffffff, 1, -0.25);
+  // 코인 가방 (코인 줍는 펭귄 표시)
+  if (o.bag) {
+    const bw = S * 0.34, bh = S * 0.25, bx = cx + rx * 0.05, by = cy + ry * 0.3;
+    gr.lineStyle(Math.max(4, S * 0.075), INK); gr.beginPath(); gr.moveTo(cx - rx * 0.7, cy - ry * 0.5); gr.lineTo(bx + bw * 0.5, by + 2); gr.strokePath();
+    gr.lineStyle(Math.max(2.2, S * 0.042), 0xb06a2c); gr.beginPath(); gr.moveTo(cx - rx * 0.7, cy - ry * 0.5); gr.lineTo(bx + bw * 0.5, by + 2); gr.strokePath();
+    gr.fillStyle(INK); gr.fillRoundedRect(bx - 2.5, by - 2.5, bw + 5, bh + 5, 6);
+    gr.fillStyle(0xc9843f); gr.fillRoundedRect(bx, by, bw, bh, 4);
+    gr.fillStyle(0xa0632b); gr.fillRoundedRect(bx, by, bw, bh * 0.4, { tl: 4, tr: 4, bl: 0, br: 0 });
+    const cr = S * 0.065;
+    gr.fillStyle(INK); gr.fillCircle(bx + bw / 2, by + bh * 0.62, cr + 1.5);
+    gr.fillStyle(P.gold); gr.fillCircle(bx + bw / 2, by + bh * 0.62, cr);
+    gr.fillStyle(P.goldHi); gr.fillCircle(bx + bw / 2 - cr * 0.3, by + bh * 0.62 - cr * 0.3, cr * 0.35);
+  }
 
   // 눈·볼
   const er = S * o.eye, ex = cx + rx * 0.44, ey = cy - ry * 0.42;
@@ -134,94 +148,212 @@ function penguin(scene, key, o, flap) {
 }
 
 /* ---------------- 천적 ---------------- */
+// 조절점을 부드럽게 잇는 곡선 (캣멀롬)
+function spline(ctrl, n = 6, closed = true) {
+  const m = ctrl.length, out = [];
+  const at = i => closed ? ctrl[(i + m) % m] : ctrl[Math.max(0, Math.min(m - 1, i))];
+  for (let i = 0; i < (closed ? m : m - 1); i++) {
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    for (let k = 0; k < n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t;
+      const f = j => 0.5 * (2 * p1[j] + (p2[j] - p0[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (3 * p1[j] - p0[j] - 3 * p2[j] + p3[j]) * t3);
+      out.push({ x: f(0), y: f(1) });
+    }
+  }
+  if (!closed) out.push({ x: ctrl[m - 1][0], y: ctrl[m - 1][1] });
+  return out;
+}
+// 외곽선 있는 곡선 도형
+function shape(gr, ctrl, color, line = LINE, alpha = 1) {
+  const pts = spline(ctrl);
+  if (line) { gr.lineStyle(line * 2, INK); gr.strokePoints(pts, true, true); }
+  gr.fillStyle(color, alpha); gr.fillPoints(pts, true);
+}
+function curve(gr, ctrl, width, color, alpha = 1) { gr.lineStyle(width, color, alpha); gr.strokePoints(spline(ctrl, 6, false), false); }
+// (x0,y0)→(x1,y1) 을 따라 이빨 n개. dir 1 = 아래로, -1 = 위로
+function teeth(gr, x0, y0, x1, y1, n, len, dir = 1) {
+  gr.fillStyle(0xffffff);
+  const step = 1 / n;
+  for (let i = 0; i < n; i++) {
+    const a = i * step, b = (i + 1) * step, m = (a + b) / 2;
+    gr.fillTriangle(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a, x0 + (x1 - x0) * b, y0 + (y1 - y0) * b, x0 + (x1 - x0) * m, y0 + (y1 - y0) * m + len * dir);
+  }
+}
+// 벌린 입 (안쪽 빨강 + 위아래 이빨)
+function jaws(gr, poly, up, lo) {
+  shape(gr, poly, 0x8c2a3f, 2);
+  teeth(gr, ...up);
+  if (lo) teeth(gr, ...lo);
+}
+// 눈꺼풀을 반쯤 내려 째려보는 눈 (범고래)
+function lid(gr, x, y, r, color) {
+  gr.fillStyle(color);
+  gr.fillPoints(ellPts(x, y, r + 1.6, r + 1.6).filter(p => p.y < y - r * 0.15), true);
+  gr.lineStyle(2.5, INK); gr.beginPath(); gr.moveTo(x - r * 1.2, y - r * 0.15); gr.lineTo(x + r * 1.2, y - r * 0.15); gr.strokePath();
+}
+
 function skua(scene, key, up) {
-  const w = 104, h = 76, gr = g(scene), cx = 50, cy = 44;
-  tri(gr, [cx - 34, cy - 4, cx - 54, cy - 14, cx - 50, cy + 8], 0x6b5140);
-  if (!up) limb(gr, cx - 4, cy - 2, 12, 30, 1.9, 0x6b5140);
-  blob(gr, cx, cy, 34, 20, 0x8b6b52);
-  ell(gr, cx + 6, cy + 7, 22, 10, 0xc7a98c);
-  blob(gr, cx + 30, cy - 12, 17, 15, 0x8b6b52);
-  tri(gr, [cx + 42, cy - 17, cx + 60, cy - 8, cx + 42, cy - 5], 0x3b3a40);
-  tri(gr, [cx + 55, cy - 10, cx + 60, cy - 8, cx + 56, cy - 3], 0x3b3a40, 0);
-  eye(gr, cx + 34, cy - 16, 5.5, true);
-  limb(gr, cx - 2, cy - 6, 11, 32, up ? 2.6 : 1.2, 0x7a5c46);
+  const w = 120, h = 100, gr = g(scene), cx = 56, cy = 58;
+  const brown = 0x7a5a44, dark = 0x5a4131, lite = 0xcdb094;
+  const wingUp = [[6, -6], [-6, -26], [-26, -44], [-46, -54], [-38, -36], [-22, -16], [-8, -2]];
+  const wingDn = [[6, -4], [-8, 10], [-26, 26], [-48, 36], [-38, 20], [-22, 4], [-8, -8]];
+  const wing = (pts, dx, dy, col) => shape(gr, pts.map(([x, y]) => [cx + x + dx, cy + y + dy]), col);
+  // 먼 쪽 날개
+  wing(up ? wingUp : wingDn, 10, up ? 4 : -2, dark);
+  // 꼬리
+  shape(gr, [[cx - 24, cy - 4], [cx - 44, cy - 10], [cx - 48, cy], [cx - 44, cy + 8], [cx - 24, cy + 6]], dark);
+  // 몸·배
+  shape(gr, [[cx + 22, cy - 10], [cx + 6, cy - 16], [cx - 18, cy - 12], [cx - 32, cy], [cx - 18, cy + 13], [cx + 8, cy + 15], [cx + 24, cy + 6]], brown);
+  shape(gr, [[cx + 18, cy + 4], [cx + 4, cy + 12], [cx - 16, cy + 10], [cx - 8, cy + 4], [cx + 8, cy + 2]], lite, 0);
+  // 머리 + 갈고리 부리
+  blob(gr, cx + 28, cy - 12, 15, 13.5, brown);
+  ell(gr, cx + 22, cy - 20, 8, 4, 0xffffff, 0.22, -0.4);
+  shape(gr, [[cx + 40, cy - 17], [cx + 56, cy - 14], [cx + 62, cy - 8], [cx + 57, cy - 6], [cx + 40, cy - 8]], 0x2e2d33, 2);
+  eye(gr, cx + 32, cy - 16, 5.5, true);
+  // 가까운 날개 + 끝의 흰 무늬 (도둑갈매기 표시)
+  const near = up ? wingUp : wingDn;
+  wing(near, 0, 0, brown);
+  const [tx, ty] = near[3];
+  ell(gr, cx + tx * 0.62, cy + ty * 0.62, 7, 3.5, 0xffffff, 0.95, Math.atan2(ty, tx));
   bake(gr, key, w, h);
 }
 
-function seal(scene, key, o) {
-  const s = o.s || 1, w = 160 * s, h = 84 * s, gr = g(scene), cx = 74 * s, cy = 46 * s;
-  tri(gr, [cx - 58 * s, cy, cx - 82 * s, cy - 18 * s, cx - 80 * s, cy + 16 * s], o.dark);
-  blob(gr, cx - 8 * s, cy, 64 * s, 25 * s, o.body);
-  ell(gr, cx - 4 * s, cy + 12 * s, 50 * s, 10 * s, o.belly);
-  for (const [dx, dy, r] of [[-40, -8, 5], [-22, -14, 4], [-8, -6, 3.5], [-50, 4, 3.5], [10, -14, 4]]) ell(gr, cx + dx * s, cy + dy * s, r * s, r * 0.8 * s, o.spot, 0.9);
-  blob(gr, cx + 50 * s, cy - 6 * s, 30 * s, 24 * s, o.body);
-  // 입: 크게 웃는 이빨
-  gr.fillStyle(INK); gr.fillTriangle(cx + 50 * s, cy + 2 * s, cx + 82 * s, cy - 2 * s, cx + 78 * s, cy + 12 * s);
-  gr.fillStyle(0xffffff);
-  for (let i = 0; i < 4; i++) gr.fillTriangle(cx + (56 + i * 6) * s, cy + 1 * s, cx + (61 + i * 6) * s, cy + 0.5 * s, cx + (58.5 + i * 6) * s, cy + 6 * s);
-  ell(gr, cx + 78 * s, cy - 12 * s, 4 * s, 3 * s, INK);
-  eye(gr, cx + 58 * s, cy - 16 * s, 6.5 * s, true);
-  limb(gr, cx + 20 * s, cy + 12 * s, 8 * s, 20 * s, 0.6, o.dark);
-  if (o.crown) {
-    const px = cx + 38 * s, py = cy - 34 * s;
-    gr.fillStyle(INK); gr.fillRect(px - 2, py - 2, 34 * s + 4, 14 * s + 4);
-    gr.fillStyle(P.gold); gr.fillRect(px, py, 34 * s, 14 * s);
-    for (let i = 0; i < 3; i++) { tri(gr, [px + i * 11 * s, py + 1, px + (5.5 + i * 11) * s, py - 11 * s, px + (11 + i * 11) * s, py + 1], P.gold, 2); }
-    ell(gr, px + 17 * s, py + 7 * s, 3.5 * s, 3.5 * s, P.bad);
-  }
-  if (o.scar) { gr.lineStyle(3, 0xffffff, 0.8); gr.beginPath(); gr.moveTo(cx + 48 * s, cy - 26 * s); gr.lineTo(cx + 64 * s, cy - 8 * s); gr.strokePath(); }
+// 표범물범: 펭귄을 실제로 사냥하는 물범. 길쭉한 몸, 크게 찢어진 입, 얼룩무늬
+function leopardSeal(scene, key) {
+  const w = 170, h = 92, gr = g(scene);
+  const back = 0x59657a, dark = 0x434f64, belly = 0xcbd4df;
+  shape(gr, [[26, 46], [10, 30], [3, 33], [8, 46], [3, 60], [10, 64], [26, 52]], dark);
+  shape(gr, [[163, 47], [155, 34], [136, 26], [114, 29], [88, 31], [58, 36], [34, 42], [22, 47], [34, 56], [62, 64], [96, 68], [126, 64], [148, 58]], back);
+  shape(gr, [[150, 53], [128, 60], [98, 65], [64, 62], [38, 55], [30, 50], [56, 53], [92, 56], [124, 53]], belly, 0);
+  for (const [x, y, r] of [[48, 43, 3.2], [66, 38, 2.6], [82, 36, 3], [100, 34, 2.4], [60, 46, 2], [114, 33, 2.2], [36, 46, 2]]) ell(gr, x, y, r * 1.3, r, 0x8592a8, 0.9);
+  for (const [x, y, r] of [[60, 58, 3.4], [78, 61, 2.8], [96, 60, 3.2], [114, 58, 2.6], [130, 56, 2.4], [46, 54, 2.2], [88, 64, 2]]) ell(gr, x, y, r * 1.2, r, 0x39435a, 0.85);
+  ell(gr, 98, 35, 34, 3.5, 0xffffff, 0.2, -0.03);
+  jaws(gr, [[162, 47], [146, 47], [128, 44], [133, 52], [148, 56], [158, 52]], [158, 47.5, 134, 45.5, 5, 4.5, 1], [155, 53, 139, 52, 3, 3.5, -1]);
+  ell(gr, 146, 53, 6, 2, 0xe0607a);
+  curve(gr, [[163, 46], [146, 46.5], [126, 42]], 3, INK);
+  ell(gr, 157, 38, 2.2, 1.5, INK);
+  eye(gr, 136, 35, 6, true);
+  shape(gr, [[112, 58], [100, 76], [89, 85], [85, 80], [95, 64], [103, 56]], dark);
   bake(gr, key, w, h);
 }
 
 function shark(scene, key) {
-  const w = 176, h = 96, gr = g(scene), cx = 84, cy = 54;
-  tri(gr, [cx - 60, cy, cx - 88, cy - 28, cx - 84, cy + 24], 0x6d8096);
-  tri(gr, [cx - 6, cy - 22, cx + 16, cy - 50, cx + 22, cy - 22], 0x6d8096);
-  blob(gr, cx, cy, 72, 26, 0x7f93a8);
-  ell(gr, cx + 8, cy + 12, 58, 12, 0xeef3f8);
-  gr.fillStyle(INK); gr.fillTriangle(cx + 38, cy + 4, cx + 74, cy + 2, cx + 66, cy + 14);
-  gr.fillStyle(0xffffff); for (let i = 0; i < 5; i++) gr.fillTriangle(cx + 42 + i * 6, cy + 3.5, cx + 47 + i * 6, cy + 3, cx + 44.5 + i * 6, cy + 8);
-  for (let i = 0; i < 3; i++) { gr.lineStyle(2, 0x51637a); gr.beginPath(); gr.moveTo(cx + 18 + i * 6, cy - 8); gr.lineTo(cx + 15 + i * 6, cy + 6); gr.strokePath(); }
-  eye(gr, cx + 50, cy - 10, 5.5, true);
-  limb(gr, cx + 6, cy + 10, 8, 20, 0.7, 0x6d8096);
+  const w = 186, h = 104, gr = g(scene);
+  const back = 0x5d7995, fin = 0x4a6482, belly = 0xf1f5fa;
+  shape(gr, [[48, 50], [26, 28], [12, 9], [22, 13], [44, 42]], fin);
+  shape(gr, [[48, 56], [28, 72], [15, 86], [26, 82], [46, 62]], fin);
+  shape(gr, [[92, 40], [104, 16], [112, 4], [118, 8], [118, 24], [126, 40]], fin);
+  shape(gr, [[60, 45], [58, 34], [66, 37], [72, 45]], fin);
+  shape(gr, [[66, 62], [62, 74], [74, 65]], fin);
+  shape(gr, [[178, 58], [166, 44], [140, 36], [108, 34], [78, 38], [52, 46], [38, 54], [52, 62], [82, 70], [118, 72], [150, 68], [170, 63]], back);
+  shape(gr, [[170, 61], [150, 66], [118, 70], [84, 68], [56, 61], [48, 56], [80, 58], [118, 59], [150, 57]], belly, 0);
+  ell(gr, 110, 40, 36, 3.5, 0xffffff, 0.22);
+  for (const x of [128, 134, 140]) curve(gr, [[x, 46], [x - 3, 53], [x, 60]], 2.2, 0x3f5570);
+  for (const [x, y] of [[86, 44], [92, 43], [98, 43]]) curve(gr, [[x, y], [x + 5, y + 8]], 2, 0xdfe8f2, 0.8);
+  jaws(gr, [[173, 60], [158, 62], [144, 59], [150, 67], [164, 69], [170, 65]], [170, 60.5, 148, 60, 5, 4.5, 1], [166, 67, 152, 67, 3, 3.5, -1]);
+  ell(gr, 172, 50, 2, 1.3, INK);
+  eye(gr, 154, 46, 5.5, true);
+  shape(gr, [[122, 64], [108, 84], [96, 96], [93, 90], [103, 74], [111, 62]], fin);
   bake(gr, key, w, h);
 }
 
+// 대왕 바다코끼리 (Lv5 보스): 왕관 + 긴 엄니 + 콧수염
+function walrus(scene, key) {
+  const w = 250, h = 160, gr = g(scene);
+  const skin = 0xb98166, dark = 0x93604a, lite = 0xdcae92, fold = 0x8a5641;
+  shape(gr, [[48, 108], [20, 94], [9, 100], [22, 113], [9, 126], [20, 133], [50, 120]], dark);
+  shape(gr, [[40, 112], [60, 84], [96, 66], [140, 60], [176, 64], [200, 82], [206, 110], [190, 132], [150, 142], [100, 142], [62, 134]], skin);
+  shape(gr, [[62, 128], [100, 138], [150, 138], [184, 128], [168, 124], [130, 128], [92, 126]], lite, 0, 0.85);
+  for (let i = 0; i < 3; i++) curve(gr, [[152 - i * 18, 68 + i * 2], [146 - i * 18, 96], [152 - i * 18, 124]], 3, fold, 0.75);
+  for (const [x, y] of [[80, 92], [104, 100], [70, 110], [120, 84], [96, 116]]) ell(gr, x, y, 2.2, 2, fold, 0.6);
+  ell(gr, 110, 76, 38, 6, 0xffffff, 0.22, -0.15);
+  // 머리
+  shape(gr, [[168, 72], [180, 46], [204, 34], [228, 42], [238, 64], [234, 90], [214, 104], [186, 100], [170, 88]], skin);
+  ell(gr, 196, 44, 16, 6, 0xffffff, 0.22, -0.3);
+  // 엄니 (콧수염 밑에서 나옴)
+  shape(gr, [[201, 96], [212, 96], [210, 128], [206, 148], [202, 130]], 0xfff4dc, 2.5);
+  shape(gr, [[219, 94], [230, 94], [229, 126], [227, 146], [222, 126]], 0xfff4dc, 2.5);
+  curve(gr, [[209, 104], [207, 128]], 2, 0xe6d3b0);
+  curve(gr, [[227, 102], [226, 126]], 2, 0xe6d3b0);
+  // 콧수염 패드 + 수염
+  blob(gr, 206, 90, 16, 12, lite);
+  blob(gr, 224, 86, 16, 12, lite);
+  for (const [x, y] of [[200, 88], [206, 94], [212, 88], [220, 84], [226, 90], [232, 84]]) ell(gr, x, y, 1.6, 1.6, fold);
+  for (const dy of [-4, 2, 8]) curve(gr, [[236, 86 + dy * 0.5], [246, 84 + dy]], 1.8, INK, 0.8);
+  ell(gr, 232, 74, 3, 2, INK); ell(gr, 222, 76, 2.6, 1.8, INK);
+  // 눈 + 흉터
+  eye(gr, 212, 56, 6.5, true);
+  eye(gr, 192, 58, 5, true);
+  gr.lineStyle(3, 0xfff1e6, 0.9); gr.beginPath(); gr.moveTo(206, 42); gr.lineTo(220, 68); gr.strokePath();
+  // 왕관
+  const px = 186, py = 20, cw = 40;
+  gr.fillStyle(INK); gr.fillRect(px - 2, py - 2, cw + 4, 16);
+  gr.fillStyle(P.gold); gr.fillRect(px, py, cw, 12);
+  for (let i = 0; i < 3; i++) tri(gr, [px + i * cw / 3, py + 1, px + (i + 0.5) * cw / 3, py - 12, px + (i + 1) * cw / 3, py + 1], P.gold, 2);
+  gr.fillStyle(P.goldHi); gr.fillRect(px + 2, py + 2, cw - 4, 3);
+  ell(gr, px + cw / 2, py + 7, 3.5, 3.5, P.bad);
+  // 앞지느러미
+  shape(gr, [[168, 120], [160, 144], [150, 152], [146, 146], [154, 128], [160, 116]], dark);
+  bake(gr, key, w, h);
+}
+
+// 북극곰 (Lv10 보스): 얼음 왕관, 헤엄치는 다리. guard = 앞발로 얼굴 가리기
 function bear(scene, key, guard) {
-  const w = 230, h = 170, gr = g(scene), cx = 100, cy = 96;
-  blob(gr, cx - 20, cy + 10, 82, 50, 0xf4f1ea);
-  ell(gr, cx - 40, cy - 12, 50, 18, 0xffffff, 0.8);
-  blob(gr, cx + 58, cy - 26, 44, 40, 0xf4f1ea);
-  blob(gr, cx + 36, cy - 62, 12, 12, 0xf4f1ea); ell(gr, cx + 36, cy - 62, 6, 6, 0xdcd4c4);
-  blob(gr, cx + 74, cy - 64, 12, 12, 0xf4f1ea); ell(gr, cx + 74, cy - 64, 6, 6, 0xdcd4c4);
-  blob(gr, cx + 90, cy - 14, 22, 16, 0xe9e2d3);
-  ell(gr, cx + 108, cy - 20, 8, 6, INK);
-  gr.lineStyle(3, INK); gr.beginPath(); gr.arc(cx + 94, cy - 4, 10, 0.2, 2.6); gr.strokePath();
-  eye(gr, cx + 70, cy - 38, 7.5, true);
-  eye(gr, cx + 48, cy - 36, 6, true);
-  limb(gr, cx + 20, cy + 30, 18, 28, 0.3, 0xefe9dc);
+  const w = 250, h = 186, gr = g(scene);
+  const fur = 0xf6f2ea, shade = 0xdcd2c0, pad = 0x4b3f3c;
+  shape(gr, [[40, 120], [30, 150], [42, 162], [62, 158], [64, 126]], shade);
+  shape(gr, [[132, 128], [128, 156], [140, 168], [160, 164], [158, 130]], shade);
+  shape(gr, [[20, 104], [34, 72], [70, 56], [118, 52], [156, 58], [176, 76], [178, 112], [160, 136], [110, 146], [60, 142], [28, 128]], fur);
+  shape(gr, [[40, 130], [80, 140], [130, 140], [166, 126], [150, 122], [100, 130], [60, 126]], shade, 0, 0.9);
+  for (const [x, y] of [[50, 76], [74, 64], [98, 60], [122, 60], [60, 96], [90, 90], [120, 96]]) curve(gr, [[x, y], [x + 5, y + 6], [x + 3, y + 12]], 2.2, shade);
+  ell(gr, 90, 66, 40, 6, 0xffffff, 0.8, -0.05);
+  shape(gr, [[58, 124], [52, 156], [66, 170], [88, 166], [84, 128]], fur);
+  ell(gr, 72, 165, 10, 3.5, pad);
+  if (!guard) { shape(gr, [[150, 116], [166, 146], [186, 158], [198, 150], [178, 120]], fur); ell(gr, 190, 153, 8, 4, pad, 1, 0.6); }
+  // 귀·머리
+  blob(gr, 166, 36, 9, 9, fur); ell(gr, 166, 36, 4.5, 4.5, shade);
+  blob(gr, 210, 30, 9, 9, fur); ell(gr, 210, 30, 4.5, 4.5, shade);
+  shape(gr, [[150, 66], [158, 42], [186, 28], [214, 32], [230, 48], [244, 64], [240, 80], [214, 88], [180, 90], [156, 84]], fur);
+  ell(gr, 226, 72, 15, 9, shade, 0.7);
+  blob(gr, 240, 63, 6, 5, pad, 0, 2); ell(gr, 238, 61, 2, 1.4, 0xffffff, 0.8);
+  curve(gr, [[238, 76], [228, 83], [214, 80]], 3, INK);
+  tri(gr, [224, 81, 228, 81, 226, 87], 0xffffff, 0);
+  // 얼음 왕관
+  for (const [bx, tip, bw] of [[176, 12, 10], [190, 3, 12], [204, 12, 10]]) {
+    shape(gr, [[bx - bw / 2, 32], [bx, tip], [bx + bw / 2, 32]], 0xbfeeff, 2);
+    tri(gr, [bx - 1, tip + 6, bx + 2, 28, bx - 3, 28], 0xffffff, 0);
+  }
   if (guard) {
-    // 앞발로 얼굴 가리기
-    for (const [px, py] of [[cx + 60, cy - 60], [cx + 96, cy - 50]]) {
-      blob(gr, px, py + 18, 22, 26, 0xefe9dc);
-      ell(gr, px, py + 24, 10, 9, 0x5a4a44); for (let i = 0; i < 3; i++) ell(gr, px - 10 + i * 10, py + 6, 4, 4, 0x5a4a44);
+    for (const [px, py, rw, rh] of [[204, 54, 22, 26], [230, 66, 20, 24]]) {
+      blob(gr, px, py, rw, rh, fur);
+      ell(gr, px, py + 6, rw * 0.45, rh * 0.32, pad);
+      for (let i = 0; i < 3; i++) ell(gr, px - rw * 0.45 + i * rw * 0.45, py - rh * 0.4, 3.6, 3.6, pad);
     }
-  } else limb(gr, cx + 64, cy + 8, 18, 30, -0.3, 0xefe9dc);
+  } else {
+    eye(gr, 206, 50, 7, true);
+    eye(gr, 186, 52, 5.5, true);
+    gr.lineStyle(3, 0xd89a9a, 0.9); gr.beginPath(); gr.moveTo(198, 38); gr.lineTo(214, 62); gr.strokePath();
+  }
   bake(gr, key, w, h);
 }
 
+// 범고래 (Lv15 보스): 눈 뒤 흰 무늬, 회색 안장 무늬, 높은 등지느러미, 째려보는 눈
 function orca(scene, key) {
-  const w = 270, h = 140, gr = g(scene), cx = 128, cy = 80;
-  tri(gr, [cx - 96, cy, cx - 132, cy - 36, cx - 126, cy + 32], 0x1c2230);
-  tri(gr, [cx - 20, cy - 34, cx + 4, cy - 76, cx + 18, cy - 34], 0x1c2230);
-  blob(gr, cx, cy, 112, 40, 0x1f2535);
-  ell(gr, cx + 20, cy + 20, 86, 16, 0xffffff);
-  ell(gr, cx - 40, cy - 6, 26, 10, 0xd9e2ec, 0.9, -0.2);
-  ell(gr, cx + 62, cy - 16, 18, 8, 0xffffff, 1, -0.15);
-  gr.fillStyle(INK); gr.fillTriangle(cx + 70, cy + 6, cx + 112, cy + 2, cx + 102, cy + 18);
-  gr.fillStyle(0xffffff); for (let i = 0; i < 5; i++) gr.fillTriangle(cx + 74 + i * 7, cy + 5.5, cx + 80 + i * 7, cy + 5, cx + 77 + i * 7, cy + 11);
-  eye(gr, cx + 80, cy - 10, 5, true);
-  limb(gr, cx + 20, cy + 22, 12, 30, 0.7, 0x1c2230);
+  const w = 290, h = 156, gr = g(scene);
+  const body = 0x1c2232, fin = 0x161b28;
+  shape(gr, [[62, 86], [40, 68], [14, 56], [11, 62], [30, 76], [50, 90]], fin);
+  shape(gr, [[62, 92], [40, 108], [14, 120], [11, 114], [30, 100], [50, 90]], fin);
+  shape(gr, [[150, 62], [158, 34], [168, 7], [176, 9], [180, 36], [194, 60]], fin);
+  shape(gr, [[280, 94], [268, 76], [242, 62], [206, 56], [166, 56], [124, 62], [88, 72], [60, 84], [56, 90], [62, 96], [88, 106], [132, 116], [192, 118], [240, 112], [268, 104]], body);
+  shape(gr, [[272, 99], [252, 107], [214, 113], [172, 114], [132, 110], [110, 102], [96, 88], [118, 91], [140, 100], [180, 104], [222, 102], [258, 97]], 0xffffff, 0);
+  ell(gr, 152, 64, 24, 6, 0xaab6c6, 0.95, -0.1);
+  ell(gr, 204, 63, 40, 4, 0x4a5570, 0.9, 0.05);
+  ell(gr, 226, 74, 17, 7.5, 0xffffff, 1, -0.2);
+  jaws(gr, [[280, 95], [262, 98], [246, 96], [252, 104], [268, 105], [277, 100]], [277, 95.5, 250, 96.5, 6, 4.5, 1], [270, 103, 256, 103, 3, 3.5, -1]);
+  eye(gr, 246, 85, 5, true);
+  lid(gr, 246, 85, 5, body);
+  for (const [x, y] of [[120, 76], [128, 72], [136, 70]]) curve(gr, [[x, y], [x + 6, y + 10]], 2, 0x5a6680, 0.9);
+  shape(gr, [[214, 108], [206, 132], [196, 142], [188, 138], [194, 116], [200, 106]], fin);
   bake(gr, key, w, h);
 }
 
@@ -433,10 +565,10 @@ export function bakeAll(scene) {
     penguin(scene, `pg-${name}-b`, look, true);
   }
   skua(scene, 'pr-skua-a', false); skua(scene, 'pr-skua-b', true);
-  seal(scene, 'pr-seal', { body: 0x98a3b3, dark: 0x7a8597, belly: 0xd9e1ea, spot: 0x5c6677 });
+  leopardSeal(scene, 'pr-seal');
   shark(scene, 'pr-shark');
   K = 1;
-  seal(scene, 'pr-bossSeal', { s: 1.45, body: 0x7d8799, dark: 0x5f6979, belly: 0xc9d2de, spot: 0x444d5c, crown: true, scar: true });
+  walrus(scene, 'pr-bossSeal');
   bear(scene, 'pr-bossBear', false); bear(scene, 'pr-bossBear-guard', true);
   orca(scene, 'pr-bossOrca');
   K = AS;

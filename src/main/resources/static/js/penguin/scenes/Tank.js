@@ -14,6 +14,8 @@ import { levelCard, startBonus, medalName } from './levelCard.js';
 
 const SHOP = ['gentoo', 'chinstrap', 'emperor', 'macaroni', 'rainbow', 'food', 'foodCount', 'weapon', 'otter'];
 const MEDAL_COLOR = { gold: 0xffc21a, silver: 0xd5dde6, bronze: 0xe0925f };
+// 보스 체력바 얼굴 자리: 텍스처 안 얼굴 중심 x·y 와 잘라 보여줄 폭 (논리 px)
+const BOSS_FACE = { bossSeal: [212, 72, 96], bossBear: [210, 56, 100], bossOrca: [246, 88, 90] };
 
 export class Tank extends Phaser.Scene {
   constructor() { super('Tank'); }
@@ -177,9 +179,15 @@ export class Tank extends Phaser.Scene {
     eb.on('pointerup', () => { eb.setScale(1); this.tryBuy('egg', eb); });
     this.egg = { box: eb, bg, fill: eggFill, lines: eggLines, l2, sig: '' };
 
-    // 보스 체력바
+    // 보스 체력바: 얼굴 + 이름 + 상태 + 깎인 만큼 늦게 따라오는 흰 줄
+    const pw = Math.min(460, W * 0.66), pl = (W - pw) / 2, pt = this.hudH + 20;
+    this.bossUi = { pl, pt, pw, kind: null, lag: 1 };
     this.bossBar = this.keep(this.add.graphics().setDepth(102));
-    this.bossName = this.keep(text(this, W / 2, this.hudH + 20, '', { size: 16, color: '#ffffff', thick: 4 }).setDepth(103));
+    const mask = this.keep(this.make.graphics({ add: false }));
+    mask.fillCircle(pl + 24, pt + 23, 24);
+    this.bossFace = this.keep(this.add.image(0, 0, 'dot').setDepth(103).setVisible(false).setMask(mask.createGeometryMask()));
+    this.bossName = this.keep(text(this, pl + 60, pt + 13, '', { size: 15, ox: 0, color: '#ffffff', thick: 0, stroke: false }).setDepth(103));
+    this.bossState = this.keep(text(this, pl + pw - 14, pt + 13, '', { size: 13, ox: 1, color: '#ffdd55', thick: 0, stroke: false }).setDepth(103));
   }
 
   updateHud() {
@@ -227,16 +235,63 @@ export class Tank extends Phaser.Scene {
       if (!ok && this.egg.pulse) { this.egg.pulse.stop(); this.egg.pulse = null; this.egg.box.setScale(1); }
     }
 
-    // 보스 체력
-    const boss = s.preds.find(p => C.PREDATORS[p.kind].boss);
-    this.bossBar.clear();
-    if (boss) {
-      const w = Math.min(420, this.W * 0.6), x = (this.W - w) / 2, y = this.hudH + 34;
-      this.bossBar.fillStyle(INK, 0.9); this.bossBar.fillRoundedRect(x - 4, y - 4, w + 8, 20, 10);
-      this.bossBar.fillStyle(0x552233, 1); this.bossBar.fillRoundedRect(x, y, w, 12, 6);
-      this.bossBar.fillStyle(boss.guardT > 0 ? 0x9fb8d9 : P.bad, 1); this.bossBar.fillRoundedRect(x, y, Math.max(0, w * boss.hp / boss.max), 12, 6);
-      this.bossName.setText(T.predNames[boss.kind]).setVisible(true);
-    } else this.bossName.setVisible(false);
+    this.updateBossBar();
+  }
+
+  updateBossBar() {
+    const boss = this.sim.preds.find(p => C.PREDATORS[p.kind].boss);
+    const u = this.bossUi, g = this.bossBar;
+    g.clear();
+    [this.bossFace, this.bossName, this.bossState].forEach(o => o.setVisible(!!boss));
+    if (!boss) { u.kind = null; return; }
+    const { pl, pt, pw } = u, fx = pl + 24, fy = pt + 23;
+    if (u.kind !== boss.kind) {
+      u.kind = boss.kind; u.lag = 1;
+      const [hx, hy, size] = BOSS_FACE[boss.kind];
+      const sc = 56 / size;
+      this.bossFace.setTexture(`pr-${boss.kind}`).setScale(sc);
+      this.bossFace.setPosition(fx + (this.bossFace.width / 2 - hx) * sc, fy + (this.bossFace.height / 2 - hy) * sc);
+      this.bossName.setText(T.predNames[boss.kind]);
+    }
+    const ratio = Math.max(0, boss.hp / boss.max);
+    u.lag = ratio < u.lag ? u.lag + (ratio - u.lag) * 0.06 : ratio;
+    const state = boss.stunT > 0 ? 'stun' : boss.guardT > 0 ? 'guard' : boss.divedT > 0 ? 'dive' : boss.rageT > 0 ? 'rage' : (boss.aimT > 0 || boss.dashT > 0) ? 'dash' : '';
+    this.bossState.setText(state ? T.bossState[state] : '').setColor(state === 'rage' || state === 'dash' ? '#ff8a9a' : state === 'stun' ? '#fff27a' : '#bfe3ff');
+    // 판
+    g.fillStyle(INK, 0.88); g.fillRoundedRect(pl, pt, pw, 46, 23);
+    g.fillStyle(0xffffff, 0.08); g.fillRoundedRect(pl + 4, pt + 3, pw - 8, 14, 7);
+    // 체력 줄: 바탕 → 늦게 따라오는 흰 줄 → 실제 체력 → 윗부분 광택 → 25% 눈금
+    const bx = pl + 58, by = pt + 26, bw = pw - 72, bh = 12;
+    g.fillStyle(0x3a1f2c, 1); g.fillRoundedRect(bx, by, bw, bh, 6);
+    if (u.lag > ratio) { g.fillStyle(0xffffff, 0.85); g.fillRoundedRect(bx, by, Math.max(bh, bw * u.lag), bh, 6); }
+    const col = state === 'guard' || state === 'dive' ? 0x8fb4e0 : state === 'rage' ? 0xff3355 : P.bad;
+    if (ratio > 0) { g.fillStyle(col, 1); g.fillRoundedRect(bx, by, Math.max(bh, bw * ratio), bh, 6); g.fillStyle(0xffffff, 0.3); g.fillRoundedRect(bx + 3, by + 2, Math.max(0, bw * ratio - 6), 3, 1.5); }
+    g.fillStyle(INK, 0.7); for (let i = 1; i < 4; i++) g.fillRect(bx + bw * i / 4 - 1, by, 2, bh);
+    // 얼굴 테두리 (얼굴 그림은 원 모양으로 잘려서 이 위에 올라감)
+    g.fillStyle(INK, 1); g.fillCircle(fx, fy, 28);
+    g.fillStyle(state === 'rage' ? 0xff3355 : 0xff6b81, 1); g.fillCircle(fx, fy, 26);
+    g.fillStyle(this.world.deep, 1); g.fillCircle(fx, fy, 24);
+  }
+
+  // 보스 예고: 화면 가운데 띠에 보스 그림·이름·공략 한 줄
+  bossIntro(kind) {
+    if (this.introObjs) this.introObjs.forEach(o => o.destroy());
+    const W = this.W, cy = this.waterTop + (this.floorY - this.waterTop) * 0.38, bh = 240, top = cy - bh / 2;
+    const band = this.add.graphics().setDepth(150);
+    band.fillStyle(0x0a0f1c, 0.9); band.fillRect(0, top, W, bh);
+    band.fillStyle(0xff3355, 1); band.fillRect(0, top, W, 4); band.fillRect(0, top + bh - 4, W, 4);
+    const tag = text(this, W / 2, top + 26, T.bossTag, { size: 22, color: '#ff6b81', thick: 5 }).setDepth(151);
+    const img = this.add.image(W + 200, top + 100, `pr-${kind}`).setDepth(151);
+    img.setScale(Math.min(116 / img.height, (W * 0.62) / img.width)).setFlipX(true);
+    const name = text(this, W / 2, top + 172, T.predNames[kind], { size: 32, color: '#ffffff', thick: 7 }).setDepth(151);
+    const hint = text(this, W / 2, top + 210, T.bossHint[kind], { size: 16, color: '#ffe680', thick: 0, stroke: false, wrap: W - 48 }).setDepth(151);
+    const objs = [band, tag, img, name, hint];
+    this.introObjs = objs;
+    band.setScale(1, 0).setY(cy).setAlpha(1);
+    this.tweens.add({ targets: band, scaleY: 1, y: 0, duration: 180, ease: 'Quad.out' });
+    this.tweens.add({ targets: img, x: W / 2, duration: 420, delay: 120, ease: 'Back.out' });
+    [tag, name, hint].forEach((o, i) => this.tweens.add({ targets: o, alpha: { from: 0, to: 1 }, scale: { from: 1.4, to: 1 }, duration: 240, delay: 260 + i * 90, ease: 'Back.out' }));
+    this.tweens.add({ targets: objs, alpha: 0, delay: 2500, duration: 300, onComplete: () => { objs.forEach(o => o.destroy()); if (this.introObjs === objs) this.introObjs = null; } });
   }
 
   /* ---------------- 하단 상점 ---------------- */
@@ -619,7 +674,7 @@ export class Tank extends Phaser.Scene {
         if (!this.seenPredHint) { this.seenPredHint = true; save.seenPredHint = true; persist(); this.toast(T.hintPred, 3200); }
         break;
       case 'bossWarn':
-        this.banner(fmt(T.bossWarn, T.predNames[e.kind]), { color: '#ff6b81', hold: 2000 });
+        this.bossIntro(e.kind);
         this.vignette(0xff1133, 5);
         Sound.warn();
         break;

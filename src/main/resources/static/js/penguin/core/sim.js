@@ -739,7 +739,7 @@ export class Sim {
       } else this.predWander(pr, speed, dt);
 
       pr.x += pr.vx * dt; pr.y += pr.vy * dt;
-      // 물범: 지그재그
+      // 표범물범: 지그재그
       if (def.zigzag && !straight) {
         const len = Math.hypot(pr.vx, pr.vy) || 1, w = Math.sin(this.t * 3.4 + pr.id) * def.zigzag * dt * (pr.rageT > 0 ? 0.3 : 1);
         pr.x += -pr.vy / len * w; pr.y += pr.vx / len * w;
@@ -748,7 +748,7 @@ export class Sim {
       if (pr.entering && pr.x > left + def.r && pr.x < right - def.r && pr.y > (def.dive ? top - 60 : top)) pr.entering = false;
       const bx = pr.x, by = pr.y;
       this.clampPred(pr, def);
-      // 대왕물범: 돌진하다 벽에 부딪히면 튕김
+      // 대왕 바다코끼리: 돌진하다 벽에 부딪히면 튕김
       if (straight && def.bounce && (pr.x !== bx || pr.y !== by)) {
         if (pr.x !== bx) pr.cvx = -pr.cvx;
         if (pr.y !== by) pr.cvy = -pr.cvy;

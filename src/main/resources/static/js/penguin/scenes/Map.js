@@ -80,7 +80,8 @@ export class MapScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.35); g.fillEllipse(-r * 0.3, -r * 0.45, r * 0.9, r * 0.4);
     c.add(g);
     if (boss) {
-      const ic = this.add.image(0, 2, `pr-${L.boss}`).setScale((r * 1.7) / (L.boss === 'bossOrca' ? 270 : L.boss === 'bossBear' ? 230 : 232));
+      const ic = this.add.image(0, 2, `pr-${L.boss}`);
+      ic.setScale((r * 1.7) / ic.width);
       if (!open) ic.setTint(0x444c5c);
       c.add(ic);
       c.add(text(this, 0, r + 14, T.boss, { size: 14, color: '#ffdd55', thick: 4 }));
