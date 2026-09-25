@@ -112,12 +112,16 @@
     box-sizing: border-box;
     overflow: auto;
     overscroll-behavior: contain;
-    padding: 18px 20px;
-    border: 1px solid rgba(45, 212, 191, 0.35);
+    position: relative;
+    padding: 22px 20px 18px;
+    /* 핀볼 기계 느낌: 짙은 보라~남색 + 네온 테두리 빛 (예전엔 남색 위 남색이라 칙칙했음) */
+    border: 2px solid rgba(94, 234, 212, 0.7);
     border-radius: 18px;
-    background: rgba(15, 23, 41, 0.92);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
-    color: #f1f5f9;
+    background:
+        radial-gradient(120% 60% at 50% 0%, rgba(168, 85, 247, 0.28), transparent 60%),
+        linear-gradient(180deg, rgba(30, 18, 64, 0.96), rgba(10, 14, 36, 0.96));
+    box-shadow: 0 0 0 1px rgba(236, 72, 153, 0.25), 0 0 26px rgba(45, 212, 191, 0.28), 0 18px 44px rgba(0, 0, 0, 0.5);
+    color: #f5f3ff;
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
 }
@@ -135,6 +139,19 @@
     outline-offset: 2px;
 }
 
+/* 맨 위 네온 띠 */
+.pb-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 18px;
+    right: 18px;
+    height: 4px;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(90deg, #ec4899, #facc15, #2dd4bf, #a855f7);
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.6);
+}
+
 /* ── 참가자 입력 ── */
 .pb-setup-card {
     display: flex;
@@ -144,16 +161,17 @@
 
 .pb-setup-title {
     margin: 0;
-    color: #5eead4;
-    font-size: clamp(1.15rem, 3.2vw, 1.6rem);
-    font-weight: 800;
+    color: #7df9ea;
+    font-size: clamp(1.3rem, 3.6vw, 1.75rem);
+    font-weight: 900;
     letter-spacing: -0.02em;
     text-align: center;
+    text-shadow: 0 0 14px rgba(45, 212, 191, 0.55), 0 2px 0 rgba(0, 0, 0, 0.4);
 }
 
 .pb-setup-sub {
-    color: #cbd5e1;
-    font-size: 0.86rem;
+    color: #ddd6fe;
+    font-size: 0.88rem;
     font-weight: 600;
     line-height: 1.45;
     text-align: center;
@@ -167,10 +185,10 @@
     min-height: 92px;
     box-sizing: border-box;
     padding: 10px 14px;
-    border: 2px solid #334155;
+    border: 2px solid #4c3f8f;
     border-radius: 12px;
-    background: #0a1020;
-    color: #e0f2fe;
+    background: rgba(9, 6, 28, 0.85);
+    color: #f5f3ff;
     /* 16px 미만이면 아이폰이 입력할 때 화면을 확대함 */
     font: 600 16px/1.55 var(--pb-font);
     resize: none;
@@ -178,7 +196,7 @@
 }
 
 #pbNamesInput::placeholder {
-    color: #64748b;
+    color: #9c93d0;
 }
 
 #pbNamesInput:focus {
@@ -187,8 +205,8 @@
 }
 
 .pb-count {
-    color: #94a3b8;
-    font-size: 0.85rem;
+    color: #b9b3dc;
+    font-size: 0.86rem;
     font-weight: 700;
     text-align: center;
 }
@@ -206,10 +224,10 @@
 .pb-mode button {
     min-height: 46px;
     padding: 6px 8px;
-    border: 2px solid #334155;
+    border: 2px solid #4c3f8f;
     border-radius: 12px;
-    background: #111a2e;
-    color: #e2e8f0;
+    background: rgba(34, 24, 74, 0.9);
+    color: #ede9fe;
     font-size: 0.93rem;
     font-weight: 700;
     word-break: keep-all;
@@ -217,11 +235,18 @@
     transition: background-color 0.15s, border-color 0.15s, transform 0.12s;
 }
 
-.pb-mode button[aria-checked="true"] {
-    border-color: var(--pb-accent);
-    background: rgba(45, 212, 191, 0.18);
+.pb-mode button[data-mode="winner"][aria-checked="true"] {
+    border-color: #fde68a;
+    background: linear-gradient(180deg, #fde047, #f59e0b);
+    color: #2a1600;
+    box-shadow: 0 4px 0 #a16207, 0 0 16px rgba(250, 204, 21, 0.35);
+}
+
+.pb-mode button[data-mode="loser"][aria-checked="true"] {
+    border-color: #fda4af;
+    background: linear-gradient(180deg, #fb7185, #e11d48);
     color: #fff;
-    box-shadow: 0 4px 0 rgba(45, 212, 191, 0.35);
+    box-shadow: 0 4px 0 var(--pb-hot-lo), 0 0 16px rgba(244, 63, 94, 0.35);
 }
 
 .pb-mode button:active {
@@ -232,7 +257,7 @@
     min-height: 54px;
     border: 0;
     border-radius: 14px;
-    background: linear-gradient(180deg, #fb7185, #e11d48);
+    background: linear-gradient(180deg, #f472b6, #db2777);
     color: #fff;
     font-size: 1.18rem;
     font-weight: 800;
@@ -242,7 +267,12 @@
 }
 
 .pb-start:not(.ready) {
-    filter: saturate(0.55) brightness(0.8);
+    /* 이름 넣기 전: 흙빛으로 죽이지 말고 살짝 흐리게만 */
+    opacity: 0.7;
+}
+
+.pb-start.ready {
+    box-shadow: 0 5px 0 var(--pb-hot-lo), 0 0 24px rgba(236, 72, 153, 0.45);
 }
 
 .pb-start:active,
