@@ -13,6 +13,9 @@ services:
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      # 회사 부수기 3D: 브이월드(국토부 건물·항공사진) 키, 지도 캐시는 호스트 폴더에 남긴다
+      - VWORLD_KEY=${VWORLD_KEY}
+      - SMASH_CACHE_DIR=/home/uploads/smash-cache
       - OPENAI_API_KEY=${OPENAI_API_KEY}
 
   # Docker Compose는 여러 컨테이너를 하나의 서비스처럼 관리

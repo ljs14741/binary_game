@@ -1,0 +1,532 @@
+/* 가족같은 회사 부수기 3D — 게임 박스 안 HUD·오버레이. 박스 밖은 사이트 공통 스타일을 따른다. */
+
+.bw-smash-shell {
+  width: min(960px, calc(100% - 1rem));
+  margin: 0 auto;
+  padding: 0.65rem 0 1.75rem;
+}
+
+/* 높이는 dvh 로 잡고 위아래 여백을 남긴다 — 박스는 touch-action:none 이라 여백이 페이지 스크롤 손잡이다 */
+.bw-smash-stage {
+  position: relative;
+  width: 100%;
+  height: min(74vh, 700px);
+  height: min(74dvh, 700px);
+  min-height: 420px;
+  margin: 0.75rem 0 1rem;
+  overflow: hidden;
+  border: 1px solid var(--bw-border);
+  border-radius: 1rem;
+  background: #b5dcf3;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: "Pretendard", system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  color: #14181f;
+}
+
+.bw-smash-stage:fullscreen,
+.bw-smash-stage:-webkit-full-screen {
+  width: 100%; height: 100%; min-height: 0; margin: 0; border: 0; border-radius: 0;
+}
+
+#smash-canvas { position: absolute; inset: 0; }
+#smash-canvas canvas { display: block; touch-action: none; }
+
+.smash-hud { position: absolute; inset: 0; pointer-events: none; }
+.smash-hud button { pointer-events: auto; }
+
+/* ── 상단: 피해액 · 직급 ── */
+.smash-top {
+  position: absolute; top: 10px; left: 10px; right: 10px;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+}
+.smash-score, .smash-rank-box {
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(20, 30, 50, 0.16);
+  backdrop-filter: blur(6px);
+}
+.smash-score { padding: 8px 12px 9px; min-width: 150px; max-width: 62%; }
+.smash-corp {
+  font-size: 12px; font-weight: 800; color: #d8333a;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.smash-label { font-size: 11px; font-weight: 700; color: #6b7280; margin-top: 2px; }
+.smash-money {
+  font-size: clamp(18px, 4.6vw, 26px); font-weight: 900; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums; line-height: 1.15;
+}
+.smash-ratio-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 11px; font-weight: 800; color: #4b5563; }
+.smash-barbox { flex: 1; height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; min-width: 80px; }
+.smash-barbox i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #f59e0b, #d8333a); transition: width .2s; }
+
+.smash-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.smash-rank-box { padding: 6px 12px; text-align: center; min-width: 64px; }
+.smash-rank-box small { display: block; font-size: 10px; font-weight: 700; color: #6b7280; }
+.smash-rank-box b { font-size: 17px; font-weight: 900; display: inline-block; }
+.smash-rank-box b.up { animation: smash-up .6s ease; }
+@keyframes smash-up { 0% { transform: scale(1); color: #d8333a; } 40% { transform: scale(1.5); color: #d8333a; } 100% { transform: scale(1); } }
+.smash-tools { display: flex; gap: 6px; }
+.smash-tools button {
+  width: 34px; height: 34px; border: 0; border-radius: 10px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.86); font-size: 16px; line-height: 1;
+  box-shadow: 0 3px 10px rgba(20, 30, 50, 0.14); color: #14181f;
+}
+
+/* ── 콤보·알림 ── */
+.smash-combo {
+  position: absolute; top: 112px; left: 50%; transform: translateX(-50%) scale(.8);
+  font-size: 20px; font-weight: 900; color: #fff;
+  text-shadow: 0 2px 0 #d8333a, 0 0 12px rgba(216, 51, 58, .6);
+  opacity: 0; transition: opacity .15s, transform .15s; white-space: nowrap;
+}
+.smash-combo.show { opacity: 1; transform: translateX(-50%) scale(1); }
+.smash-toast {
+  position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+  padding: 10px 18px; border-radius: 999px;
+  background: #14181f; color: #ffd23f; font-weight: 900; font-size: 18px; white-space: nowrap;
+  opacity: 0; pointer-events: none;
+}
+.smash-toast.show { animation: smash-toast 1.6s ease forwards; }
+@keyframes smash-toast {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(.7); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  20% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -70%); }
+}
+.smash-hint {
+  position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
+  padding: 7px 14px; border-radius: 999px; background: rgba(20, 24, 31, .78); color: #fff;
+  font-size: 12.5px; font-weight: 700; white-space: pre-line; text-align: center; max-width: calc(100% - 24px); width: max-content; opacity: 0; transition: opacity .4s;
+}
+.smash-hint.show { opacity: 1; }
+
+/* ── 사장님 말풍선 (위치는 JS 가 transform 으로) ── */
+.smash-bubble {
+  position: absolute; left: 0; top: 0; max-width: 220px;
+  padding: 8px 12px; border-radius: 14px; background: #fff; color: #14181f;
+  font-size: 13.5px; font-weight: 800; line-height: 1.35; text-align: center;
+  box-shadow: 0 6px 18px rgba(20, 30, 50, .22);
+  opacity: 0; transition: opacity .15s; margin-top: -12px; word-break: keep-all;
+}
+.smash-bubble::after {
+  content: ""; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+  border: 8px solid transparent; border-top-color: #fff; border-bottom: 0;
+}
+.smash-bubble.show { opacity: 1; }
+
+/* ── 피해액 팝업 ── */
+.smash-pops { position: absolute; inset: 0; overflow: hidden; }
+.smash-pop {
+  position: absolute; transform: translate(-50%, -50%);
+  font-size: 15px; font-weight: 900; color: #ffd23f; white-space: nowrap;
+  text-shadow: 0 2px 0 #7a3e00, 0 0 6px rgba(0, 0, 0, .35);
+  animation: smash-pop .9s ease-out forwards;
+}
+.smash-pop.big { font-size: 22px; color: #fff; text-shadow: 0 2px 0 #d8333a, 0 0 10px rgba(216, 51, 58, .7); animation-duration: 1.3s; }
+@keyframes smash-pop {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); }
+  15% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -260%) scale(1); }
+}
+
+/* ── 무기 ── */
+.smash-weapons {
+  position: absolute; left: 10px; right: 74px; bottom: 10px;
+  display: flex; gap: 5px; justify-content: center;
+}
+.smash-weapons button {
+  --cd: 0;
+  position: relative; overflow: hidden; flex: 0 1 62px; min-width: 0;
+  height: 58px; border: 2px solid transparent; border-radius: 14px; cursor: pointer;
+  background: rgba(255, 255, 255, .9); color: #14181f;
+  box-shadow: 0 4px 14px rgba(20, 30, 50, .18);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font: inherit; padding: 0;
+}
+.smash-weapons button::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+  height: calc(var(--cd) * 100%); background: rgba(20, 24, 31, .35); pointer-events: none;
+}
+.smash-weapons button.on { border-color: #d8333a; background: #fff; transform: translateY(-3px); }
+.smash-weapons .ic { font-size: 22px; line-height: 1; }
+.smash-weapons small { font-size: 10.5px; font-weight: 800; white-space: nowrap; }
+.smash-weapons kbd { position: absolute; top: 3px; left: 5px; font: 700 9px/1 system-ui, sans-serif; color: #9ca3af; }
+@media (pointer: coarse) { .smash-weapons kbd { display: none; } }
+.smash-wname {
+  position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%);
+  padding: 5px 12px; border-radius: 999px; background: rgba(20, 24, 31, .78); color: #fff;
+  font-size: 12px; font-weight: 800; white-space: nowrap; opacity: 0; pointer-events: none;
+}
+.smash-wname.show { animation: smash-fade 2.2s ease forwards; }
+@keyframes smash-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* 퇴사 버튼: 게이지가 차오르는 동그라미 */
+.smash-nuke {
+  --g: 0;
+  position: absolute; right: 10px; bottom: 10px; width: 58px; height: 58px; border-radius: 50%;
+  border: 0; padding: 0; cursor: pointer; font: inherit;
+  background: conic-gradient(#d8333a calc(var(--g) * 360deg), rgba(255, 255, 255, .55) 0);
+  box-shadow: 0 4px 14px rgba(20, 30, 50, .22);
+  display: grid; place-items: center;
+}
+.smash-nuke span {
+  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+  background: #4b5563; color: #e5e7eb; font-size: 13px; font-weight: 900;
+}
+.smash-nuke.ready { animation: smash-pulse 1s ease-in-out infinite; }
+.smash-nuke.ready span { background: #d8333a; color: #fff; box-shadow: inset 0 -4px 0 #9e1f25; }
+@keyframes smash-pulse { 50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(216, 51, 58, .25); } }
+.smash-aim {
+  position: absolute; top: 34%; left: 50%; transform: translateX(-50%);
+  padding: 9px 16px; border-radius: 999px; background: #d8333a; color: #fff;
+  font-weight: 900; font-size: 15px; white-space: nowrap; display: none;
+}
+.smash-aim.show { display: block; animation: smash-pulse 1s ease-in-out infinite; }
+.smash-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.smash-flash.go { animation: smash-flash 1.6s ease-out forwards; }
+@keyframes smash-flash { 0% { opacity: 0; } 6% { opacity: 1; } 100% { opacity: 0; } }
+.smash-osm {
+  position: absolute; left: 6px; bottom: 72px; display: flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600; pointer-events: auto;
+}
+.smash-osm[hidden] { display: none; }
+.smash-osm button {
+  width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, .55); color: #374151; font-size: 12px; line-height: 18px;
+}
+.smash-osm a {
+  display: none; color: #374151; background: rgba(255, 255, 255, .7); padding: 1px 5px; border-radius: 4px; text-decoration: none;
+}
+.smash-osm.open a { display: inline; }
+
+/* 결과 보기: 평소엔 작게, 건물이 거의 다 무너지면 반짝인다 */
+.smash-finish {
+  display: block; width: 100%; margin-top: 6px; padding: 5px 0; border: 0; border-radius: 8px; cursor: pointer;
+  background: #f3f4f6; color: #374151; font: inherit; font-size: 11.5px; font-weight: 900;
+}
+.smash-finish.ready { background: #d8333a; color: #fff; animation: smash-pulse 1s ease-in-out infinite; }
+.smash-pop.talk {
+  font-size: 12.5px; color: #14181f; background: #fff; padding: 3px 9px; border-radius: 10px;
+  text-shadow: none; box-shadow: 0 3px 10px rgba(0, 0, 0, .18); animation-duration: 1.6s;
+}
+.smash-ratio-label { font-size: 10px; color: #6b7280; white-space: nowrap; }
+
+/* ── 시작·끝 오버레이 ── */
+.smash-overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(15, 20, 30, .45); backdrop-filter: blur(2px);
+}
+.smash-overlay[hidden] { display: none; }
+.smash-card {
+  width: min(360px, 100%); padding: 22px 20px 18px; border-radius: 20px;
+  background: #fff; color: #14181f; text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .3);
+}
+.smash-kicker { margin: 0; font: 800 11px/1 "Syne", system-ui, sans-serif; letter-spacing: .18em; color: #d8333a; }
+.smash-card h2 { margin: 8px 0 6px; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+.smash-card p { margin: 0 0 14px; font-size: 14px; color: #4b5563; font-weight: 600; }
+.smash-card input {
+  width: 100%; box-sizing: border-box; padding: 13px 14px; border-radius: 12px;
+  border: 2px solid #e5e7eb; font: inherit; font-size: 17px; font-weight: 800; text-align: center; color: #14181f; background: #f9fafb;
+}
+.smash-card input:focus { outline: none; border-color: #d8333a; background: #fff; }
+.smash-card button { font: inherit; cursor: pointer; }
+.smash-primary {
+  width: 100%; margin-top: 10px; padding: 14px; border: 0; border-radius: 12px;
+  background: #d8333a; color: #fff; font-size: 17px !important; font-weight: 900;
+  box-shadow: 0 6px 0 #9e1f25; transition: transform .08s, box-shadow .08s;
+}
+.smash-primary:active { transform: translateY(4px); box-shadow: 0 2px 0 #9e1f25; }
+.smash-note { display: block; margin-top: 12px; font-size: 11.5px; color: #9ca3af; }
+.smash-stats {
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0 0 6px; padding: 12px 14px;
+  border-radius: 12px; background: #f3f4f6; text-align: left; font-size: 14px;
+}
+.smash-stats dt { color: #6b7280; font-weight: 700; }
+.smash-stats dd { margin: 0; text-align: right; font-weight: 900; }
+.smash-row { display: flex; gap: 8px; margin-top: 10px; }
+.smash-row button {
+  flex: 1; padding: 11px 8px; border-radius: 12px; border: 2px solid #e5e7eb; background: #fff;
+  font-size: 14px; font-weight: 800; color: #14181f;
+}
+
+/* ── 설명 본문 ── */
+.bw-smash-help { margin-top: 1.5rem; line-height: 1.7; }
+.bw-smash-help h2 { font-size: 1.15rem; margin: 1.4rem 0 .5rem; }
+.bw-smash-help li { margin: .25rem 0; }
+
+
+/* ── 검색·로딩 ── */
+.smash-search { display: flex; gap: 6px; }
+.smash-search input { flex: 1; min-width: 0; }
+.smash-search button {
+  flex: 0 0 auto; padding: 0 16px; border: 0; border-radius: 12px; background: #d8333a; color: #fff;
+  font-size: 16px; font-weight: 900; box-shadow: 0 4px 0 #9e1f25;
+}
+.smash-msg { margin: 10px 0 0 !important; font-size: 13px !important; color: #6b7280 !important; }
+.smash-results { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; max-height: 210px; overflow-y: auto; text-align: left; }
+.smash-result {
+  display: block; width: 100%; padding: 9px 12px; border: 2px solid #e5e7eb; border-radius: 12px; background: #fff;
+  color: #14181f; text-align: left;
+}
+.smash-result:hover, .smash-result:focus { border-color: #d8333a; outline: none; }
+.smash-result b { display: block; font-size: 15px; font-weight: 900; }
+.smash-result small { display: block; font-size: 11.5px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.smash-link {
+  margin-top: 12px; border: 0; background: none; color: #4b5563; font-size: 13px; font-weight: 800;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.smash-loading-card { padding: 28px 20px; }
+.smash-loading-card p { margin: 14px 0 6px; font-weight: 800; color: #14181f; }
+.smash-loading-card small { color: #6b7280; font-size: 12.5px; }
+.smash-spinner {
+  width: 44px; height: 44px; margin: 0 auto; border-radius: 50%;
+  border: 5px solid #f3d4d5; border-top-color: #d8333a; animation: smash-spin .8s linear infinite;
+}
+@keyframes smash-spin { to { transform: rotate(360deg); } }
+.bw-smash-credit { font-size: .85rem; opacity: .75; }
+/* 링크 기본 파란색은 어두운 테마에서 안 보인다 — 글자색 그대로 + 밑줄 */
+.bw-smash-help a { color: inherit; text-decoration: underline; text-underline-offset: 2px; font-weight: 700; }
+
+@media (max-width: 420px) {
+  .smash-weapons { gap: 4px; left: 6px; right: 68px; }
+  .smash-weapons button { height: 54px; border-radius: 12px; }
+  .smash-weapons .ic { font-size: 19px; }
+  .smash-weapons small { font-size: 9.5px; }
+  .smash-nuke { width: 54px; height: 54px; right: 7px; }
+  .smash-nuke span { width: 42px; height: 42px; }
+  .smash-score { min-width: 0; }
+}
+
+/* ── 조작 안내 ── */
+.smash-tools #smash-help { font-weight: 900; font-size: 17px; }
+.smash-keys {
+  position: absolute; left: 8px; bottom: 96px; padding: 5px 10px; border-radius: 10px;
+  background: rgba(20, 24, 31, .62); color: #e5e7eb; font-size: 11.5px; font-weight: 700; pointer-events: none;
+}
+.smash-keys b { color: #ffd23f; }
+.smash-keys[hidden] { display: none; }
+.smash-tut-card { width: min(400px, 100%); text-align: left; }
+.smash-tut-card h2, .smash-tut-card .smash-kicker { text-align: center; }
+.smash-tut-list { margin: 6px 0 4px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.smash-tut-list li {
+  padding: 9px 12px; border-radius: 12px; background: #f3f4f6; color: #374151; font-size: 13.5px; font-weight: 600; line-height: 1.45;
+}
+.smash-tut-list li b { color: #d8333a; }
+
+/* ── 카드 공통: 넘치면 카드 안에서만 스크롤 (스크롤바는 얇게) ── */
+.smash-card { max-height: 100%; overflow-y: auto; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+.smash-card::-webkit-scrollbar { width: 6px; }
+.smash-card::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+/* ── 시작 카드 ── */
+.smash-start-card { width: min(400px, 100%); padding: 24px 22px 16px; }
+.smash-start-card h2 { margin: 0 0 4px; font-size: 25px; }
+.smash-start-card .smash-start-sub { margin: 0 0 14px; }
+.smash-results { max-height: none; overflow: visible; }
+.smash-result { padding: 10px 12px; border-radius: 12px; border-width: 1.5px; transition: border-color .12s, background .12s; }
+.smash-result:hover, .smash-result:focus { background: #fff5f5; }
+.smash-boss-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 14px; padding: 10px 12px; border-radius: 14px; cursor: pointer;
+  border: 1.5px solid #e5e7eb; background: #f9fafb; color: #14181f; font: inherit; text-align: left;
+}
+.smash-boss-row:hover { border-color: #d8333a; }
+.smash-boss-row .ic { font-size: 24px; line-height: 1; }
+.smash-boss-row .txt { flex: 1; min-width: 0; }
+.smash-boss-row small { display: block; font-size: 11px; font-weight: 700; color: #6b7280; }
+.smash-boss-row b { display: block; font-size: 15px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smash-boss-row .go { font-size: 13px; font-weight: 900; color: #d8333a; white-space: nowrap; }
+.smash-start-foot { margin-top: 6px; }
+.smash-start-foot .smash-link { margin-top: 8px; }
+.smash-start-foot .smash-note { margin-top: 6px; }
+
+/* ── 상사 꾸미기 창 ── */
+.smash-boss-card { width: min(560px, 100%); padding: 20px 20px 14px; text-align: left; }
+.smash-boss-card h2 { text-align: center; margin: 0 0 12px; font-size: 21px; }
+.smash-boss-grid { display: grid; grid-template-columns: 190px 1fr; gap: 14px; align-items: start; }
+.smash-boss-preview {
+  height: 260px; border-radius: 14px; overflow: hidden;
+  background: linear-gradient(180deg, #cfe6f7 0%, #eef5fb 70%, #d9d4c8 70%, #cfc9bc 100%);
+}
+.smash-boss-preview canvas { display: block; width: 100%; height: 100%; }
+.smash-boss-form { display: grid; gap: 8px; min-width: 0; }
+.smash-field { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; margin: 0; }
+.smash-field > span { font-size: 12px; font-weight: 800; color: #6b7280; }
+.smash-boss-card .smash-field input {
+  font-size: 15px; padding: 9px 11px; text-align: left; border-width: 1.5px; border-radius: 10px;
+}
+.smash-boss-card .smash-field input.bad { border-color: #d8333a; background: #fff5f5; }
+.smash-sugg { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 2px 42px; }
+.smash-sugg button {
+  padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; color: #4b5563;
+  font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer;
+}
+.smash-sugg button:hover { border-color: #d8333a; color: #d8333a; }
+.smash-seg { display: flex; padding: 3px; gap: 3px; border-radius: 10px; background: #f3f4f6; }
+.smash-seg.wrap { flex-wrap: wrap; }
+.smash-seg button {
+  flex: 1 1 auto; min-width: 0; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: #4b5563;
+  font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap;
+}
+.smash-seg button.on { background: #fff; color: #d8333a; box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
+.smash-swatches { display: flex; gap: 8px; }
+.smash-swatches button {
+  width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; padding: 0;
+  box-shadow: 0 0 0 1.5px #d1d5db;
+}
+.smash-swatches button.on { box-shadow: 0 0 0 2.5px #d8333a; }
+.smash-boss-warn { margin: 0 !important; font-size: 12px !important; color: #d8333a !important; font-weight: 800 !important; }
+.smash-boss-warn[hidden] { display: none; }
+@media (max-width: 520px) {
+  .smash-boss-grid { grid-template-columns: 1fr; }
+  .smash-boss-preview { height: 150px; }
+}
+
+/* ── 회사 랭킹 ── */
+.smash-ranklist { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #fff8e6; text-align: left; }
+.smash-ranklist[hidden] { display: none; }
+.smash-ranklist b { display: block; font-size: 13px; font-weight: 900; color: #8a5a00; margin-bottom: 4px; }
+.smash-ranklist ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.smash-ranklist li { display: flex; gap: 8px; align-items: baseline; font-size: 13px; font-weight: 700; color: #374151; }
+.smash-ranklist li i { font-style: normal; width: 18px; font-weight: 900; color: #d8333a; }
+.smash-ranklist li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smash-ranklist li em { font-style: normal; font-size: 12px; color: #6b7280; white-space: nowrap; }
+.smash-end-rank { margin: 8px 0 0 !important; padding: 9px 12px; border-radius: 12px; background: #fff8e6; color: #8a5a00 !important; font-size: 13.5px !important; font-weight: 800 !important; }
+.smash-end-rank[hidden] { display: none; }
+.smash-ranklist li.empty { display: block; font-size: 12.5px; font-weight: 600; color: #8a6d3b; line-height: 1.45; }
+
+/* ── 주소로 고를 때 회사 이름 묻기 ── */
+.smash-addrname { padding: 12px; border-radius: 12px; background: #f9fafb; border: 2px solid #e5e7eb; text-align: center; }
+.smash-addrname b { display: block; font-size: 14px; font-weight: 900; }
+.smash-addrname small { display: block; margin: 2px 0 8px; font-size: 11.5px; color: #6b7280; }
+.smash-addrname input { font-size: 15px !important; padding: 10px 12px !important; }
+.smash-result.friend { border-color: #d8333a; background: #fff5f5; }
+
+/* ── 결과 공유 ── */
+.smash-share-card { width: min(380px, 100%); }
+.smash-share-preview {
+  position: relative; width: 150px; aspect-ratio: 9 / 16; margin: 4px auto 6px; border-radius: 12px; overflow: hidden;
+  background: #14171d; box-shadow: 0 8px 22px rgba(0, 0, 0, .28);
+}
+.smash-share-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.smash-share-preview .smash-spinner { position: absolute; left: 50%; top: 50%; margin: -22px 0 0 -22px; display: none; }
+#smash-sharesheet.busy .smash-share-preview .smash-spinner { display: block; }
+.smash-share-main { display: flex; gap: 8px; }
+.smash-share-main button { flex: 1; }
+.smash-share-main [data-act="native"] {
+  margin-top: 10px; padding: 14px 8px; border-radius: 12px; border: 2px solid #14181f; background: #fff; color: #14181f;
+  font-size: 15px; font-weight: 900;
+}
+.smash-share-main [data-act="native"][hidden] { display: none; }
+.smash-share-main .smash-primary { font-size: 15px !important; padding: 14px 8px; }
+.smash-share-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.smash-share-row button {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border: 0; border-radius: 12px;
+  background: none; color: #374151; font-size: 11px; font-weight: 800;
+}
+.smash-share-row i {
+  display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%;
+  font-style: normal; font-size: 18px; font-weight: 900;
+}
+.smash-share-row svg { width: 20px; height: 20px; }
+.smash-share-row .kakao i { background: #fee500; color: #191919; }
+.smash-share-row .line i { background: #06c755; color: #fff; }
+.smash-share-row .x i { background: #111; color: #fff; }
+.smash-share-row .facebook i { background: #1877f2; color: #fff; }
+.smash-share-row .copy i { background: #e5e7eb; color: #14181f; }
+.smash-searchtip { display: block; margin-top: 7px; font-size: 11.5px; line-height: 1.45; color: #6b7280; font-weight: 600; }
+.smash-share-main button { white-space: nowrap; padding-left: 6px !important; padding-right: 6px !important; }
+.smash-share-main [data-act="native"], .smash-share-main .smash-primary { font-size: 14px !important; padding-top: 12px !important; padding-bottom: 12px !important; }
+.smash-share-preview { width: clamp(96px, 19vh, 150px); }
+.smash-tools #smash-bgm.off { opacity: .45; text-decoration: line-through; }
+.smash-finish { white-space: nowrap; }
+/* 좁은 폰: 오른쪽 위 버튼을 3개씩 두 줄로 — 한 줄로 두면 점수 칸을 밀어낸다 */
+@media (max-width: 480px) {
+  .smash-tools { flex-wrap: wrap; justify-content: flex-end; max-width: 112px; gap: 5px; }
+  .smash-tools button { width: 34px; height: 32px; }
+}
+
+/* ── 배경음악 볼륨 (🎵 누르면) ── */
+.smash-vol {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; pointer-events: auto;
+  background: rgba(255, 255, 255, .94); box-shadow: 0 6px 18px rgba(20, 30, 50, .2); color: #14181f;
+}
+.smash-vol[hidden] { display: none; }
+.smash-vol span { font-size: 11.5px; font-weight: 800; white-space: nowrap; }
+.smash-vol input { width: 110px; accent-color: #d8333a; }
+.smash-vol b { width: 34px; font-size: 11.5px; font-weight: 900; text-align: right; }
+
+/* 필살기 버튼: 아이콘 + 글자 */
+.smash-nuke span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1; }
+.smash-nuke span i { font-style: normal; font-size: 17px; }
+.smash-nuke span b { font-size: 10.5px; font-weight: 900; margin-top: 2px; }
+
+/* ── 페이지 랭킹 (게임 밖) ── */
+.bw-smash-rank {
+  margin: 1.4rem 0 0; padding: 18px 18px 16px; border-radius: 18px;
+  background: rgba(255, 210, 63, .08); border: 1px solid rgba(255, 210, 63, .35);
+}
+.bw-smash-rank h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.bw-smash-rank p { margin: 0 0 12px; font-size: .9rem; opacity: .75; }
+.bw-smash-rank ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.bw-smash-rank li {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px;
+  background: rgba(127, 127, 127, .1);
+}
+.bw-smash-rank li i { flex: 0 0 26px; font-style: normal; font-weight: 900; font-size: 1rem; text-align: center; color: #d8333a; }
+.bw-smash-rank li span { flex: 1; min-width: 0; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bw-smash-rank li span small { display: block; font-size: .75rem; font-weight: 600; opacity: .65; }
+.bw-smash-rank li em { font-style: normal; font-weight: 900; color: #e0a800; white-space: nowrap; }
+.bw-smash-rank li.empty { display: block; font-size: .9rem; font-weight: 600; opacity: .8; line-height: 1.5; }
+.bw-smash-rank-go {
+  margin-top: 12px; padding: 10px 16px; border: 0; border-radius: 999px; cursor: pointer;
+  background: #d8333a; color: #fff; font: inherit; font-size: .9rem; font-weight: 900;
+}
+
+/* 랭킹을 게임 위로 옮기며 촘촘하게 */
+.bw-smash-rank { margin: .6rem 0 1rem; padding: 14px 16px 12px; }
+.bw-smash-rank-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.bw-smash-rank-head h2 { margin: 0; }
+.bw-smash-rank p { margin: 4px 0 10px; }
+.bw-smash-rank .bw-smash-rank-go { margin-top: 0; padding: 8px 14px; font-size: .85rem; }
+.bw-smash-rank ol { grid-template-columns: 1fr 1fr; grid-auto-flow: column; grid-template-rows: repeat(5, auto); gap: 5px 10px; }
+.bw-smash-rank li { padding: 6px 10px; }
+.bw-smash-rank li.empty { grid-column: 1 / -1; grid-row: 1; }
+.bw-smash-rank-more {
+  display: block; width: 100%; margin-top: 8px; padding: 7px; border: 1px dashed rgba(127, 127, 127, .45); border-radius: 10px;
+  background: none; color: inherit; font: inherit; font-size: .85rem; font-weight: 800; cursor: pointer;
+}
+.bw-smash-rank-more[hidden] { display: none; }
+@media (max-width: 640px) {
+  .bw-smash-rank ol { grid-template-columns: 1fr; grid-auto-flow: row; grid-template-rows: none; }
+  .bw-smash-rank:not(.more) li:nth-child(n+6) { display: none; }
+  .bw-smash-rank-head h2 { font-size: 1.05rem; }
+}
+.smash-seg.wrap { display: grid; grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 520px) {
+  /* 폰: 꾸미기 창이 무대 높이 안에 들어가게 촘촘히 */
+  .smash-boss-card { padding: 14px 14px 10px; }
+  .smash-boss-card h2 { font-size: 18px; margin-bottom: 8px; }
+  .smash-boss-grid { gap: 8px; }
+  .smash-boss-preview { height: 112px; }
+  .smash-boss-form { gap: 6px; }
+  .smash-boss-card .smash-field input { padding: 7px 10px; font-size: 14px; }
+  .smash-sugg { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-top: -1px; }
+  .smash-sugg::-webkit-scrollbar { display: none; }
+  .smash-sugg button { flex: 0 0 auto; }
+  .smash-seg button { padding: 5px 4px; font-size: 12px; }
+  .smash-boss-card .smash-primary { margin-top: 8px; padding: 11px; }
+  .smash-boss-card .smash-note { margin-top: 6px; font-size: 10.5px; }
+}
+/* 검색 결과가 나오면 도움말은 접고 결과 줄을 촘촘하게 — 카드가 넘치지 않게 */
+.smash-start-card:has(.smash-result) .smash-searchtip,
+.smash-start-card:has(.smash-result) .smash-start-foot .smash-note { display: none; }
+.smash-start-card .smash-results { gap: 5px; }
+.smash-start-card .smash-result { padding: 7px 12px; }
+.smash-start-card .smash-result b { font-size: 14.5px; }
+.smash-start-card .smash-result small { margin-top: 1px; }
+.smash-lead-2 { display: block; margin-top: .45rem; }

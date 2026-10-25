@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko" th:lang="${lang}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!--/* 제목은 검색어 "회사 부수기" 로 시작하고, 게임명 "가족같은 회사 부수기 3D" 를 뒤에 품는다. 글자는 messages*.properties 의 smash.* */-->
+    <title th:text="#{smash.meta.title}">회사 부수기 게임 - 가족같은 회사 3D로 부수기 | 스트레스 해소 게임 | Binary World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" th:content="#{smash.meta.description}" content="">
+    <meta name="keywords" th:content="#{smash.meta.keywords}" content="">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Binary World">
+    <meta property="og:type" content="website">
+    <meta property="og:title" th:content="#{smash.meta.ogTitle}" content="">
+    <meta property="og:description" th:content="#{smash.meta.ogDescription}" content="">
+    <meta property="og:image" content="https://game.binaryworld.kr/img/smash.png">
+    <meta property="og:url" th:content="${canonicalUrl}" content="https://game.binaryworld.kr/smash">
+    <meta property="og:locale" th:content="${lang == 'ko' ? 'ko_KR' : (lang == 'ja' ? 'ja_JP' : 'en_US')}" content="ko_KR">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" th:content="#{smash.meta.ogTitle}" content="">
+    <meta name="twitter:description" th:content="#{smash.meta.ogDescription}" content="">
+    <meta name="twitter:image" content="https://game.binaryworld.kr/img/smash.png">
+    <link rel="icon" href="/img/favicon/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-icon-180x180.png">
+    <link rel="manifest" href="/img/favicon/manifest.json">
+    <meta name="theme-color" content="#0b0d10">
+    <th:block th:replace="~{fragments/i18n :: hreflang}"/>
+    <script type="application/ld+json" th:inline="javascript">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": [[#{smash.ld.name}]],
+      "alternateName": [[${ {#messages.msg('smash.ld.alt1'), #messages.msg('smash.ld.alt2'), #messages.msg('smash.ld.alt3'), #messages.msg('smash.ld.alt4')} }]],
+      "url": [[${canonicalUrl}]],
+      "image": "https://game.binaryworld.kr/img/smash.png",
+      "description": [[#{smash.ld.description}]],
+      "genre": ["Casual", "Action"],
+      "gamePlatform": ["Web Browser", "Mobile"],
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "inLanguage": [[${lang}]],
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "keywords": [[#{smash.ld.keywords}]]
+    }
+    </script>
+    <script type="application/ld+json" th:inline="javascript">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": [[#{smash.faq.q1}]], "acceptedAnswer": { "@type": "Answer", "text": [[#{smash.faq.a1}]] } },
+        { "@type": "Question", "name": [[#{smash.faq.q2}]], "acceptedAnswer": { "@type": "Answer", "text": [[#{smash.faq.a2}]] } },
+        { "@type": "Question", "name": [[#{smash.faq.q3}]], "acceptedAnswer": { "@type": "Answer", "text": [[#{smash.faq.a3}]] } }
+      ]
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/header.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/footer.css">
+    <link rel="stylesheet" href="https://binaryworld.kr/common/guestbook.css">
+    <link id="theme-style" rel="stylesheet" th:href="@{/css/main-dark.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/smash.css}">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6890085609044109"
+            crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0TSFJBQ41N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-0TSFJBQ41N');
+    </script>
+    <!--/* 게임 소스(/js/smash/)는 빌드 없이 ES 모듈로 서빙한다. three.js r170 은 vendor 에 둔다 (CDN 의존 없음). */-->
+    <script type="importmap">
+    { "imports": { "three": "/js/smash/vendor/three.module.min.js" } }
+    </script>
+</head>
+<body class="bw-game-body">
+<header id="global-header" aria-label="Binary World 공통 메뉴"></header>
+<div class="bw-smash-shell">
+    <div class="nav-back">
+        <a href="/" class="back-btn" th:text="#{common.back}">← 게임 목록</a>
+    </div>
+    <div th:replace="~{fragments/i18n :: langSwitch}"></div>
+    <h1 class="game-title" th:text="#{smash.ui.title}">가족같은 회사 부수기 3D</h1>
+    <p class="game-desc" th:utext="#{smash.ui.lead}"></p>
+
+    <!--/* 게임 위 랭킹: 들어오자마자 "어느 회사가 제일 많이 부서졌나"를 보여 준다. 채우는 건 main.js 의 loadRanking('smash-pagerank-ol', 10).
+           PC 는 두 줄(1~5위 | 6~10위), 폰은 5위까지만 보이고 "더 보기"로 펼친다 — 게임이 너무 아래로 밀리지 않게 */-->
+    <section class="bw-smash-rank" id="smash-pagerank">
+        <div class="bw-smash-rank-head">
+            <h2 th:text="#{smash.page.rankTitle}">🏆 회사 파괴 랭킹 TOP 10</h2>
+            <button type="button" id="smash-pagerank-go" class="bw-smash-rank-go" th:text="#{smash.page.rankGo}">우리 회사 부수러 가기 ↓</button>
+        </div>
+        <p th:text="#{smash.page.rankDesc}">지금까지 가장 많이 부서진 회사예요.</p>
+        <ol id="smash-pagerank-ol"></ol>
+        <button type="button" id="smash-pagerank-more" class="bw-smash-rank-more" hidden th:text="#{smash.page.rankMore}">6~10위 더 보기</button>
+    </section>
+
+    <!--/* 게임 박스. id 는 js/smash/main.js 가 찾는다. */-->
+    <div class="bw-smash-stage" id="smash-stage">
+        <div id="smash-canvas" role="img" th:aria-label="#{smash.ui.canvasAria}"></div>
+
+        <div class="smash-hud">
+            <div class="smash-top">
+                <div class="smash-score">
+                    <div class="smash-corp" id="smash-corp"></div>
+                    <div class="smash-label" th:text="#{smash.ui.damage}">점수</div>
+                    <div class="smash-money" id="smash-money">0점</div>
+                    <div class="smash-ratio-row">
+                        <span class="smash-ratio-label" th:text="#{smash.ui.ratio}">회사 파괴율</span>
+                        <div class="smash-barbox"><i id="smash-bar"></i></div>
+                        <span id="smash-ratio">0%</span>
+                    </div>
+                    <!--/* 끝은 사람이 정한다. 건물이 거의 다 무너지면 반짝이며 눌러 달라고 한다 (완전히 무너지면 저절로) */-->
+                    <button type="button" class="smash-finish" id="smash-finish" th:text="#{smash.ui.finish}">🏁 결과 보기</button>
+                </div>
+                <div class="smash-side">
+                    <div class="smash-rank-box">
+                        <small th:text="#{smash.ui.rank}">직급</small>
+                        <b id="smash-rank">인턴</b>
+                    </div>
+                    <div class="smash-tools">
+                        <button id="smash-rank-btn" type="button" th:aria-label="#{smash.ui.rankAria}" th:title="#{smash.ui.rankAria}">🏆</button>
+                        <button id="smash-help" type="button" th:aria-label="#{smash.ui.helpAria}" th:title="#{smash.ui.helpAria}">?</button>
+                        <button id="smash-home" type="button" th:aria-label="#{smash.ui.homeAria}" th:title="#{smash.ui.homeAria}">🏢</button>
+                        <button id="smash-bgm" type="button" th:aria-label="#{smash.ui.bgmAria}" th:title="#{smash.ui.bgmAria}">🎵</button>
+                        <button id="smash-mute" type="button" th:aria-label="#{smash.ui.muteAria}">🔊</button>
+                        <button id="smash-full" type="button" th:aria-label="#{smash.ui.fullAria}">⛶</button>
+                    </div>
+                    <!--/* 🎵 를 누르면 열리는 배경음악 볼륨. 0% 면 음악을 멈춘다 */-->
+                    <div class="smash-vol" id="smash-vol" hidden>
+                        <span th:text="#{smash.ui.volTitle}">🎵 배경음악</span>
+                        <input id="smash-vol-range" type="range" min="0" max="100" step="5" value="30" th:aria-label="#{smash.ui.volAria}">
+                        <b id="smash-vol-val">30%</b>
+                    </div>
+                </div>
+            </div>
+            <div class="smash-combo" id="smash-combo"></div>
+            <div class="smash-toast" id="smash-toast"></div>
+            <div class="smash-aim" id="smash-aim"></div>
+            <div class="smash-hint" id="smash-hint" th:text="#{smash.ui.hint}" th:data-touch="#{smash.ui.hintTouch}"></div>
+            <div class="smash-bubble" id="smash-bubble"></div>
+            <div class="smash-pops" id="smash-pops"></div>
+            <div class="smash-wname" id="smash-wname"></div>
+            <div class="smash-weapons" id="smash-weapons">
+                <button type="button" data-w="0"><span class="ic">🔨</span><small></small><kbd>1</kbd></button>
+                <button type="button" data-w="1"><span class="ic">📎</span><small></small><kbd>2</kbd></button>
+                <button type="button" data-w="2"><span class="ic">✉️</span><small></small><kbd>3</kbd></button>
+                <button type="button" data-w="3"><span class="ic">🔥</span><small></small><kbd>4</kbd></button>
+                <button type="button" data-w="4"><span class="ic">💬</span><small></small><kbd>5</kbd></button>
+                <button type="button" data-w="5"><span class="ic">☄️</span><small></small><kbd>6</kbd></button>
+                <button type="button" data-w="6"><span class="ic">🌀</span><small></small><kbd>7</kbd></button>
+                <button type="button" data-w="7"><span class="ic">🏗️</span><small></small><kbd>8</kbd></button>
+            </div>
+            <button type="button" class="smash-nuke" id="smash-nuke" th:aria-label="#{smash.ui.nukeAria}"><span><i>💥</i><b th:text="#{smash.ui.nuke}">필살기</b></span></button>
+            <div class="smash-keys" id="smash-keys" hidden th:utext="#{smash.ui.keys}"></div>
+            <!--/* 지도 출처. 브이월드 약관·OpenStreetMap(ODbL)이 지도 화면에 출처를 요구한다.
+                   시작할 때 몇 초 보였다가 ⓘ 로 접힌다 (OSM 출처 표기 지침이 허용하는 접는 방식). 지우면 안 된다 */-->
+            <div class="smash-osm" id="smash-osm" hidden>
+                <button type="button" th:aria-label="#{smash.ui.creditAria}" aria-label="지도 출처">ⓘ</button>
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© 브이월드 · OpenFreeMap · OpenStreetMap</a>
+            </div>
+        </div>
+        <div class="smash-flash" id="smash-flash"></div>
+
+        <!--/* 시작 카드: 검색 → 결과 → (선택) 상사 꾸미기. 랭킹은 페이지 위에 있으니 여기엔 두지 않는다.
+               상사 꾸미기는 카드 안에서 펼치지 않고 따로 창(#smash-bosssheet)으로 — 펼치면 카드가 길어져 스크롤이 생겼다 */-->
+        <div class="smash-overlay" id="smash-start">
+            <div class="smash-card smash-start-card">
+                <h2 th:text="#{smash.ui.startTitle}">가족같은 회사 부수기 3D</h2>
+                <p class="smash-start-sub" th:text="#{smash.ui.startDesc}">오늘 부술 회사를 찾아 주세요</p>
+                <div class="smash-search">
+                    <input id="smash-name" type="search" maxlength="30" autocomplete="off" enterkeyhint="search" th:placeholder="#{smash.ui.namePh}">
+                    <button id="smash-go" type="button" th:text="#{smash.ui.go}">찾기</button>
+                </div>
+                <small class="smash-searchtip" th:text="#{smash.ui.searchTip}">회사가 안 나오면 회사 주소·건물 이름·근처 역으로 찾아보세요</small>
+                <p class="smash-msg" id="smash-msg" hidden></p>
+                <div class="smash-results" id="smash-results"></div>
+                <button id="smash-boss-toggle" type="button" class="smash-boss-row">
+                    <span class="ic" aria-hidden="true">👔</span>
+                    <span class="txt"><small th:text="#{smash.ui.bossToday}">오늘의 상사</small><b id="smash-boss-summary">사장님</b></span>
+                    <span class="go" th:text="#{smash.ui.bossEdit}">꾸미기 ›</span>
+                </button>
+                <div class="smash-start-foot">
+                    <button id="smash-fake" type="button" class="smash-link" th:text="#{smash.ui.fake}">지도 없이 가상 회사 부수기</button>
+                    <small class="smash-note" th:text="#{smash.ui.startNote}"></small>
+                </div>
+            </div>
+        </div>
+
+        <!--/* 상사 꾸미기 창. 미리보기(3D) + 이름·직함은 직접 입력, 나머지는 버튼. 욕설은 받지 않는다 (main.js 의 badWord) */-->
+        <div class="smash-overlay" id="smash-bosssheet" hidden>
+            <div class="smash-card smash-boss-card">
+                <h2 th:text="#{smash.ui.bossTitle}">상사 꾸미기</h2>
+                <div class="smash-boss-grid">
+                    <div class="smash-boss-preview"><canvas id="smash-boss-canvas" th:aria-label="#{smash.ui.bossPreviewAria}"></canvas></div>
+                    <div class="smash-boss-form">
+                        <label class="smash-field"><span th:text="#{smash.ui.bossName}">이름</span>
+                            <input id="smash-boss-name" type="text" maxlength="6" autocomplete="off" th:placeholder="#{smash.ui.bossNamePh}"></label>
+                        <label class="smash-field"><span th:text="#{smash.ui.bossTitleLabel}">직함</span>
+                            <input id="smash-boss-title" type="text" maxlength="8" autocomplete="off" th:placeholder="#{smash.ui.bossTitlePh}"></label>
+                        <div class="smash-sugg" id="smash-boss-sugg"></div>
+                        <div class="smash-field"><span th:text="#{smash.ui.bossGender}">성별</span><div class="smash-seg" data-k="gender"></div></div>
+                        <div class="smash-field"><span th:text="#{smash.ui.bossHair}">머리</span><div class="smash-seg wrap" data-k="hair"></div></div>
+                        <div class="smash-field"><span th:text="#{smash.ui.bossGlasses}">안경</span><div class="smash-seg" data-k="glasses"></div></div>
+                        <div class="smash-field"><span th:text="#{smash.ui.bossSuit}">옷</span><div class="smash-swatches" data-k="suit"></div></div>
+                        <p class="smash-boss-warn" id="smash-boss-warn" hidden th:text="#{smash.ui.bossBad}">욕설·비하하는 말은 쓸 수 없어요</p>
+                    </div>
+                </div>
+                <button id="smash-boss-done" type="button" class="smash-primary" th:text="#{smash.ui.bossDone}">완료</button>
+                <small class="smash-note" th:text="#{smash.ui.bossNote}">상사 이름은 이 기기에서만 쓰이고, 공유·랭킹에는 올라가지 않아요</small>
+            </div>
+        </div>
+
+        <div class="smash-overlay" id="smash-loading" hidden>
+            <div class="smash-card smash-loading-card">
+                <div class="smash-spinner"></div>
+                <p id="smash-loading-text"></p>
+                <small id="smash-loading-tip"></small>
+                <button id="smash-skip" type="button" class="smash-link" hidden th:text="#{smash.ui.skip}">기다리지 않고 가상 동네로 시작</button>
+            </div>
+        </div>
+
+        <div class="smash-overlay" id="smash-rankpop" hidden>
+            <div class="smash-card">
+                <p class="smash-kicker">RANKING</p>
+                <h2 th:text="#{smash.ui.rankPopTitle}">회사 파괴 랭킹</h2>
+                <div class="smash-ranklist"><ol id="smash-rankpop-ol"></ol></div>
+                <button id="smash-rankpop-close" type="button" class="smash-primary" th:text="#{smash.ui.rankPopClose}">계속 부수기</button>
+            </div>
+        </div>
+
+        <div class="smash-overlay" id="smash-tut" hidden>
+            <div class="smash-card smash-tut-card">
+                <p class="smash-kicker">HOW TO SMASH</p>
+                <h2 th:text="#{smash.tut.title}">이렇게 부숴요</h2>
+                <ul class="smash-tut-list">
+                    <li th:utext="#{smash.tut.l1}"></li>
+                    <li th:utext="#{smash.tut.l2}"></li>
+                    <li th:utext="#{smash.tut.l3}"></li>
+                    <li th:utext="#{smash.tut.l4}"></li>
+                    <li th:utext="#{smash.tut.l5}"></li>
+                </ul>
+                <button id="smash-tut-ok" type="button" class="smash-primary" th:text="#{smash.tut.ok}">알겠어요, 부수러 가기</button>
+            </div>
+        </div>
+
+        <div class="smash-overlay" id="smash-end" hidden>
+            <div class="smash-card">
+                <p class="smash-kicker">CONGRATULATIONS</p>
+                <h2 id="smash-end-title"></h2>
+                <p id="smash-end-sub"></p>
+                <dl id="smash-end-stats" class="smash-stats"></dl>
+                <p class="smash-end-rank" id="smash-end-rank" hidden></p>
+                <button id="smash-share" type="button" class="smash-primary" th:text="#{smash.ui.share}">결과 공유하기</button>
+                <div class="smash-row">
+                    <button id="smash-again" type="button" th:text="#{smash.ui.again}">다시 부수기</button>
+                    <button id="smash-keep" type="button" th:text="#{smash.ui.keep}">동네 더 부수기</button>
+                </div>
+                <button id="smash-other" type="button" class="smash-link" th:text="#{smash.ui.other}">다른 회사 찾기</button>
+            </div>
+        </div>
+
+        <!--/* 결과 공유: 결과 이미지(9:16) 미리보기 + 저장·기기 공유 + 카카오톡·LINE·X·페이스북·링크 복사. 동작은 main.js 의 openShare/shareAct */-->
+        <div class="smash-overlay" id="smash-sharesheet" hidden>
+            <div class="smash-card smash-share-card">
+                <p class="smash-kicker">SHARE</p>
+                <h2 th:text="#{smash.ui.share}">결과 공유하기</h2>
+                <div class="smash-share-preview"><img id="smash-share-img" th:alt="#{smash.ui.shareImgAlt}" alt=""><div class="smash-spinner"></div></div>
+                <div class="smash-share-main">
+                    <button type="button" class="smash-primary" data-act="save" th:text="#{smash.ui.shareSave}">📥 이미지 저장</button>
+                    <button type="button" data-act="native" hidden th:text="#{smash.ui.shareNative}">📤 스토리 공유</button>
+                </div>
+                <div class="smash-share-row">
+                    <button type="button" class="kakao" data-act="kakao"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.48 3 2 6.58 2 11c0 2.84 1.86 5.33 4.66 6.75l-.95 3.53c-.08.3.26.55.52.38l4.2-2.8c.51.06 1.03.09 1.57.09 5.52 0 10-3.58 10-7.95S17.52 3 12 3z"/></svg></i><span th:text="#{common.share.kakao}">카카오톡</span></button>
+                    <button type="button" class="line" data-act="line"><i>L</i><span th:text="#{common.share.line}">LINE</span></button>
+                    <button type="button" class="x" data-act="x"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.53 3h3.06l-6.7 7.66L21.8 21h-6.17l-4.83-6.32L5.27 21H2.2l7.17-8.19L1.8 3h6.33l4.37 5.78L17.53 3zm-1.07 16.2h1.7L7.05 4.7H5.23l11.23 14.5z"/></svg></i><span th:text="#{common.share.x}">X</span></button>
+                    <button type="button" class="facebook" data-act="facebook"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.25-1.5 1.55-1.5H16.6V4.4c-.3-.04-1.3-.13-2.45-.13-2.43 0-4.1 1.48-4.1 4.2v2.03H7.3v3h2.75V21h3.45z"/></svg></i><span th:text="#{common.share.facebook}">페이스북</span></button>
+                    <button type="button" class="copy" data-act="copy"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></i><span th:text="#{common.share.copy}">링크 복사</span></button>
+                </div>
+                <small class="smash-note" th:text="#{smash.ui.shareNote}">이미지를 저장해서 인스타·카톡 스토리에 올려 보세요</small>
+                <button type="button" class="smash-link" data-act="close" th:text="#{smash.ui.shareClose}">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/share :: shareBar}"></div>
+
+    <section class="bw-smash-help">
+        <h2 th:text="#{smash.help.title}">가족같은 회사 부수기 3D</h2>
+        <p th:utext="#{smash.help.intro}"></p>
+        <h2 th:text="#{smash.help.controlsTitle}">조작법</h2>
+        <ol>
+            <li th:utext="#{smash.help.c1}"></li>
+            <li th:utext="#{smash.help.c2}"></li>
+            <li th:utext="#{smash.help.c3}"></li>
+        </ol>
+        <h2 th:text="#{smash.help.weaponsTitle}">무기</h2>
+        <ul>
+            <li th:utext="#{smash.help.wp1}"></li>
+            <li th:utext="#{smash.help.wp2}"></li>
+            <li th:utext="#{smash.help.wp3}"></li>
+            <li th:utext="#{smash.help.wp4}"></li>
+            <li th:utext="#{smash.help.wp5}"></li>
+            <li th:utext="#{smash.help.wp6}"></li>
+            <li th:utext="#{smash.help.wp7}"></li>
+            <li th:utext="#{smash.help.wp8}"></li>
+        </ul>
+        <h2 th:text="#{smash.help.rankTitle}">승진, 퇴사 버튼, 엔딩</h2>
+        <p th:utext="#{smash.help.r1}"></p>
+        <p th:utext="#{smash.help.r2}"></p>
+        <p th:utext="#{smash.help.r3}"></p>
+        <p class="bw-smash-credit" th:utext="#{smash.help.credit}"></p>
+    </section>
+</div>
+<div th:replace="~{fragments/other-games :: otherGames}"></div>
+<div id="bw-guestbook" aria-label="방명록"></div>
+<footer id="global-footer" aria-label="Binary World 푸터"></footer>
+<script type="module" th:src="@{/js/smash/main.js}"></script>
+<script src="https://binaryworld.kr/common/header.js" defer></script>
+<script src="https://binaryworld.kr/common/footer.js" defer></script>
+<script src="https://binaryworld.kr/common/guestbook.js" defer></script>
+</body>
+</html>

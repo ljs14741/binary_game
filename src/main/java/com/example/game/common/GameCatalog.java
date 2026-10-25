@@ -76,12 +76,12 @@ public final class GameCatalog {
      * 나중에 도구가 생기면 WebP 로 다시 구워 여기서 지우면 된다.
      */
     /** 혼자 즐기는 게임 (키우기·리듬·아케이드). 메인에서 "내기·복불복"과 나눠 보여줌. 여기 없는 건 전부 내기·복불복 */
-    static final Set<String> SOLO = Set.of("/penguin", "/rhythm", "/kimchi", "/dodge");
+    static final Set<String> SOLO = Set.of("/penguin", "/rhythm", "/kimchi", "/dodge", "/smash");
 
     /** 메인 맨 위 "새로 나온 게임" 칸. 새 게임이 나오면 여기만 바꿈. 아래 묶음에도 그대로 나옴 */
-    public static final String FEATURED = "/penguin";
+    public static final String FEATURED = "/smash";
 
-    static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel", "/rhythm", "/press", "/pinball", "/penguin");
+    static final Set<String> PNG_CARDS = Set.of("/roulette", "/wheel", "/rhythm", "/press", "/pinball", "/penguin", "/smash");
 
     /**
      * 표시 순서 = 이 목록의 순서. 맨 앞은 키우는 게임(펭귄), 그다음 수익이 좋은 경마·핀볼·무궁화.
@@ -96,6 +96,8 @@ public final class GameCatalog {
                     "핀볼뽑기·랜덤볼뽑기 · 커피내기·점심내기·벌칙뽑기", "2026-09-21", Set.of("en", "ja")),
             new Game("/mugunghwa", "무궁화 꽃이 피었습니다", "Pick",
                     "커피내기·점심내기·벌칙뽑기 · 사다리·룰렛 대체", "2026-09-21", Set.of("en", "ja")),
+            new Game("/smash", "가족같은 회사 부수기 3D", "Smash",
+                    "우리 회사를 실제 지도에서 3D로 부수기 · 스트레스 해소", "2026-10-24"),
             new Game("/rhythm", "뿌셔뿌셔 리듬게임", "Rhythm",
                     "리듬 듣고 똑같이 따라 쳐서 벽·창문·굴뚝 부수기 · 버튼 하나 리듬게임", "2026-09-21", Set.of("en", "ja")),
             new Game("/ladder", "사다리타기 워터슬라이드", "Ladder",
