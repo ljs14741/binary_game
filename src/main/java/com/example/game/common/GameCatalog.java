@@ -150,17 +150,27 @@ public final class GameCatalog {
      *
      * <p>현재 게임은 빼고, {@code limit} 개까지만 돌려준다.
      * 게임이 20개가 되면 19장을 전부 내리는 셈이라 개수 제한이 필요하다.
-     * 앞 {@link #FIXED_OTHERS}개(키우는 게임·수익 게임)는 {@link #GAMES} 순서대로 늘 먼저 보이고,
-     * 나머지는 매번 섞어서 재방문자에게 다른 게임이 눈에 띄도록 한다.
+     * 맨 앞은 {@link #FEATURED}(새로 나온 게임), 그다음 앞 {@link #FIXED_OTHERS}개(키우는 게임·수익 게임)가
+     * {@link #GAMES} 순서대로 늘 먼저 보이고, 나머지는 매번 섞어서 재방문자에게 다른 게임이 눈에 띄도록 한다.
      */
     public static List<Game> others(String currentPath, int limit) {
         List<Game> rest = new ArrayList<>(GAMES.size());
+        Game featured = null;
         for (Game g : GAMES) {
-            if (!g.path().equals(currentPath)) {
+            if (g.path().equals(currentPath)) {
+                continue;
+            }
+            if (g.path().equals(FEATURED)) {
+                featured = g;
+            } else {
                 rest.add(g);
             }
         }
-        int fixed = Math.min(FIXED_OTHERS, rest.size());
+        // 새로 나온 게임은 맨 앞에 고정
+        if (featured != null) {
+            rest.add(0, featured);
+        }
+        int fixed = Math.min(FIXED_OTHERS + (featured != null ? 1 : 0), rest.size());
         Collections.shuffle(rest.subList(fixed, rest.size()));
         return rest.size() > limit ? rest.subList(0, limit) : rest;
     }
