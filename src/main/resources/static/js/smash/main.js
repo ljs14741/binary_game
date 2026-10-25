@@ -1407,11 +1407,11 @@ let stageHot = false;
 stage.addEventListener('pointerenter', () => { stageHot = true; });
 stage.addEventListener('pointerleave', () => { stageHot = false; keys.clear(); });
 
-// ── 입력: 탭 = 공격, 꾹 = 연사, 끌기 = 회전, 두 손가락/오른쪽 버튼 = 이동, 휠·집기 = 확대 ──
+// ── 입력: 탭 = 공격, 꾹 = 연사, 끌기 = 회전(폰은 이동), 오른쪽 버튼 = 이동, 두 손가락 = 돌리기·기울이기·확대, 휠 = 확대 ──
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 const ptrs = new Map();
-let pinch = 0, mid = null;
+let pinch = 0, mid = null, twist = null;
 
 function aimAt(cx, cy) {
     const r = box.getBoundingClientRect();
@@ -1451,11 +1451,12 @@ cv.addEventListener('pointerdown', e => {
     if (game.phase !== 'play') return;
     initAudio();
     cv.setPointerCapture(e.pointerId);
-    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false, fired: false, firing: false, pan: e.button === 2 || e.shiftKey });
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false, fired: false, firing: false, pan: e.button === 2 || e.shiftKey, touch: e.pointerType === 'touch' });
     if (ptrs.size === 2) {
         const [a, b] = [...ptrs.values()];
         pinch = Math.hypot(a.x - b.x, a.y - b.y);
         mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        twist = Math.atan2(b.y - a.y, b.x - a.x);
         a.moved = b.moved = true; a.firing = b.firing = false;
     }
 });
@@ -1480,15 +1481,25 @@ cv.addEventListener('pointermove', e => {
         const d = Math.hypot(a.x - b.x, a.y - b.y);
         if (pinch > 0) orbit.zoom = Math.min(2.4, Math.max(0.25, orbit.zoom * pinch / d));
         pinch = d;
+        // 지도 앱처럼 두 손가락 비틀기 = 돌리기, 같이 위아래로 밀기 = 기울이기
+        const ang = Math.atan2(b.y - a.y, b.x - a.x);
+        if (twist !== null) {
+            let da = ang - twist;
+            if (da > Math.PI) da -= Math.PI * 2;
+            if (da < -Math.PI) da += Math.PI * 2;
+            orbit.theta -= da;
+        }
+        twist = ang;
         const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-        if (mid) panBy(m.x - mid.x, m.y - mid.y);
+        if (mid) orbit.phi = Math.min(1.45, Math.max(0.3, orbit.phi - (m.y - mid.y) * 0.006));
         mid = m;
         return;
     }
     if (p.firing) return;
     if (!p.moved && Math.hypot(p.x - p.sx, p.y - p.sy) > 9) p.moved = true;
     if (p.moved) {
-        if (p.pan) panBy(dx, dy);
+        // 폰은 한 손가락 끌기가 이동 (지도 앱과 같게)
+        if (p.pan || p.touch) panBy(dx, dy);
         else {
             orbit.theta -= dx * 0.008;
             orbit.phi = Math.min(1.45, Math.max(0.3, orbit.phi - dy * 0.006));
@@ -1499,11 +1510,11 @@ function release(e) {
     const p = ptrs.get(e.pointerId);
     if (!p) return;
     ptrs.delete(e.pointerId);
-    if (ptrs.size < 2) { pinch = 0; mid = null; }
+    if (ptrs.size < 2) { pinch = 0; mid = null; twist = null; }
     if (!p.moved && !p.fired && !p.pan && performance.now() - p.t < 500) attack(p.x, p.y);
 }
 cv.addEventListener('pointerup', release);
-cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); pinch = 0; mid = null; });
+cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); pinch = 0; mid = null; twist = null; });
 cv.addEventListener('wheel', e => {
     if (game.phase !== 'play') return;
     e.preventDefault();
