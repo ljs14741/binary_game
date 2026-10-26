@@ -103,7 +103,9 @@ export class World {
         this.scene = scene;
         this.ground = new Ground();
         this.cellSize = 280 / UNIT_M;
-        this.groundMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+        // 바닥층(바탕 땅·항공사진·도로)은 높이 차이가 몇 mm라 깊이로 가리면 멀리서 서로 깜빡인다.
+        // 깊이를 안 쓰고 renderOrder 순서대로 덮어 그린다 (바닥 아래로 내려가는 물체는 없음)
+        this.groundMat = new THREE.MeshLambertMaterial({ vertexColors: true, depthWrite: false });
         this.texLoader = new THREE.TextureLoader();
         this.sat = new Map();
         this.reqs = new Map();
@@ -506,8 +508,9 @@ export class World {
 
     /** 끝없이 이어지는 바탕 땅 한 장 (칸마다 도로·공원·항공사진을 그 위에 얹는다) */
     _baseGround() {
-        const base = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshLambertMaterial({ color: 0xcdc8bc }));
+        const base = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshLambertMaterial({ color: 0xcdc8bc, depthWrite: false }));
         base.rotation.x = -Math.PI / 2;
+        base.renderOrder = -3;
         base.receiveShadow = true;
         base.userData.ground = true;
         this.root.add(base);
@@ -532,27 +535,28 @@ export class World {
             const faces = THREE.ShapeUtils.triangulateShape(pts, []);
             for (const [a, b, d] of faces) tri(pts[a].x, pts[a].y, pts[b].x, pts[b].y, pts[d].x, pts[d].y, y, hex);
         };
-        for (const a of area.areas) {
+        // 한 메시 안에서는 넣은 순서대로 덮인다: 공원 → 물 → 인도 → 도로(작은 길부터) → 차선
+        const areas = [...area.areas].sort((a, b) => (a.t === 'water') - (b.t === 'water'));
+        for (const a of areas) {
             const p = conv(a.poly);
             if (p.length >= 6) poly(p, a.t === 'water' ? 0.015 : 0.01, AREA_COLOR[a.t] || 0x97c375);
         }
         const order = { foot: 0, minor: 1, mid: 2, major: 3 };
         const sorted = [...area.roads].sort((a, b) => order[a.t] - order[b.t]);
         const roads = [];
-        for (const r of sorted) {
-            const pts = conv(r.pts);
-            const w = r.w * k;
-            const y = 0.02 + order[r.t] * 0.006;
-            if (r.t === 'major' || r.t === 'mid') ribbon(pts, w + 2.2, y - 0.004, 0xbab4a8, tri);
-            ribbon(pts, w, y, ROAD_COLOR[r.t], tri);
-            if (r.t === 'major' || r.t === 'mid') dashes(pts, 0.14, y + 0.002, 0xf1f1ec, tri);
-            if (r.t !== 'foot') roads.push({ t: r.t, w, pts });
+        const lines = sorted.map(r => ({ r, pts: conv(r.pts), w: r.w * k, y: 0.02 + order[r.t] * 0.006, big: r.t === 'major' || r.t === 'mid' }));
+        for (const l of lines) if (l.big) ribbon(l.pts, l.w + 2.2, l.y - 0.004, 0xbab4a8, tri);
+        for (const l of lines) {
+            ribbon(l.pts, l.w, l.y, ROAD_COLOR[l.r.t], tri);
+            if (l.r.t !== 'foot') roads.push({ t: l.r.t, w: l.w, pts: l.pts });
         }
+        for (const l of lines) if (l.big) dashes(l.pts, 0.14, l.y + 0.002, 0xf1f1ec, tri);
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
         g.computeVertexNormals();
         const mesh = new THREE.Mesh(g, this.groundMat);
+        mesh.renderOrder = -1;
         mesh.receiveShadow = true;
         return { mesh, roads };
     }
@@ -577,11 +581,12 @@ export class World {
             const key = z + '/' + x + '/' + y;
             if (this.sat.has(key)) continue;
             const west = ux(lng(x)), east = ux(lng(x + 1)), north = uz(lat(y)), south = uz(lat(y + 1));
-            const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, depthWrite: false });
             // 조각 사이 틈이 보이지 않게 아주 조금 겹친다
             const mesh = new THREE.Mesh(new THREE.PlaneGeometry((east - west) * 1.004, (south - north) * 1.004), mat);
             mesh.rotation.x = -Math.PI / 2;
             mesh.position.set((west + east) / 2, 0.012, (north + south) / 2);
+            mesh.renderOrder = -2;
             mesh.receiveShadow = true;
             mesh.visible = false;
             this.root.add(mesh);
