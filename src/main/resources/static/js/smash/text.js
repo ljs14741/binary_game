@@ -23,6 +23,8 @@ const KO = {
     endTitle: '퇴사를 축하합니다!',
     endTitleAny: '스트레스 완전 해소!',
     endSub: '{0}을(를) 완전히 부쉈습니다',
+    // 파괴율별 결과 문구 [기준, 문구] — 높은 것부터
+    endSubs: [[0.97, '{0}을(를) 완전히 부쉈습니다'], [0.5, '{0}을(를) 거의 다 부쉈습니다'], [0.15, '{0}에 큰 구멍을 냈습니다'], [0, '{0}에 살짝 흠집만 냈습니다']],
     statDamage: '점수',
     statRatio: '파괴율',
     statBuildings: '부순 건물',
@@ -95,7 +97,22 @@ const T = Object.assign({}, KO, window.SMASH_I18N || {});
 export default T;
 
 export function fmt(s, ...args) {
-    return s.replace(/\{(\d)\}/g, (_, i) => args[+i]);
+    return s.replace(/\{(\d)\}/g, (_, i) => args[+i]).replace(/(\S+)(을\(를\)|이\(가\)|은\(는\)|과\(와\)|와\(과\))/g, (_, w, j) => w + josa(w, j));
+}
+
+/** 앞 낱말 끝 글자 받침 보고 을/를·이/가·은/는·과/와 고름 */
+function josa(w, j) {
+    const c = w.slice(-1);
+    const [a, b] = j.replace(')', '').split('(');
+    const pair = { 을: ['을', '를'], 를: ['을', '를'], 이: ['이', '가'], 가: ['이', '가'], 은: ['은', '는'], 는: ['은', '는'], 과: ['과', '와'], 와: ['과', '와'] }[a];
+    if (!pair) return a + '(' + b + ')';
+    const code = c.charCodeAt(0) - 0xac00;
+    let has;
+    if (code >= 0 && code < 11172) has = code % 28 !== 0;
+    else if (/[0-9]/.test(c)) has = '013678'.includes(c);
+    else if (/[a-z]/i.test(c)) has = /([lmn]|le)$/i.test(w);
+    else return a + '(' + b + ')';
+    return has ? pair[0] : pair[1];
 }
 
 /**

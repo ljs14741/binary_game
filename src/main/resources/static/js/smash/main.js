@@ -922,7 +922,9 @@ function finish() {
     const sec = Math.round((performance.now() - game.startAt) / 1000);
     const time = sec >= 60 ? fmt(T.minutes, Math.floor(sec / 60), sec % 60) : fmt(T.seconds, sec);
     ui.endTitle.textContent = game.company ? T.endTitle : T.endTitleAny;
-    ui.endSub.textContent = fmt(T.endSub, corpName());
+    const r = targetRatio();
+    const sub = (T.endSubs || []).find(([min]) => r >= min);
+    ui.endSub.textContent = fmt(sub ? sub[1] : T.endSub, corpName());
     ui.endStats.innerHTML = '';
     const rows = [
         [T.statDamage, score(game.damage)],

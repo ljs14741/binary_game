@@ -446,8 +446,21 @@
 .smash-finish { white-space: nowrap; }
 /* 좁은 폰: 오른쪽 위 버튼을 3개씩 두 줄로 — 한 줄로 두면 점수 칸을 밀어낸다 */
 @media (max-width: 480px) {
-  .smash-tools { flex-wrap: wrap; justify-content: flex-end; max-width: 112px; gap: 5px; }
-  .smash-tools button { width: 34px; height: 32px; }
+  .smash-tools { flex-wrap: wrap; justify-content: flex-end; max-width: 100px; gap: 4px; }
+  .smash-tools button { width: 30px; height: 28px; font-size: 14px; border-radius: 9px; }
+  /* 폰: 위쪽 정보창을 작게 — 크면 옥상 상사와 데미지 숫자를 가린다 */
+  .smash-top { top: 8px; left: 8px; right: 8px; }
+  .smash-score { padding: 5px 10px 6px; max-width: 48%; border-radius: 12px; }
+  .smash-corp { font-size: 11px; }
+  .smash-label { display: none; }
+  .smash-money { font-size: 18px; }
+  .smash-ratio-row { margin-top: 2px; font-size: 10px; gap: 5px; }
+  .smash-barbox { min-width: 40px; height: 5px; }
+  .smash-finish { margin-top: 4px; padding: 4px 0; font-size: 11px; }
+  .smash-rank-box { padding: 3px 9px 4px; min-width: 0; border-radius: 10px; }
+  .smash-rank-box small { font-size: 9px; }
+  .smash-rank-box b { font-size: 14px; }
+  .smash-tools #smash-help { font-size: 15px; }
 }
 
 /* ── 배경음악 볼륨 (🎵 누르면) ── */
