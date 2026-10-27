@@ -15,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 상사별 누적 날린 횟수 랭킹 (smash_boss, src/main/resources/db/smash_boss.sql).
  *
- * <p>상사는 성(이름 첫 글자) + 직함만 남김 ("김철수 부장님" → "김 부장님"). 실제 사람을 짚지 못하게
- * 이름 나머지는 버리고, 회사 이름과도 묶어 저장하지 않음.
+ * <p>상사는 이름 + 직함으로 쌓음 ("김철수 부장님"). 회사 이름과는 묶어 저장하지 않음
+ * (어느 회사 누구인지는 안 드러나게).
  * 손대지 않은 기본 상사("사장님")는 모두 같은 이름이라 늘 1위가 되니 뺌.
  * 날린 횟수는 화면이 세서 보내는 값이라 한 판·초당 상한을 걺 (상사는 맞고 0.3초 동안 다시 안 맞음).
  */
@@ -30,6 +30,8 @@ public class SmashBossService {
     static final int MAX_HITS_PER_SECOND = 4;
     static final int MAX_PLAYS_PER_DAY = 40;
     static final int MAX_TITLE = 8;
+    /** 상사 꾸미기 이름 칸 maxlength 와 맞춤 */
+    static final int MAX_NAME = 6;
     /** 기본 상사 직함 (main.js 의 BOSS_DEFAULT) */
     static final String DEFAULT_TITLE = "사장님";
 
@@ -46,14 +48,14 @@ public class SmashBossService {
     public record Entry(int rank, String name, long hits, int plays, int players) {
     }
 
-    /** 화면 표시 이름: 성 + 직함. 이름은 첫 글자만 남김 */
+    /** 화면 표시 이름: 이름 + 직함 */
     static String label(String rawName, String rawTitle) {
         String title = SmashRankService.clean(rawTitle);
         if (title.length() > MAX_TITLE) title = title.substring(0, MAX_TITLE).trim();
         String name = SmashRankService.clean(rawName).replace(" ", "");
-        String surname = name.isEmpty() ? "" : name.substring(0, name.offsetByCodePoints(0, 1));
-        if (title.isEmpty()) return surname;
-        return surname.isEmpty() ? title : surname + " " + title;
+        if (name.codePointCount(0, name.length()) > MAX_NAME) name = name.substring(0, name.offsetByCodePoints(0, MAX_NAME));
+        if (title.isEmpty()) return name;
+        return name.isEmpty() ? title : name + " " + title;
     }
 
     /** 묶음용 이름: 공백·기호 빼고 소문자로, 끝의 "님"도 뺌. "김 부장님" = "김부장" */

@@ -32,7 +32,7 @@ const store = {
 const track = (name, params) => { if (typeof window.gtag === 'function') window.gtag('event', name, params || {}); };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
-// ── 상사 꾸미기: 이름·직함·성별·머리·안경·옷. 이 기기에 저장하고, 상사 랭킹에는 성(이름 첫 글자) + 직함만 보냄 ──
+// ── 상사 꾸미기: 이름·직함·성별·머리·안경·옷. 이 기기에 저장하고, 상사 랭킹에는 이름 + 직함만 보냄 ──
 const BOSS_DEFAULT = { name: '', title: '사장님', gender: 'm', hair: 'bald', glasses: true, suit: 'navy' };
 const bossLook = (() => {
     try { return { ...BOSS_DEFAULT, ...JSON.parse(store.get('smash.boss') || '{}') }; } catch (e) { return { ...BOSS_DEFAULT }; }
@@ -822,17 +822,17 @@ function roofSpot(b, camDir) {
     return best || { x: b.cx, z: b.cz };
 }
 
-// ── 회사 파괴 랭킹: 판이 끝나면 회사 이름(사용자가 입력한 것)과 피해액만 보낸다. 상사는 성 + 직함 + 날린 횟수만 ──
+// ── 회사 파괴 랭킹: 판이 끝나면 회사 이름(사용자가 입력한 것)과 피해액만 보낸다. 상사는 이름 + 직함 + 날린 횟수만 ──
 function playSeconds() {
     return Math.round((performance.now() - game.startAt) / 1000);
 }
 
-/** 상사 랭킹용: 이름은 첫 글자(성)만. 손대지 않은 기본 "사장님"·욕 섞인 이름·한 번도 안 날렸으면 안 보냄 */
+/** 상사 랭킹용: 이름 + 직함. 손대지 않은 기본 "사장님"·욕 섞인 이름·한 번도 안 날렸으면 안 보냄 */
 function bossPayload() {
     const title = (bossLook.title || '').trim();
-    const surname = [...(bossLook.name || '').trim()][0] || '';
-    if (game.stats.boss < 1 || !title || (!surname && title === BOSS_DEFAULT.title) || badWord(surname + title)) return null;
-    return { bossName: surname, bossTitle: title, bossHits: game.stats.boss };
+    const name = (bossLook.name || '').trim();
+    if (game.stats.boss < 1 || !title || (!name && title === BOSS_DEFAULT.title) || badWord(name + title)) return null;
+    return { bossName: name, bossTitle: title, bossHits: game.stats.boss };
 }
 
 function rankPayload() {

@@ -153,13 +153,14 @@ class SmashServicesTest {
 
     @Test
     void bossLabelKeepsOnlySurnameAndTitle() {
-        // 이름은 첫 글자(성)만 남김
-        assertEquals("김 부장님", SmashBossService.label("김철수", "부장님"));
-        assertEquals("김 부장님", SmashBossService.label(" 김 철수 ", "  부장님 "));
+        // 이름 + 직함, 이름 안 띄어쓰기는 붙임, 이름 6글자 제한
+        assertEquals("김철수 부장님", SmashBossService.label("김철수", "부장님"));
+        assertEquals("김철수 부장님", SmashBossService.label(" 김 철수 ", "  부장님 "));
+        assertEquals("가나다라마바 과장", SmashBossService.label("가나다라마바사", "과장"), "이름 6글자 제한");
         assertEquals("부장님", SmashBossService.label("", "부장님"));
         assertEquals("사장님", SmashBossService.label(null, "사장님"));
         assertEquals("김 대표이사사장님입", SmashBossService.label("김", "대표이사사장님입니다"), "직함 8글자 제한");
-        assertEquals("김 과장", SmashBossService.label("김<script>", "과<장>"), "꺾쇠 제거");
+        assertEquals("김철수 과장", SmashBossService.label("김<철수>", "과<장>"), "꺾쇠 제거");
         // "님" 있든 없든, 띄어쓰기 있든 없든 같은 상사로 묶음
         assertEquals("김부장", SmashBossService.labelKey("김 부장님"));
         assertEquals("김부장", SmashBossService.labelKey("김 부장"));
@@ -195,10 +196,10 @@ class SmashServicesTest {
         assertFalse(s.submit("씨", "발부장", 30, 60, "1.1.1.1"), "금칙어");
         verify(jdbc, never()).update(anyString(), any(Object[].class));
         assertTrue(s.submit("김철수", "부장님", 9_999, 30, "1.1.1.1"));
-        // 이름 나머지는 안 들어가고, 횟수는 30초 × 4 로 잘림. 처음 본 사람이라 player +1
-        verify(jdbc).update(anyString(), eq("김부장"), eq("김 부장님"), eq(120), eq(1));
-        assertTrue(s.submit("김영희", "부장", 5, 30, "1.1.1.1"));
-        verify(jdbc).update(anyString(), eq("김부장"), eq("김 부장"), eq(5), eq(0));
+        // 횟수는 30초 × 4 로 잘림. 처음 본 사람이라 player +1
+        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장님"), eq(120), eq(1));
+        assertTrue(s.submit("김철수", "부장", 5, 30, "1.1.1.1"));
+        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장"), eq(5), eq(0));
     }
 
     @Test

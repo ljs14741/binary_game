@@ -95,13 +95,13 @@ public class SmashController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(places.exits(st, lat, lng));
     }
 
-    /** bossName 은 성(첫 글자)만, bossHits 는 이번 판 상사 날린 횟수. 회사 없이 상사만 와도 됨 */
+    /** bossName·bossTitle 은 상사 꾸미기 값, bossHits 는 이번 판 상사 날린 횟수. 회사 없이 상사만 와도 됨 */
     public record PlayReq(String company, long damage, int seconds, String bossName, String bossTitle, int bossHits) {
     }
 
     /**
      * 한 판 기록. 회사 이름은 사용자가 입력한 그대로만 받음 (카카오 장소 정보는 안 받음).
-     * 상사는 성 + 직함만 따로 쌓고 회사와는 묶지 않음
+     * 상사는 이름 + 직함으로 따로 쌓고 회사와는 묶지 않음
      */
     @PostMapping("/plays")
     public ResponseEntity<?> play(@RequestBody PlayReq body, HttpServletRequest req) {
