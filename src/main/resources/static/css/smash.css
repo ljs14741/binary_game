@@ -611,5 +611,5 @@
 @media (max-width: 480px) { .smash-tag { font-size: 11px; padding: 2px 6px 3px; } .smash-tag.main { font-size: 12px; } }
 
 /* 상사 응징 랭킹 옆 작은 상사 그림 */
-.smash-bossface { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #e9eef5, #c9d3df); object-fit: cover; margin-right: 2px; }
-@media (max-width: 480px) { .smash-bossface { width: 34px; height: 34px; flex-basis: 34px; } }
+.smash-bossface { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #e9eef5, #c9d3df); object-fit: cover; margin-right: 2px; }
+@media (max-width: 480px) { .smash-bossface { width: 54px; height: 54px; flex-basis: 54px; } }

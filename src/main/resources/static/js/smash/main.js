@@ -1091,7 +1091,7 @@ function bossFaceUrl(look) {
         const cv = document.createElement('canvas');
         const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true });
         r.setPixelRatio(1);
-        r.setSize(112, 112, false);
+        r.setSize(192, 192, false);
         const sc = new THREE.Scene();
         sc.add(new THREE.HemisphereLight(0xffffff, 0x9aa3ad, 2.3));
         const key2 = new THREE.DirectionalLight(0xfff4e0, 2.2);
@@ -1099,8 +1099,8 @@ function bossFaceUrl(look) {
         sc.add(key2);
         const cam = new THREE.PerspectiveCamera(28, 1, 0.1, 50);
         // 가슴 위로 (얼굴·모자·안경이 잘 보이게)
-        cam.position.set(0, 2.75, 5.4);
-        cam.lookAt(0, 2.35, 0);
+        cam.position.set(0, 2.8, 4.9);
+        cam.lookAt(0, 2.4, 0);
         const b = new Boss(sc);
         b.reset(0, 0, 0, 1);
         faceKit = { r, sc, cam, b };
