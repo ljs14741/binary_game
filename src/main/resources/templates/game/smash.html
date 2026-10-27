@@ -153,6 +153,11 @@
             <div class="smash-aim" id="smash-aim"></div>
             <div class="smash-hint" id="smash-hint" th:text="#{smash.ui.hint}" th:data-touch="#{smash.ui.hintTouch}"></div>
             <div class="smash-bubble" id="smash-bubble"></div>
+            <!--/* 상사 찾기: 상사가 화면 밖이면 가장자리에 뜸. 누르면 카메라가 상사로 감 (main.js updateFinder) */-->
+            <button type="button" class="smash-finder" id="smash-finder" th:aria-label="#{smash.ui.bossFindAria}" aria-label="상사 찾기">
+                <i class="smash-finder-arrow" id="smash-finder-arrow"></i>
+                <span class="ic" aria-hidden="true">👔</span><b id="smash-finder-name">사장님</b>
+            </button>
             <div class="smash-pops" id="smash-pops"></div>
             <div class="smash-wname" id="smash-wname"></div>
             <div class="smash-weapons" id="smash-weapons">
@@ -201,27 +206,52 @@
             </div>
         </div>
 
-        <!--/* 상사 꾸미기 창. 미리보기(3D) + 이름·직함은 직접 입력, 나머지는 버튼. 욕설은 받지 않는다 (main.js 의 badWord) */-->
+        <!--/* 상사 꾸미기 창. 미리보기(3D) + 탭(기본·얼굴·옷·소품). 이름·직함은 직접 입력, 나머지는 버튼. 욕설은 받지 않는다 (main.js 의 badWord)
+               탭 내용은 한 칸에 겹쳐 두고 고른 것만 보임 — 탭을 바꿔도 창 높이가 안 흔들림 */-->
         <div class="smash-overlay" id="smash-bosssheet" hidden>
             <div class="smash-card smash-boss-card">
                 <h2 th:text="#{smash.ui.bossTitle}">상사 꾸미기</h2>
                 <div class="smash-boss-grid">
-                    <div class="smash-boss-preview"><canvas id="smash-boss-canvas" th:aria-label="#{smash.ui.bossPreviewAria}"></canvas></div>
+                    <div class="smash-boss-preview">
+                        <canvas id="smash-boss-canvas" th:aria-label="#{smash.ui.bossPreviewAria}"></canvas>
+                        <button id="smash-boss-dice" type="button" class="smash-boss-dice" th:text="#{smash.ui.bossDice}">🎲 랜덤</button>
+                    </div>
                     <div class="smash-boss-form">
-                        <label class="smash-field"><span th:text="#{smash.ui.bossName}">이름</span>
-                            <input id="smash-boss-name" type="text" maxlength="6" autocomplete="off" th:placeholder="#{smash.ui.bossNamePh}"></label>
-                        <label class="smash-field"><span th:text="#{smash.ui.bossTitleLabel}">직함</span>
-                            <input id="smash-boss-title" type="text" maxlength="8" autocomplete="off" th:placeholder="#{smash.ui.bossTitlePh}"></label>
-                        <div class="smash-sugg" id="smash-boss-sugg"></div>
-                        <div class="smash-field"><span th:text="#{smash.ui.bossGender}">성별</span><div class="smash-seg" data-k="gender"></div></div>
-                        <div class="smash-field"><span th:text="#{smash.ui.bossHair}">머리</span><div class="smash-seg wrap" data-k="hair"></div></div>
-                        <div class="smash-field"><span th:text="#{smash.ui.bossGlasses}">안경</span><div class="smash-seg" data-k="glasses"></div></div>
-                        <div class="smash-field"><span th:text="#{smash.ui.bossSuit}">옷</span><div class="smash-swatches" data-k="suit"></div></div>
+                        <div class="smash-boss-tabs" role="tablist">
+                            <button type="button" role="tab" data-tab="who" th:text="#{smash.ui.bossTabWho}">기본</button>
+                            <button type="button" role="tab" data-tab="face" th:text="#{smash.ui.bossTabFace}">얼굴</button>
+                            <button type="button" role="tab" data-tab="wear" th:text="#{smash.ui.bossTabWear}">옷</button>
+                            <button type="button" role="tab" data-tab="prop" th:text="#{smash.ui.bossTabProp}">소품</button>
+                        </div>
+                        <div class="smash-boss-panes">
+                            <div class="smash-boss-pane" data-pane="who" role="tabpanel">
+                                <label class="smash-field"><span th:text="#{smash.ui.bossName}">이름</span>
+                                    <input id="smash-boss-name" type="text" maxlength="6" autocomplete="off" th:placeholder="#{smash.ui.bossNamePh}"></label>
+                                <label class="smash-field"><span th:text="#{smash.ui.bossTitleLabel}">직함</span>
+                                    <input id="smash-boss-title" type="text" maxlength="8" autocomplete="off" th:placeholder="#{smash.ui.bossTitlePh}"></label>
+                                <div class="smash-sugg" id="smash-boss-sugg"></div>
+                                <div class="smash-field"><span th:text="#{smash.ui.bossGender}">성별</span><div class="smash-seg" data-k="gender"></div></div>
+                                <div class="smash-field"><span th:text="#{smash.ui.bossBody}">체형</span><div class="smash-seg" data-k="body"></div></div>
+                            </div>
+                            <div class="smash-boss-pane" data-pane="face" role="tabpanel">
+                                <div class="smash-field"><span th:text="#{smash.ui.bossHair}">머리</span><div class="smash-seg wrap" data-k="hair"></div></div>
+                                <div class="smash-field"><span th:text="#{smash.ui.bossGlasses}">안경</span><div class="smash-seg" data-k="glasses"></div></div>
+                                <div class="smash-field"><span th:text="#{smash.ui.bossBeard}">수염</span><div class="smash-seg wrap five" data-k="beard"></div></div>
+                                <div class="smash-field"><span th:text="#{smash.ui.bossFace}">표정</span><div class="smash-seg" data-k="face"></div></div>
+                            </div>
+                            <div class="smash-boss-pane" data-pane="wear" role="tabpanel">
+                                <div class="smash-field"><span th:text="#{smash.ui.bossSuit}">옷</span><div class="smash-seg wrap" data-k="outfit"></div></div>
+                                <div class="smash-field"><span th:text="#{smash.ui.bossColor}">색</span><div class="smash-swatches" data-k="suit"></div></div>
+                            </div>
+                            <div class="smash-boss-pane" data-pane="prop" role="tabpanel">
+                                <div class="smash-field"><span th:text="#{smash.ui.bossHat}">모자</span><div class="smash-seg wrap" data-k="hat"></div></div>
+                                <div class="smash-field"><span th:text="#{smash.ui.bossItem}">손에</span><div class="smash-seg wrap five" data-k="item"></div></div>
+                            </div>
+                        </div>
                         <p class="smash-boss-warn" id="smash-boss-warn" hidden th:text="#{smash.ui.bossBad}">욕설·비하하는 말은 쓸 수 없어요</p>
                     </div>
                 </div>
                 <button id="smash-boss-done" type="button" class="smash-primary" th:text="#{smash.ui.bossDone}">완료</button>
-                <small class="smash-note" th:text="#{smash.ui.bossNote}">상사 랭킹에는 성과 직함만 올라가요 (김철수 부장님 → 김 부장님). 회사 이름과는 따로 쌓여요</small>
             </div>
         </div>
 

@@ -345,15 +345,35 @@
 .smash-start-foot .smash-note { margin-top: 6px; }
 
 /* ── 상사 꾸미기 창 ── */
-.smash-boss-card { width: min(560px, 100%); padding: 20px 20px 14px; text-align: left; }
+.smash-boss-card {
+  width: min(600px, 100%); max-height: 100%; overflow-y: auto; box-sizing: border-box;
+  padding: 20px 20px 14px; text-align: left; overscroll-behavior: contain;
+}
 .smash-boss-card h2 { text-align: center; margin: 0 0 12px; font-size: 21px; }
-.smash-boss-grid { display: grid; grid-template-columns: 190px 1fr; gap: 14px; align-items: start; }
+.smash-boss-grid { display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: stretch; }
 .smash-boss-preview {
-  height: 260px; border-radius: 14px; overflow: hidden;
+  position: relative; min-height: 280px; border-radius: 14px; overflow: hidden;
   background: linear-gradient(180deg, #cfe6f7 0%, #eef5fb 70%, #d9d4c8 70%, #cfc9bc 100%);
 }
-.smash-boss-preview canvas { display: block; width: 100%; height: 100%; }
-.smash-boss-form { display: grid; gap: 8px; min-width: 0; }
+.smash-boss-preview canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.smash-boss-dice {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  padding: 5px 12px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .92); color: #14181f;
+  font: inherit; font-size: 12.5px; font-weight: 900; white-space: nowrap; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(20, 30, 50, .18);
+}
+.smash-boss-dice:active { transform: translateX(-50%) scale(.94); }
+.smash-boss-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.smash-boss-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 3px; border-radius: 12px; background: #f3f4f6; }
+.smash-boss-tabs button {
+  padding: 7px 0; border: 0; border-radius: 9px; background: none; color: #6b7280;
+  font: inherit; font-size: 13.5px; font-weight: 900; cursor: pointer;
+}
+.smash-boss-tabs button.on { background: #d8333a; color: #fff; box-shadow: 0 2px 6px rgba(216, 51, 58, .3); }
+/* 탭 내용은 한 칸에 겹쳐 둠: 창 높이는 가장 긴 탭에 맞춰 고정 */
+.smash-boss-panes { display: grid; }
+.smash-boss-pane { grid-area: 1 / 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.smash-boss-pane:not(.on) { visibility: hidden; }
 .smash-field { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; margin: 0; }
 .smash-field > span { font-size: 12px; font-weight: 800; color: #6b7280; }
 .smash-boss-card .smash-field input {
@@ -367,13 +387,15 @@
 }
 .smash-sugg button:hover { border-color: #d8333a; color: #d8333a; }
 .smash-seg { display: flex; padding: 3px; gap: 3px; border-radius: 10px; background: #f3f4f6; }
-.smash-seg.wrap { flex-wrap: wrap; }
 .smash-seg button {
-  flex: 1 1 auto; min-width: 0; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: #4b5563;
-  font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap;
+  flex: 1 1 auto; min-width: 0; padding: 6px 6px; border: 0; border-radius: 8px; background: none; color: #4b5563;
+  font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.smash-seg button:hover { color: #d8333a; }
 .smash-seg button.on { background: #fff; color: #d8333a; box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
-.smash-swatches { display: flex; gap: 8px; }
+.smash-seg.wrap { display: grid; grid-template-columns: repeat(4, 1fr); }
+.smash-seg.wrap.five { grid-template-columns: repeat(5, 1fr); }
+.smash-swatches { display: flex; flex-wrap: wrap; gap: 7px; padding: 2px; }
 .smash-swatches button {
   width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; padding: 0;
   box-shadow: 0 0 0 1.5px #d1d5db;
@@ -381,9 +403,30 @@
 .smash-swatches button.on { box-shadow: 0 0 0 2.5px #d8333a; }
 .smash-boss-warn { margin: 0 !important; font-size: 12px !important; color: #d8333a !important; font-weight: 800 !important; }
 .smash-boss-warn[hidden] { display: none; }
-@media (max-width: 520px) {
-  .smash-boss-grid { grid-template-columns: 1fr; }
-  .smash-boss-preview { height: 150px; }
+.smash-boss-card .smash-primary { margin-top: 14px; }
+
+/* ── 상사 찾기 (위치·화살표 방향은 JS 가 transform 으로) ── */
+.smash-finder {
+  position: absolute; left: 0; top: 0; width: 54px; height: 54px; padding: 0; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 3px solid #d8333a; border-radius: 50%; background: #fff; color: #d8333a; font: inherit; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20, 30, 50, .28); opacity: 0; transition: opacity .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.smash-hud .smash-finder:not(.show) { pointer-events: none; }
+.smash-finder.show { opacity: 1; animation: smash-find 1.3s ease-in-out infinite; }
+@keyframes smash-find {
+  0%, 100% { box-shadow: 0 4px 12px rgba(20, 30, 50, .28), 0 0 0 0 rgba(216, 51, 58, .55); }
+  50% { box-shadow: 0 4px 12px rgba(20, 30, 50, .28), 0 0 0 8px rgba(216, 51, 58, 0); }
+}
+.smash-finder .ic { font-size: 19px; line-height: 1; }
+.smash-finder b {
+  max-width: 44px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; font-weight: 900; line-height: 1.15;
+}
+.smash-finder-arrow {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin: -9px 0 0 -7px;
+  border-left: 14px solid #d8333a; border-top: 9px solid transparent; border-bottom: 9px solid transparent;
 }
 
 /* ── 회사 랭킹 ── */
@@ -519,21 +562,28 @@
   .bw-smash-rank:not(.more) li:nth-child(n+6) { display: none; }
   .bw-smash-rank-head h2 { font-size: 1.05rem; }
 }
-.smash-seg.wrap { display: grid; grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 520px) {
-  /* 폰: 꾸미기 창이 무대 높이 안에 들어가게 촘촘히 */
-  .smash-boss-card { padding: 14px 14px 10px; }
-  .smash-boss-card h2 { font-size: 18px; margin-bottom: 8px; }
-  .smash-boss-grid { gap: 8px; }
-  .smash-boss-preview { height: 112px; }
-  .smash-boss-form { gap: 6px; }
-  .smash-boss-card .smash-field input { padding: 7px 10px; font-size: 14px; }
+  /* 폰: 미리보기를 위로 얇게, 탭 내용은 촘촘히 — 창이 무대 높이 안에 들어가게 */
+  #smash-bosssheet { padding: 10px; }
+  .smash-boss-card { padding: 10px 12px; border-radius: 16px; }
+  .smash-boss-card h2 { font-size: 16px; margin-bottom: 6px; }
+  .smash-boss-grid { grid-template-columns: 1fr; gap: 8px; }
+  .smash-boss-preview { min-height: 0; height: 104px; }
+  .smash-boss-dice { left: auto; right: 8px; bottom: 8px; transform: none; padding: 4px 10px; font-size: 12px; }
+  .smash-boss-dice:active { transform: scale(.94); }
+  .smash-boss-form { gap: 8px; }
+  .smash-boss-tabs button { padding: 5px 0; font-size: 13px; }
+  .smash-boss-pane { gap: 6px; }
+  .smash-boss-card .smash-field input { padding: 6px 10px; font-size: 14px; }
   .smash-sugg { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-top: -1px; }
   .smash-sugg::-webkit-scrollbar { display: none; }
   .smash-sugg button { flex: 0 0 auto; }
-  .smash-seg button { padding: 5px 4px; font-size: 12px; }
-  .smash-boss-card .smash-primary { margin-top: 8px; padding: 11px; }
-  .smash-boss-card .smash-note { margin-top: 6px; font-size: 10.5px; }
+  .smash-seg button { padding: 4px 1px; font-size: 12px; }
+  .smash-swatches { gap: 6px; }
+  .smash-swatches button { width: 26px; height: 26px; }
+  .smash-boss-card .smash-primary { margin-top: 8px; padding: 10px; box-shadow: 0 4px 0 #9e1f25; }
+  .smash-finder { width: 48px; height: 48px; }
+  .smash-finder .ic { font-size: 17px; }
 }
 /* 검색 결과가 나오면 도움말은 접고 결과 줄을 촘촘하게 — 카드가 넘치지 않게 */
 .smash-start-card:has(.smash-result) .smash-searchtip,

@@ -81,84 +81,115 @@ class Rigid {
     }
 }
 
-const SUIT = 0x283247, SKIN = 0xf2c39b, SHIRT = 0xffffff, TIE = 0xd8333a;
+const SKIN = 0xf2c39b, SHIRT = 0xffffff, TIE = 0xd8333a, MUSTACHE = 0x3b2a20, GOLD = 0xd4a52a;
+
+/** 상사 옷 색. 키는 저장값(suit) 그대로 — 예전 다섯 색도 같은 키 */
+export const BOSS_COLORS = {
+    navy: 0x283247, gray: 0x6b7280, black: 0x1a1a1f, brown: 0x6d4c41, wine: 0x7b2d3b,
+    red: 0xd8333a, yellow: 0xf2b630, pink: 0xf08fb0, green: 0x2f8f5b, sky: 0x5aa9e6, white: 0xeef0f3,
+};
+/** 꾸미기 기본값. 모르는 값이 오면 이걸로 */
+export const BOSS_LOOK = { gender: 'm', hair: 'bald', glasses: 'horn', suit: 'navy', outfit: 'suit', body: 'normal', beard: 'mustache', face: 'angry', hat: 'none', item: 'none' };
+// 체형: 배 타원 크기 x, y, z, 배를 앞으로 내미는 양
+const BODIES = { normal: [1, 1.05, 0.88, 0], belly: [1.16, 1.1, 1.25, 0.12], slim: [0.8, 1.03, 0.72, 0] };
+// 모자가 머리 위로 솟는 높이 (이름표·말풍선을 그만큼 올림)
+const HAT_TOP = { fedora: 0.26, hiking: 0.1, crown: 0.3 };
+
+// 재질은 색마다 하나만 만들어 미리보기 상사·게임 상사가 같이 씀 (지우지 않음)
+const MATS = new Map();
+function mat(hex, kind = 'l') {
+    const k = kind + hex;
+    let m = MATS.get(k);
+    if (!m) {
+        const side = kind.includes('d') ? THREE.DoubleSide : THREE.FrontSide;
+        m = kind.startsWith('p') ? new THREE.MeshPhongMaterial({ color: hex, shininess: 70, side }) : new THREE.MeshLambertMaterial({ color: hex, side });
+        MATS.set(k, m);
+    }
+    return m;
+}
+function shade(hex, k) { return new THREE.Color(hex).multiplyScalar(k).getHex(); }
+/** 옷 색과 겹치지 않는 포인트 색 */
+function accent(hex, a = 0xd8333a, b = 0x1f2a44) {
+    const warm = [a, BOSS_COLORS.red, BOSS_COLORS.wine, BOSS_COLORS.pink];
+    return warm.includes(hex) ? b : a;
+}
+
+const BOX = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const CYL = (rt, rb, h, n = 14, open = false, t0 = 0, tl = Math.PI * 2) => new THREE.CylinderGeometry(rt, rb, h, n, 1, open, t0, tl);
+function part(parent, geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+    const o = new THREE.Mesh(geo, m);
+    o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true;
+    parent.add(o);
+    return o;
+}
+/** 갈아입힐 묶음 비우기. 공유 재질은 두고 모양·자기 전용 재질만 버린다 */
+function clearSlot(g) {
+    for (const c of [...g.children]) {
+        g.remove(c);
+        c.traverse(o => {
+            if (o.geometry) o.geometry.dispose();
+            if (o.material && o.material.userData.own) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+        });
+    }
+}
+
+const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+const _seg = new THREE.Line3();
 
 export class Boss {
     constructor(scene) {
         const g = this.group = new THREE.Group();
-        const lam = c => new THREE.MeshLambertMaterial({ color: c });
-        const box = (w, h, d, c, x, y, z, parent) => {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c));
-            m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m;
-        };
         this.body = new THREE.Group();
         g.add(this.body);
         const B = this.body;
-        box(0.34, 0.85, 0.38, 0x1d2333, -0.22, 0.43, 0, B);
-        box(0.34, 0.85, 0.38, 0x1d2333, 0.22, 0.43, 0, B);
-        box(0.4, 0.16, 0.56, 0x111111, -0.22, 0.08, 0.07, B);
-        box(0.4, 0.16, 0.56, 0x111111, 0.22, 0.08, 0.07, B);
-        this.suitMat = lam(SUIT);
-        const belly = new THREE.Mesh(new THREE.SphereGeometry(0.66, 20, 14), this.suitMat);
-        belly.scale.set(1, 1.05, 0.88); belly.position.set(0, 1.42, 0); belly.castShadow = true; B.add(belly);
-        this.belly = belly;
-        const shirt = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), lam(SHIRT));
-        shirt.rotation.x = Math.PI / 2 - 0.25; shirt.position.set(0, 1.62, 0.36); shirt.scale.set(0.7, 1, 0.6); B.add(shirt);
-        this.tie = box(0.13, 0.55, 0.06, TIE, 0, 1.5, 0.6, B);
+        const slot = p => { const s = new THREE.Group(); p.add(s); return s; };
+        // 다리·구두·배·팔. 색과 크기는 옷·체형 따라 setLook 에서 바꿈
+        this.legs = [-1, 1].map(s => part(B, BOX(0.34, 0.85, 0.38), mat(0x1d2333), s * 0.22, 0.43, 0));
+        this.shoes = [-1, 1].map(s => part(B, BOX(0.4, 0.16, 0.56), mat(0x111111), s * 0.22, 0.08, 0.07));
+        this.belly = part(B, new THREE.SphereGeometry(0.66, 20, 14), mat(BOSS_COLORS.navy), 0, 1.42, 0);
+        this.dressBelly = slot(this.belly); // 배 곡면을 따라 붙는 것 (지퍼·띠)
+        // 앞판: 배 앞면에 붙는 것. 체형 따라 통째로 앞뒤로 민다
+        this.front = slot(B);
+        this.shirt = part(this.front, new THREE.SphereGeometry(0.4, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), mat(SHIRT), 0, 1.62, 0.36, Math.PI / 2 - 0.25);
+        this.shirt.scale.set(0.7, 0.62, 0.6);
+        this.tie = part(this.front, BOX(0.13, 0.55, 0.06), mat(TIE), 0, 1.5, 0.6, -0.1);
         // 목걸이 (여성 상사)
-        this.necklace = new THREE.Group();
+        this.necklace = slot(this.front);
+        const pearl = new THREE.SphereGeometry(0.045, 8, 6);
         for (let i = 0; i < 9; i++) {
             const a = -0.9 + i * 0.225;
-            const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), lam(0xf5f0e6));
-            pearl.position.set(Math.sin(a) * 0.3, 1.78 - Math.cos(a) * 0.16 + 0.08, 0.42 + Math.cos(a) * 0.05);
-            this.necklace.add(pearl);
+            part(this.necklace, pearl, mat(0xf5f0e6), Math.sin(a) * 0.3, 1.78 - Math.cos(a) * 0.16 + 0.08, 0.42 + Math.cos(a) * 0.05).castShadow = false;
         }
-        this.necklace.visible = false;
-        B.add(this.necklace);
+        this.dress = slot(B);
+        this.dressF = slot(this.front);
         this.armL = new THREE.Group(); this.armL.position.set(-0.68, 1.8, 0); B.add(this.armL);
         this.armR = new THREE.Group(); this.armR.position.set(0.68, 1.8, 0); B.add(this.armR);
-        const arm = (parent) => {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.8, 0.28), this.suitMat);
-            m.position.set(0, -0.38, 0); m.castShadow = true; parent.add(m);
-        };
-        arm(this.armL);
-        box(0.22, 0.2, 0.22, SKIN, 0, -0.84, 0, this.armL);
-        arm(this.armR);
-        box(0.22, 0.2, 0.22, SKIN, 0, -0.84, 0, this.armR);
+        this.sleeves = [this.armL, this.armR].map(a => part(a, BOX(0.26, 0.8, 0.28), mat(BOSS_COLORS.navy), 0, -0.38, 0));
+        this.hands = [this.armL, this.armR].map(a => part(a, BOX(0.22, 0.2, 0.22), mat(SKIN), 0, -0.84, 0));
+        this.dressArm = [slot(this.armL), slot(this.armR)];
+        this.item = slot(this.armR); // 손에 든 것 (치켜든 오른손)
         this.head = new THREE.Group(); this.head.position.set(0, 2.42, 0); B.add(this.head);
         const H = this.head;
-        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.46, 22, 16), new THREE.MeshPhongMaterial({ color: SKIN, shininess: 60 }));
-        skull.castShadow = true; H.add(skull);
-        // 눈 + 찡그린 눈썹 (안경을 벗겨도 얼굴이 비지 않게)
-        const eyeMat = lam(0x1a1a1a), whiteMat = lam(0xffffff);
+        part(H, new THREE.SphereGeometry(0.46, 22, 16), mat(SKIN, 'p'));
+        // 눈·눈썹·입. 표정은 이 셋의 크기·각도로만 바꿈
+        this.eyes = []; this.pupils = []; this.brows = [];
         for (const s of [-1, 1]) {
-            const white = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), whiteMat);
-            white.scale.set(1, 0.8, 0.4); white.position.set(s * 0.16, 0.05, 0.43); H.add(white);
-            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 6), eyeMat);
-            pupil.scale.set(1, 1, 0.5); pupil.position.set(s * 0.155, 0.045, 0.46); H.add(pupil);
-            const brow = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.035, 0.03), lam(0x2b2420));
-            brow.position.set(s * 0.17, 0.2, 0.43); brow.rotation.z = s * 0.32; H.add(brow);
+            this.eyes.push(part(H, new THREE.SphereGeometry(0.075, 10, 8), mat(0xffffff), s * 0.16, 0.05, 0.43));
+            this.pupils.push(part(H, new THREE.SphereGeometry(0.042, 8, 6), mat(0x1a1a1a), s * 0.155, 0.045, 0.46));
+            this.brows.push(part(H, BOX(0.17, 0.035, 0.03), mat(0x2b2420), s * 0.17, 0.2, 0.43));
         }
-        this.glasses = new THREE.Group();
-        for (const x of [-0.16, 0.16]) {
-            const r = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 16), lam(0x111111));
-            r.position.set(x, 0.05, 0.42); this.glasses.add(r);
-        }
-        box(0.1, 0.025, 0.02, 0x111111, 0, 0.06, 0.43, this.glasses);
-        H.add(this.glasses);
-        this.mustache = box(0.34, 0.09, 0.08, 0x3b2a20, 0, -0.14, 0.42, H);
-        this.mouthMat = lam(0x7a1f1f);
-        this.mouth = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.04), this.mouthMat);
-        this.mouth.position.set(0, -0.25, 0.42); H.add(this.mouth);
-        this.hair = null;
-        // 이름표: 머리 위에 늘 카메라를 보는 판
-        this.plateMat = new THREE.SpriteMaterial({ transparent: true });
+        this.mouth = part(H, BOX(0.16, 0.04, 0.04), mat(0x7a1f1f), 0, -0.25, 0.42);
+        this.sweat = part(H, new THREE.SphereGeometry(0.055, 8, 6), mat(0x9fd8ff, 'p'), 0.37, 0.24, 0.26);
+        this.sweat.scale.set(0.75, 1.35, 0.75);
+        this.glasses = slot(H); this.beard = slot(H); this.hat = slot(H); this.hairSlot = slot(H);
+        // 이름표: 머리 위에 늘 카메라를 보는 판. 건물에 가려도 보이게 깊이 검사를 끔 (상사 찾기)
+        this.plateMat = new THREE.SpriteMaterial({ transparent: true, depthTest: false });
         this.plate = new THREE.Sprite(this.plateMat);
+        this.plate.renderOrder = 5;
         this.plate.position.set(0, 3.55, 0);
         this.plate.scale.set(2.6, 0.62, 1);
         this.plate.visible = false;
         g.add(this.plate);
-        this.setLook({});
         this.stars = new THREE.Group(); this.stars.position.set(0, 3.05, 0); g.add(this.stars);
         for (let i = 0; i < 3; i++) {
             const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.14), new THREE.MeshBasicMaterial({ color: 0xffd23f }));
@@ -167,11 +198,12 @@ export class Boss {
         }
         this.stars.visible = false;
         this.size = 1.6;
+        this.bodyR = 0.66;
+        this.hatTop = 0;
+        this.setLook({});
         g.scale.setScalar(this.size);
         scene.add(g);
         this.rigid = new Rigid(g);
-        this.meshes = [];
-        g.traverse(o => { if (o.isMesh) this.meshes.push(o); });
     }
 
     reset(x, y, z, size = 1.6) {
@@ -185,27 +217,45 @@ export class Boss {
         this.talk = 0;
         this.hitCool = 0;
         this.stars.visible = false;
-        this.stars.position.set(0, 3.05, 0);
+        this.stars.position.set(0, 3.05 + this.hatTop, 0);
     }
 
     /**
-     * 상사 꾸미기. look = { gender: 'm'|'f', hair, glasses: bool, suit, label }
+     * 상사 꾸미기. look = { gender, hair, glasses, suit(옷 색), outfit, body, beard, face, hat, item, label }
      * hair: bald 대머리 | part 가르마 | slick 올백 | perm 파마 | bob 단발 | long 긴머리 | pony 묶음
+     * 모르는 값은 기본 모양으로 그림
      */
     setLook(look) {
-        const L = { gender: 'm', hair: 'bald', glasses: true, suit: 'navy', label: '', ...look };
-        const SUITS = { navy: 0x283247, gray: 0x6b7280, black: 0x1a1a1f, brown: 0x6d4c41, wine: 0x7b2d3b };
-        this.suitMat.color.setHex(SUITS[L.suit] || SUITS.navy);
+        const L = { ...BOSS_LOOK, label: '', ...look };
         const f = L.gender === 'f';
-        this.glasses.visible = !!L.glasses;
-        this.mustache.visible = !f;
-        this.tie.visible = !f;
-        this.necklace.visible = f;
-        this.mouthMat.color.setHex(f ? 0xd0344a : 0x7a1f1f);
-        this.belly.scale.set(f ? 0.86 : 1, f ? 1.0 : 1.05, f ? 0.78 : 0.88);
-        if (this.hair) { this.head.remove(this.hair); this.hair.traverse(o => { if (o.isMesh) o.geometry.dispose(); }); }
-        this.hair = hairMesh(L.hair, L.hair === 'bald' ? 0x5a5a5a : (f ? 0x2b201b : 0x24211f));
-        this.head.add(this.hair);
+        // 체형: 배 크기를 바꾸고 앞판·팔을 배 겉면에 맞춤
+        const [bx, by, bz, oz] = BODIES[L.body] || BODIES.normal;
+        const sx = bx * (f ? 0.88 : 1), sz = bz * (f ? 0.9 : 1);
+        this.belly.scale.set(sx, by, sz);
+        this.belly.position.set(0, 1.42, oz);
+        this.front.position.z = oz + 0.66 * sz - 0.58;
+        this.armL.position.x = -(0.66 * sx + 0.03);
+        this.armR.position.x = 0.66 * sx + 0.03;
+        this.bodyR = 0.66 * Math.max(sx, sz);
+        this.dressUp(L.outfit, BOSS_COLORS[L.suit] ?? BOSS_COLORS.navy, f, sx, sz, oz);
+        this.mouth.material = mat(f ? 0xd0344a : 0x7a1f1f);
+        // 머리
+        clearSlot(this.hairSlot);
+        this.hairSlot.add(hairMesh(L.hair, L.hair === 'bald' ? 0x5a5a5a : (f ? 0x2b201b : 0x24211f)));
+        // 안경 (예전 저장값은 true/false)
+        clearSlot(this.glasses);
+        buildGlasses(this.glasses, L.glasses === true ? 'horn' : L.glasses === false ? 'none' : L.glasses);
+        clearSlot(this.beard);
+        buildBeard(this.beard, L.beard);
+        clearSlot(this.hat);
+        buildHat(this.hat, L.hat);
+        this.hatTop = HAT_TOP[L.hat] || 0;
+        clearSlot(this.item);
+        buildItem(this.item, L.item);
+        this.faceKind = ['angry', 'smug', 'panic'].includes(L.face) ? L.face : 'angry';
+        this.applyFace(this.faceKind);
+        // 이름표: 모자 높이만큼 올림
+        this.plate.position.y = 3.55 + this.hatTop;
         if (this.plateMat.map) this.plateMat.map.dispose();
         this.plateMat.map = L.label ? labelTexture(512, 120, (g, w, h) => {
             g.fillStyle = 'rgba(216,51,58,0.95)'; g.beginPath(); g.roundRect(6, 6, w - 12, h - 12, 30); g.fill();
@@ -219,10 +269,137 @@ export class Boss {
         this.group.traverse(o => { if (o.isMesh) this.meshes.push(o); });
     }
 
+    /** 옷 종류별 모양. 배·소매·다리는 있는 걸 칠하고, 나머지는 묶음에 새로 붙임 */
+    dressUp(kind, color, f, sx, sz, oz) {
+        for (const s of [this.dress, this.dressF, this.dressBelly, ...this.dressArm]) clearSlot(s);
+        const main = mat(color), dark = mat(shade(color, 0.7)), white = mat(SHIRT);
+        const backZ = oz - 0.66 * sz;
+        // 기본: 정장 차림
+        let pants = 0x1d2333, shoes = 0x111111, sleeve = main, arm = 'long', shirt = true, tie = true, pearl = true, wideLegs = false;
+        this.belly.material = main;
+        this.hands[0].material = this.hands[1].material = mat(SKIN);
+        for (const s of this.shoes) { s.scale.y = 1; s.position.y = 0.08; }
+        this.shirt.scale.set(0.7, 0.62, 0.6);
+        const F = this.dressF, D = this.dress, BL = this.dressBelly;
+        // 배 곡면을 따라 내려가는 앞 줄 (지퍼)
+        const zipper = (m, w) => { part(BL, new THREE.SphereGeometry(0.668, 3, 12, Math.PI / 2 - w / 2, w, 0.25, 2.1), m).castShadow = false; };
+        const collar = m => part(D, CYL(0.3, 0.36, 0.2, 16, true), m, 0, 2.0, oz * 0.5);
+        const buttons = (m, ys) => ys.forEach(([y, z]) => { part(F, new THREE.SphereGeometry(0.04, 8, 6), m, 0, y, z).castShadow = false; });
+        switch (kind) {
+            case 'vest':
+                sleeve = white; pants = 0x4b5563; shoes = 0x3b2a20;
+                this.shirt.scale.set(0.85, 0.62, 0.6);
+                buttons(mat(GOLD, 'p'), [[1.36, 0.59], [1.2, 0.56], [1.04, 0.5]]);
+                part(F, BOX(0.24, 0.02, 0.02), mat(GOLD, 'p'), 0.2, 1.16, 0.55, 0, 0, 0.35).castShadow = false; // 회중시계 줄
+                for (const a of this.dressArm) part(a, BOX(0.28, 0.06, 0.3), mat(0x9ca3af), 0, -0.3, 0); // 팔 고리
+                break;
+            case 'golf': {
+                pants = 0xe9e4d4; shoes = 0xf5f5f5; arm = 'short'; shirt = tie = pearl = false;
+                const trim = color === BOSS_COLORS.white ? mat(BOSS_COLORS.navy) : white;
+                for (const s of [-1, 1]) part(D, BOX(0.2, 0.05, 0.15), trim, s * 0.11, 2.0, oz * 0.5 + 0.3, 0.7, 0, -s * 0.35);
+                part(F, BOX(0.07, 0.26, 0.02), dark, 0, 1.84, 0.43, -0.45).castShadow = false;
+                part(D, CYL(0.42, 0.42, 0.08, 18), mat(0x3b2a20), 0, 0.86, 0); // 벨트
+                this.hands[0].material = white; // 왼손 장갑
+                break;
+            }
+            case 'hiking': {
+                pants = 0x374151; shoes = 0x6b4a2e; shirt = tie = pearl = false;
+                for (const s of this.shoes) { s.scale.y = 1.7; s.position.y = 0.13; }
+                collar(mat(color, 'd'));
+                zipper(mat(0x222222), 0.04);
+                const band = accent(color, 0x222222, BOSS_COLORS.yellow);
+                part(BL, new THREE.SphereGeometry(0.67, 20, 2, 0, Math.PI * 2, 0.78, 0.26), mat(band)).castShadow = false;
+                part(D, BOX(0.74, 0.86, 0.3), mat(accent(color, 0xe3762b, 0x3f4a3a)), 0, 1.5, backZ - 0.1); // 배낭
+                part(D, CYL(0.12, 0.12, 0.72, 10), mat(0x2f6f4f), 0, 2.0, backZ - 0.1, 0, 0, Math.PI / 2);
+                for (const a of this.dressArm) part(a, BOX(0.28, 0.08, 0.3), mat(band), 0, -0.68, 0); // 소맷부리
+                break;
+            }
+            case 'training': {
+                pants = color; shoes = 0xf5f5f5; shirt = tie = pearl = false;
+                const line = color === BOSS_COLORS.white ? mat(BOSS_COLORS.navy) : white;
+                collar(main);
+                zipper(line, 0.035);
+                this.dressArm.forEach((a, i) => { part(a, BOX(0.04, 0.8, 0.29), line, (i ? 1 : -1) * 0.12, -0.38, 0).castShadow = false; });
+                for (const s of [-1, 1]) part(D, BOX(0.04, 0.85, 0.39), line, s * 0.38, 0.43, 0).castShadow = false;
+                break;
+            }
+            case 'hanbok': {
+                pants = 0xe9e4d4; shoes = 0xf5f5f5; arm = 'wide'; shirt = tie = false; wideLegs = true;
+                // 동정(흰 깃) 두 줄이 엇갈리고, 옷고름이 늘어짐
+                part(F, BOX(0.09, 0.62, 0.04), white, 0.07, 1.7, 0.47, -0.4, 0, 0.62);
+                part(F, BOX(0.09, 0.42, 0.04), white, -0.13, 1.82, 0.4, -0.5, 0, -0.62);
+                const ribbon = mat(accent(color));
+                part(F, BOX(0.07, 0.5, 0.03), ribbon, 0.12, 1.32, 0.58, -0.08, 0, 0.12);
+                part(F, BOX(0.07, 0.4, 0.03), ribbon, 0.22, 1.36, 0.57, -0.08, 0, -0.18);
+                part(F, new THREE.SphereGeometry(0.06, 8, 6), ribbon, 0.16, 1.58, 0.56);
+                break;
+            }
+            case 'gown': {
+                pants = 0x2b2b2b; shoes = shade(color, 0.6); arm = 'wide'; tie = false;
+                const trim = mat(GOLD, 'p');
+                // 무릎까지 오는 가운 자락
+                part(D, CYL(0.6, 0.76, 0.95, 20, true), mat(color, 'd'), 0, 0.64, oz).scale.set(sx, 1, sz);
+                for (const s of [-1, 1]) part(F, BOX(0.13, 0.78, 0.04), trim, s * 0.15, 1.58, 0.5, -0.28, 0, -s * 0.36);
+                part(BL, new THREE.TorusGeometry(0.62, 0.045, 6, 26), trim, 0, -0.24, 0, Math.PI / 2);
+                part(BL, BOX(0.08, 0.32, 0.03), trim, 0.16, -0.42, 0.6, -0.4, 0, 0.2);
+                part(BL, BOX(0.08, 0.28, 0.03), trim, 0.26, -0.42, 0.57, -0.4, 0, -0.1);
+                for (const a of this.dressArm) part(a, CYL(0.27, 0.27, 0.08, 10, true), trim, 0, -0.78, 0);
+                break;
+            }
+            default: // suit 정장: 깃·단추·행커치프
+                for (const s of [-1, 1]) part(F, BOX(0.1, 0.5, 0.04), dark, s * 0.17, 1.68, 0.5, -0.35, 0, -s * 0.42);
+                buttons(mat(0x111111), [[1.2, 0.56], [1.03, 0.49]]);
+                part(F, BOX(0.13, 0.06, 0.03), white, -0.3, 1.64, 0.47, -0.2).castShadow = false;
+        }
+        for (const s of this.sleeves) {
+            s.material = sleeve;
+            s.visible = arm !== 'wide';
+            s.scale.y = arm === 'short' ? 0.45 : 1;
+            s.position.y = arm === 'short' ? -0.18 : -0.38;
+        }
+        // 반팔은 맨팔, 넓은 소매는 아래로 퍼지는 통
+        if (arm === 'short') for (const a of this.dressArm) part(a, BOX(0.2, 0.44, 0.22), mat(SKIN), 0, -0.58, 0);
+        if (arm === 'wide') for (const a of this.dressArm) part(a, CYL(0.15, 0.27, 0.82, 12), main, 0, -0.4, 0);
+        for (const l of this.legs) { l.material = mat(pants); l.scale.set(wideLegs ? 1.3 : 1, 1, wideLegs ? 1.2 : 1); }
+        for (const s of this.shoes) s.material = mat(shoes);
+        this.shirt.visible = shirt;
+        this.tie.visible = tie && !f;
+        this.necklace.visible = f && pearl;
+    }
+
+    /** 표정: angry 버럭 | smug 능글 | panic 당황 (날아가거나 쓰러지면 잠깐 당황) */
+    applyFace(kind) {
+        this.faceNow = kind;
+        const smug = kind === 'smug', panic = kind === 'panic';
+        this.eyes.forEach(e => e.scale.set(panic ? 1.3 : 1, smug ? 0.42 : panic ? 1.3 : 0.8, 0.4));
+        this.pupils.forEach(p => p.scale.set(panic ? 0.7 : 1, panic ? 0.7 : smug ? 0.55 : 1, 0.5));
+        this.brows.forEach((b, i) => {
+            const s = i ? 1 : -1;
+            if (panic) { b.rotation.z = -s * 0.3; b.position.y = 0.25; }
+            else if (smug) { b.rotation.z = i ? -0.05 : 0.18; b.position.y = i ? 0.18 : 0.26; }
+            else { b.rotation.z = s * 0.32; b.position.y = 0.2; }
+        });
+        const m = this.mouth;
+        m.scale.x = panic ? 0.6 : smug ? 1.25 : 1;
+        this.mouthY = panic ? 3.2 : 1;
+        m.scale.y = this.mouthY;
+        m.rotation.z = smug ? 0.24 : 0;
+        m.position.set(smug ? 0.05 : 0, panic ? -0.27 : -0.25, 0.42);
+        this.sweat.visible = panic;
+    }
+
     say() { this.talk = 1.6; }
 
-    headPos(out) { return out.set(0, this.plate.visible ? 4.05 : 3.25, 0).applyMatrix4(this.group.matrixWorld); }
+    headPos(out) { return out.set(0, this.plate.visible ? this.plate.position.y + 0.5 : 3.25 + this.hatTop, 0).applyMatrix4(this.group.matrixWorld); }
     center(out) { return out.set(0, 1.4, 0).applyMatrix4(this.group.matrixWorld); }
+    /** 맞았는지 볼 때: 발목~정수리 선분까지 거리. 덩치가 커지면 같이 커짐 */
+    hitDist(p) {
+        const m = this.group.matrixWorld;
+        _seg.set(_a.set(0, 0.4, 0).applyMatrix4(m), _b.set(0, 2.6, 0).applyMatrix4(m));
+        return _seg.closestPointToPoint(p, true, _v).distanceTo(p);
+    }
+    /** 몸통 반지름 (월드) */
+    hitR() { return (this.bodyR + 0.12) * this.size; }
 
     knock(dir, force) {
         if (this.hitCool > 0) return false;
@@ -244,10 +421,13 @@ export class Boss {
         this.hitCool -= dt;
         const g = this.group;
         let ev = null;
+        // 날아가거나 쓰러져 있는 동안은 당황한 얼굴
+        const face = this.state === 'fly' || this.state === 'down' ? 'panic' : this.faceKind;
+        if (face !== this.faceNow) this.applyFace(face);
         if (this.talk > 0) {
             this.talk -= dt;
-            this.mouth.scale.y = 1 + Math.abs(Math.sin(time * 22)) * 3;
-        } else this.mouth.scale.y = 1;
+            this.mouth.scale.y = this.mouthY + Math.abs(Math.sin(time * 22)) * 3;
+        } else this.mouth.scale.y = this.mouthY;
 
         if (this.state === 'stand') {
             const p = g.position;
@@ -296,21 +476,140 @@ export class Boss {
             _q2.setFromAxisAngle(UP, yaw);
             g.quaternion.slerp(_q2, Math.min(1, dt * 8));
             this.timer -= dt;
-            if (this.timer <= 0) { this.state = 'stand'; this.stars.position.set(0, 3.05, 0); }
+            if (this.timer <= 0) { this.state = 'stand'; this.stars.position.set(0, 3.05 + this.hatTop, 0); }
         }
         return ev;
+    }
+}
+
+/** 안경: none | horn 뿔테 | gold 금테 | sun 선글라스. 머리 그룹 기준 (얼굴은 +z) */
+function buildGlasses(g, kind) {
+    if (kind === 'none') return;
+    if (kind === 'sun') {
+        const lens = mat(0x101317, 'p');
+        // 눈알보다 앞에 오게 얼굴에서 조금 띄움
+        for (const x of [-0.16, 0.16]) part(g, CYL(0.125, 0.125, 0.025, 16), lens, x, 0.04, 0.49, Math.PI / 2).scale.set(1, 1, 0.82);
+        part(g, BOX(0.5, 0.03, 0.025), lens, 0, 0.13, 0.48);
+        return;
+    }
+    const gold = kind === 'gold';
+    const m = gold ? mat(GOLD, 'p') : mat(0x111111);
+    for (const x of [-0.16, 0.16]) part(g, new THREE.TorusGeometry(gold ? 0.1 : 0.11, gold ? 0.013 : 0.03, 6, 18), m, x, 0.05, 0.42).castShadow = false;
+    part(g, BOX(0.1, gold ? 0.014 : 0.03, 0.02), m, 0, 0.06, 0.43);
+}
+
+/** 수염: none | mustache 콧수염 | kaiser 팔자 | goatee 염소 | full 덥수룩 */
+function buildBeard(g, kind) {
+    const m = mat(MUSTACHE);
+    switch (kind) {
+        case 'none': return;
+        case 'kaiser':
+            for (const s of [-1, 1]) {
+                part(g, BOX(0.17, 0.05, 0.05), m, s * 0.085, -0.155, 0.435, 0, 0, s * 0.3);
+                part(g, new THREE.SphereGeometry(0.026, 6, 5), m, s * 0.155, -0.118, 0.425);
+            }
+            return;
+        case 'goatee':
+            part(g, BOX(0.26, 0.05, 0.06), m, 0, -0.15, 0.43);
+            part(g, new THREE.ConeGeometry(0.08, 0.26, 7), m, 0, -0.49, 0.32, Math.PI);
+            return;
+        case 'full':
+            part(g, BOX(0.36, 0.09, 0.08), m, 0, -0.14, 0.43);
+            part(g, new THREE.SphereGeometry(0.5, 18, 6, Math.PI / 2 - 1.3, 2.6, 2.2, 0.8), mat(MUSTACHE, 'd'), 0, 0.01, 0.02);
+            return;
+        default:
+            part(g, BOX(0.34, 0.09, 0.08), m, 0, -0.14, 0.42);
+    }
+}
+
+/** 모자: none | visor 골프 바이저 | fedora 중절모 | hiking 등산모 | band 머리띠 | crown 왕관 */
+function buildHat(g, kind) {
+    switch (kind) {
+        case 'visor':
+            part(g, CYL(0.48, 0.48, 0.13, 24, true), mat(0xffffff, 'd'), 0, 0.27, 0);
+            part(g, CYL(0.44, 0.44, 0.03, 18, false, -Math.PI / 2, Math.PI), mat(0x1f2a44), 0, 0.23, 0.1, 0.12).scale.z = 1.15;
+            break;
+        case 'fedora': {
+            const m = mat(0x4b3a2f);
+            part(g, CYL(0.38, 0.47, 0.36, 18), m, 0, 0.5, -0.02);
+            part(g, CYL(0.475, 0.475, 0.08, 18), mat(0x1a1a1a), 0, 0.36, -0.02);
+            part(g, CYL(0.8, 0.8, 0.035, 26), m, 0, 0.32, -0.02, 0.1);
+            break;
+        }
+        case 'hiking': {
+            const m = mat(0x8a7f5a, 'd');
+            part(g, CYL(0.4, 0.5, 0.3, 18), m, 0, 0.38, 0);
+            part(g, CYL(0.5, 0.74, 0.13, 24, true), m, 0, 0.18, 0);
+            break;
+        }
+        case 'band': {
+            part(g, new THREE.TorusGeometry(0.475, 0.055, 6, 28), mat(0xffffff), 0, 0.22, 0, Math.PI / 2 + 0.12);
+            const tm = new THREE.MeshBasicMaterial({ transparent: true, map: labelTexture(256, 100, (c, w, h) => {
+                c.fillStyle = '#d8333a'; c.textAlign = 'center'; c.textBaseline = 'middle';
+                fitFont(c, '필승', w - 20, 84);
+                c.fillText('필승', w / 2, h / 2 + 4);
+            }) });
+            tm.userData.own = true;
+            part(g, new THREE.PlaneGeometry(0.34, 0.13), tm, 0, 0.225, 0.535, -0.12).castShadow = false;
+            break;
+        }
+        case 'crown': {
+            const m = mat(0xf2c230, 'pd');
+            part(g, CYL(0.33, 0.3, 0.2, 18, true), m, 0, 0.5, 0);
+            for (let i = 0; i < 6; i++) {
+                const a = i / 6 * Math.PI * 2;
+                part(g, new THREE.ConeGeometry(0.06, 0.18, 6), m, Math.sin(a) * 0.32, 0.68, Math.cos(a) * 0.32);
+            }
+            part(g, new THREE.SphereGeometry(0.05, 8, 6), mat(0xd8333a, 'p'), 0, 0.5, 0.33);
+            break;
+        }
+    }
+}
+
+/** 손에 든 것: none | board 결재판 | club 골프채 | coffee 아아 | phone 휴대폰. 오른팔 기준 (손은 y -0.84, 팔을 치켜들면 -y 가 위) */
+function buildItem(g, kind) {
+    switch (kind) {
+        case 'board': {
+            const b = new THREE.Group(); b.position.set(0, -1.14, 0.06); g.add(b);
+            part(b, BOX(0.46, 0.62, 0.05), mat(0x1f2a44));
+            part(b, BOX(0.38, 0.5, 0.012), mat(0xffffff), 0, 0.01, 0.03).castShadow = false;
+            for (let i = 0; i < 3; i++) part(b, BOX(0.24, 0.018, 0.006), mat(0x9ca3af), -0.03, 0.14 - i * 0.07, 0.04).castShadow = false;
+            part(b, CYL(0.06, 0.06, 0.012, 14), mat(0xd8333a), 0.1, -0.15, 0.04, Math.PI / 2).castShadow = false; // 도장
+            part(b, BOX(0.14, 0.05, 0.03), mat(GOLD, 'p'), 0, -0.29, 0.04);
+            break;
+        }
+        case 'club':
+            part(g, CYL(0.045, 0.045, 0.34, 8), mat(0x111111), 0, -0.98, 0);
+            part(g, CYL(0.022, 0.022, 1.7, 6), mat(0xc0c6cc, 'p'), 0, -1.9, 0);
+            part(g, new THREE.SphereGeometry(0.15, 12, 8), mat(0x22252a, 'p'), 0, -2.78, 0.1).scale.set(0.9, 0.7, 1.4);
+            break;
+        case 'coffee': {
+            // 팔을 치켜들면 똑바로 서게 뒤집어 둠
+            const c = new THREE.Group(); c.position.set(0, -0.98, 0.04); c.rotation.z = Math.PI; g.add(c);
+            part(c, CYL(0.16, 0.12, 0.42, 14), mat(0x5a3a22));
+            part(c, CYL(0.165, 0.15, 0.15, 14), mat(0xc8975a), 0, 0.02, 0);
+            part(c, CYL(0.17, 0.17, 0.04, 14), mat(0xffffff), 0, 0.23, 0);
+            part(c, CYL(0.018, 0.018, 0.34, 6), mat(0x2f8f5b), 0.04, 0.38, 0, 0, 0, -0.18);
+            break;
+        }
+        case 'phone': {
+            const p = new THREE.Group(); p.position.set(0, -1.06, 0.06); g.add(p);
+            part(p, BOX(0.25, 0.46, 0.04), mat(0x111111));
+            part(p, BOX(0.21, 0.4, 0.006), mat(0x6ec1ff, 'p'), 0, 0, 0.022).castShadow = false;
+            break;
+        }
     }
 }
 
 /** 머리 모양. 머리 그룹 기준 좌표(머리 반지름 0.46, 얼굴은 +z) */
 function hairMesh(style, color) {
     const g = new THREE.Group();
-    const mat = new THREE.MeshLambertMaterial({ color });
+    const m = mat(color);
     const add = (geo, x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => {
-        const m = new THREE.Mesh(geo, mat);
-        m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.scale.set(sx, sy, sz); m.castShadow = true;
-        g.add(m);
-        return m;
+        const o = new THREE.Mesh(geo, m);
+        o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.scale.set(sx, sy, sz); o.castShadow = true;
+        g.add(o);
+        return o;
     };
     // 정수리 덮개: 위쪽 반구, 앞이마는 조금 열어 둔다
     const cap = (theta = Math.PI * 0.42, r = 0.49) => add(new THREE.SphereGeometry(r, 18, 12, 0, Math.PI * 2, 0, theta), 0, 0.02, -0.02, -0.18);

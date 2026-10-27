@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { World, UNIT_M, pointInPolygon, distToPolygon } from './world.js';
 import { FX } from './fx.js';
-import { Boss, Sign, Banner, FONT } from './props.js';
+import { Boss, Sign, Banner, FONT, BOSS_LOOK, BOSS_COLORS } from './props.js';
 import { Street } from './street.js';
 import { Landmarks } from './landmarks.js';
 import { Labels } from './labels.js';
@@ -33,11 +33,26 @@ const store = {
 const track = (name, params) => { if (typeof window.gtag === 'function') window.gtag('event', name, params || {}); };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
-// ── 상사 꾸미기: 이름·직함·성별·머리·안경·옷. 이 기기에 저장하고, 상사 랭킹에는 이름 + 직함만 보냄 ──
-const BOSS_DEFAULT = { name: '', title: '사장님', gender: 'm', hair: 'bald', glasses: true, suit: 'navy' };
-const bossLook = (() => {
-    try { return { ...BOSS_DEFAULT, ...JSON.parse(store.get('smash.boss') || '{}') }; } catch (e) { return { ...BOSS_DEFAULT }; }
-})();
+// ── 상사 꾸미기: 이름·직함 + 얼굴·옷·소품. 이 기기에 저장하고, 상사 랭킹에는 이름 + 직함만 보냄 ──
+const BOSS_DEFAULT = { name: '', title: '사장님', ...BOSS_LOOK };
+const bossLook = loadBossLook();
+/** 저장된 꾸미기 읽기. 예전 값(안경 true/false, 수염 칸 없음)도 받고, 모르는 값은 기본으로 */
+function loadBossLook() {
+    let s = {};
+    try { s = JSON.parse(store.get('smash.boss') || '{}') || {}; } catch (e) { /* 깨진 값은 버림 */ }
+    const L = { ...BOSS_DEFAULT };
+    if (typeof s.name === 'string') L.name = s.name.slice(0, 6);
+    if (typeof s.title === 'string' && s.title.trim()) L.title = s.title.slice(0, 8);
+    if (s.glasses === true) s.glasses = 'horn';
+    else if (s.glasses === false) s.glasses = 'none';
+    // 예전엔 여자 상사면 수염이 없었음
+    if (s.beard === undefined && s.gender === 'f') s.beard = 'none';
+    for (const k of Object.keys(T.bossOpts)) {
+        const ok = k === 'suit' ? s[k] in BOSS_COLORS : T.bossOpts[k].some(([v]) => v === s[k]);
+        if (ok) L[k] = s[k];
+    }
+    return L;
+}
 function bossLabel() {
     const n = (bossLook.name || '').trim();
     return n ? `${n} ${bossLook.title}` : bossLook.title;
@@ -45,11 +60,12 @@ function bossLabel() {
 function applyBossLook() {
     boss.setLook({ ...bossLook, label: bossLabel() });
     street.setBossTag(fmt(T.bossCarTag, bossLook.title));
+    finder.name.textContent = bossLook.title;
     if (preview.boss) preview.boss.setLook({ ...bossLook, label: bossLabel() });
 }
 
 /** 상사 꾸미기 미리보기: 메뉴를 처음 열 때 작은 3D 화면을 만들고, 열려 있는 동안만 그린다 */
-const preview = { renderer: null, scene: null, camera: null, boss: null, t: 0 };
+const preview = { renderer: null, scene: null, camera: null, boss: null, t: 0, focus: 0, f: 0 };
 function initBossPreview() {
     if (preview.renderer) return;
     const cv = $('smash-boss-canvas');
@@ -61,8 +77,6 @@ function initBossPreview() {
     key.position.set(3, 5, 6);
     preview.scene.add(key);
     preview.camera = new THREE.PerspectiveCamera(28, 2, 0.1, 50);
-    preview.camera.position.set(0, 2.3, 7.8);
-    preview.camera.lookAt(0, 2.05, 0);
     preview.boss = new Boss(preview.scene);
     preview.boss.reset(0, 0, 0, 1);
     preview.boss.setLook({ ...bossLook, label: bossLabel() });
@@ -79,7 +93,15 @@ function drawBossPreview(dt) {
     if (!preview.renderer || $('smash-bosssheet').hidden) return;
     preview.t += dt;
     const b = preview.boss;
-    b.group.rotation.set(0, Math.sin(preview.t * 0.6) * 0.9, 0);
+    // 얼굴 탭에선 얼굴 가까이, 나머지는 온몸 (focus 0 → 1 로 부드럽게)
+    preview.f += (preview.focus - preview.f) * Math.min(1, dt * 6);
+    const f = preview.f;
+    // 좁은 화면(PC 세로 미리보기)은 들고 있는 골프채까지 들어오게 조금 물러남
+    const span = 2 * Math.tan(THREE.MathUtils.degToRad(preview.camera.fov / 2)) * preview.camera.aspect;
+    const far = Math.max(8.2, 3.1 / span), near = Math.max(3.6, 1.6 / span);
+    preview.camera.position.set(0, 2.35 + f * 0.35, far + (near - far) * f);
+    preview.camera.lookAt(0, 2.05 + f * 0.45, 0);
+    b.group.rotation.set(0, Math.sin(preview.t * 0.6) * (0.9 - f * 0.45), 0);
     b.armR.rotation.z = 2.4 + Math.sin(preview.t * 6) * 0.35;
     b.armR.rotation.x = -0.3;
     b.armL.rotation.z = -0.25 + Math.sin(preview.t * 3) * 0.1;
@@ -132,27 +154,59 @@ function buildBossPanel() {
         b.addEventListener('click', () => { titleIn.value = t; titleIn.dispatchEvent(new Event('input')); });
         sugg.appendChild(b);
     }
-    // 성별·머리·안경: 버튼 묶음, 옷: 색 동그라미
-    const SUIT_HEX = { navy: '#283247', gray: '#6b7280', black: '#1a1a1f', brown: '#6d4c41', wine: '#7b2d3b' };
+    // 얼굴·옷·소품: 버튼 묶음, 옷 색: 색 동그라미
     const groups = [...sheet.querySelectorAll('.smash-seg, .smash-swatches')];
     const sync = () => groups.forEach(g => g.querySelectorAll('button').forEach(b => b.classList.toggle('on', String(bossLook[g.dataset.k]) === b.dataset.v)));
+    const choose = (k, v) => {
+        bossLook[k] = v;
+        // 여자로 바꾸면 대머리·수염은 빼 줌 (원하면 다시 고르면 됨)
+        if (k === 'gender' && v === 'f') {
+            if (bossLook.hair === 'bald') bossLook.hair = 'bob';
+            bossLook.beard = 'none';
+        }
+        // 골프웨어·등산복은 모자가 없으면 짝 맞는 모자를 씌움
+        if (k === 'outfit' && bossLook.hat === 'none') {
+            if (v === 'golf') bossLook.hat = 'visor';
+            if (v === 'hiking') bossLook.hat = 'hiking';
+        }
+        sync();
+        save();
+    };
     for (const g of groups) {
         const k = g.dataset.k;
         for (const [v, text] of T.bossOpts[k]) {
             const b = document.createElement('button');
             b.type = 'button';
             b.dataset.v = String(v);
-            if (k === 'suit') { b.style.background = SUIT_HEX[v]; b.title = text; b.setAttribute('aria-label', text); } else b.textContent = text;
-            b.addEventListener('click', () => {
-                bossLook[k] = v;
-                // 여자로 바꾸면서 머리가 대머리면 단발로
-                if (k === 'gender' && v === 'f' && bossLook.hair === 'bald') bossLook.hair = 'bob';
-                sync();
-                save();
-            });
+            if (k === 'suit') {
+                b.style.background = '#' + BOSS_COLORS[v].toString(16).padStart(6, '0');
+                b.title = text;
+                b.setAttribute('aria-label', text);
+            } else b.textContent = text;
+            b.addEventListener('click', () => choose(k, v));
             g.appendChild(b);
         }
     }
+    // 🎲 아무렇게나: 이름·직함·성별은 두고 나머지를 섞음
+    $('smash-boss-dice').addEventListener('click', () => {
+        for (const k of ['hair', 'glasses', 'beard', 'face', 'body', 'outfit', 'suit', 'hat', 'item']) bossLook[k] = pick(T.bossOpts[k])[0];
+        if (bossLook.gender === 'f') {
+            if (bossLook.hair === 'bald') bossLook.hair = pick(['bob', 'long', 'pony', 'perm']);
+            if (Math.random() < 0.85) bossLook.beard = 'none';
+        }
+        sync();
+        save();
+    });
+    // 탭: 기본 · 얼굴 · 옷 · 소품. 얼굴 탭이면 미리보기를 얼굴로 당김
+    const tabs = [...sheet.querySelectorAll('.smash-boss-tabs button')];
+    const panes = [...sheet.querySelectorAll('.smash-boss-pane')];
+    const showTab = name => {
+        tabs.forEach(t => { const on = t.dataset.tab === name; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); });
+        panes.forEach(p => p.classList.toggle('on', p.dataset.pane === name));
+        preview.focus = name === 'face' ? 1 : 0;
+    };
+    tabs.forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+    showTab('who');
     sync();
     syncBossSummary();
     // 입력하는 동안엔 "과장씹…" 의 앞부분("과장")까지 반영되니, 욕이 남은 채로 닫으면 그 칸을 고치기 시작하기 전 값으로 되돌린다
@@ -219,6 +273,51 @@ function hudRects(dt) {
     return hudAvoid;
 }
 const boss = new Boss(scene);
+const BOSS_BIG = 1.75;
+
+// ── 상사 찾기: 상사가 화면 밖(뒤 포함)이면 가장자리에 화살표 + 직함 동그라미를 띄움. 누르면 카메라가 상사한테 감 ──
+// 화면 안이면 숨김 — 머리 위 이름표가 건물에 가려도 보이게 그려지니 따로 안 띄움
+// 매 프레임 레이아웃을 읽지 않게 크기는 ResizeObserver 로만 받음
+const finder = {
+    el: $('smash-finder'), arrow: $('smash-finder-arrow'), name: $('smash-finder-name'),
+    w: 0, h: 0, on: false, go: 0, x: NaN, y: NaN, a: NaN, p: new THREE.Vector3(), v: new THREE.Vector3(),
+};
+new ResizeObserver(() => { finder.w = box.clientWidth; finder.h = box.clientHeight; }).observe(box);
+finder.el.addEventListener('click', () => { finder.go = 0.9; track('smash_find_boss'); });
+/** 카메라 위치를 정하기 전에: 눌렀으면 0.9초 동안 카메라 중심을 상사 쪽으로 끌어옴 (날아가는 중이어도 따라감) */
+function followBoss(dt) {
+    if (finder.go <= 0) return;
+    finder.go -= dt;
+    boss.center(finder.p);
+    const k = Math.min(1, dt * 7);
+    orbit.target.lerp(finder.p, k);
+    if (orbit.zoom > 1.1) orbit.zoom += (1 - orbit.zoom) * k;
+}
+/** 카메라를 정한 뒤에: 상사가 화면 밖이면 가장자리 자리·방향을 잡아 보여 줌 */
+function updateFinder() {
+    const f = finder;
+    let show = false;
+    if (game.phase === 'play' && boss.group.visible && f.w) {
+        boss.center(f.p);
+        const v = f.v.copy(f.p).project(camera);
+        const behind = v.z > 1;
+        // 카메라 뒤면 투영이 뒤집히니 방향을 되돌림
+        const x = behind ? -v.x : v.x, y = behind ? -v.y : v.y;
+        show = behind || Math.abs(x) > 0.96 || Math.abs(y) > 0.96;
+        if (show) {
+            // 화면 가운데에서 상사 쪽으로 그은 선이 안쪽 테두리(위 점수판·아래 무기 칸은 피함)와 만나는 곳
+            const hw = f.w / 2, hh = f.h / 2;
+            let dx = x * hw, dy = -y * hh;
+            if (Math.abs(dx) + Math.abs(dy) < 1) dy = 1;
+            const top = Math.min(hh - 40, 118), bottom = Math.min(hh - 40, 124), side = 44;
+            const t = Math.min((hw - side) / Math.max(1e-3, Math.abs(dx)), (dy < 0 ? hh - top : hh - bottom) / Math.max(1e-3, Math.abs(dy)));
+            const px = Math.round(hw + dx * t), py = Math.round(hh + dy * t), a = Math.atan2(dy, dx);
+            if (px !== f.x || py !== f.y) { f.el.style.transform = `translate(${px}px, ${py}px) translate(-50%, -50%)`; f.x = px; f.y = py; }
+            if (!(Math.abs(a - f.a) < 0.01)) { f.arrow.style.transform = `rotate(${a.toFixed(3)}rad) translateX(33px)`; f.a = a; }
+        }
+    }
+    if (show !== f.on) { f.on = show; f.el.classList.toggle('show', show); }
+}
 const sign = new Sign(scene);
 const banner = new Banner(scene);
 boss.group.visible = sign.group.visible = banner.group.visible = false;
@@ -472,7 +571,7 @@ function hit(point, w, dir) {
 
     // 사장님
     boss.center(_c);
-    if (_c.distanceTo(point) < r + 1.4 && boss.group.visible) {
+    if (boss.group.visible && boss.hitDist(point) < r + boss.hitR()) {
         _d.subVectors(_c, point).setY(0);
         if (_d.lengthSq() < 0.01) _d.copy(dir).setY(0);
         _d.normalize().lerp(dir, 0.4).setY(0).normalize();
@@ -772,13 +871,16 @@ function setup(area, fake, placeName, preview = false) {
     // 세로 화면은 폭이 좁아 더 멀리서 본다
     const portrait = camera.aspect < 1 ? 1 / Math.sqrt(camera.aspect) : 1;
     orbit.base = Math.min(260, Math.max(50, b.top * 2.15, size * 2.6) * portrait);
-    orbit.home.set(b.cx, Math.min(b.top * 0.48, 60), b.cz);
+    // 옥상의 큰 상사 머리까지 화면에 들어오게 중심을 조금 올림
+    const bossSize = Math.min(4, Math.max(1.6, b.top / 20)) * BOSS_BIG;
+    orbit.home.set(b.cx, Math.min(Math.max(b.top * 0.48, (b.top + 4 * bossSize) * 0.5), 70), b.cz);
     orbit.theta = bestView(b, Math.atan2(nx, nz) + 0.45);
     orbit.target.copy(orbit.home);
     const camDir = new THREE.Vector3(Math.sin(orbit.theta), 0, Math.cos(orbit.theta));
     // 사장님: 옥상 안쪽 점
     const spot = roofSpot(b, camDir);
-    boss.reset(spot.x, b.top, spot.z, Math.min(4, Math.max(1.6, b.top / 20)));
+    // 괴롭히는 맛이 나게 건물에 비해 일부러 크게 (예전 1.6~4 → 2.8~7)
+    boss.reset(spot.x, b.top, spot.z, bossSize);
     applyBossLook();
     boss.group.visible = true;
     sign.setName(corpName());
@@ -1817,6 +1919,7 @@ function frame() {
     world.flushRoofs(coarse ? 1 : 2);
     drawBossPreview(dt);
     if (game.phase === 'start') orbit.theta += dt * 0.12;
+    followBoss(dt);
     placeCamera(dt);
     // 이름표는 이번 프레임 카메라로 잡아야 안 밀림
     labels.setVisible(game.phase !== 'start');
@@ -1825,12 +1928,17 @@ function frame() {
         // 옥상 상사와 말풍선 자리는 이름표가 가리지 않게
         const avoid = hudRects(dt).slice();
         if (boss.group.visible) {
+            // 상사가 커서 발~머리 위 이름표까지 통째로 피함
             boss.group.getWorldPosition(_bossAt);
-            const h = toScreen(_bossAt.x, _bossAt.y + 1.2, _bossAt.z);
-            if (!h.behind) avoid.push({ x0: h.x - 130, y0: h.y - 110, x1: h.x + 130, y1: h.y + 50 });
+            const ft = toScreen(_bossAt.x, _bossAt.y, _bossAt.z);
+            boss.headPos(_bossAt);
+            const h = toScreen(_bossAt.x, _bossAt.y, _bossAt.z);
+            const half = Math.max(130, (ft.y - h.y) * 0.6);
+            if (!h.behind) avoid.push({ x0: h.x - half, y0: h.y - 80, x1: h.x + half, y1: Math.max(h.y + 50, ft.y + 10) });
         }
         labels.update(dt, world, game.target, orbit.target, orbit.base * orbit.zoom * 1.8, toScreen, box.clientWidth, box.clientHeight, camera.position, avoid);
     }
+    updateFinder();
     renderer.render(scene, camera);
 }
 
