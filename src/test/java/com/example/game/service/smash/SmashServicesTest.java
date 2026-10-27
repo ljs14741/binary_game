@@ -3,6 +3,7 @@ package com.example.game.service.smash;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.io.InputStream;
 import java.util.List;
@@ -10,6 +11,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class SmashServicesTest {
 
@@ -142,6 +149,56 @@ class SmashServicesTest {
         assertEquals(0, SmashRankService.plausible(-5, 30));
         assertEquals(SmashRankService.hash("1.2.3.4"), SmashRankService.hash("1.2.3.4"));
         assertFalse(SmashRankService.hash("1.2.3.4").contains("1.2.3.4"));
+    }
+
+    @Test
+    void bossLabelKeepsOnlySurnameAndTitle() {
+        // 이름은 첫 글자(성)만 남김
+        assertEquals("김 부장님", SmashBossService.label("김철수", "부장님"));
+        assertEquals("김 부장님", SmashBossService.label(" 김 철수 ", "  부장님 "));
+        assertEquals("부장님", SmashBossService.label("", "부장님"));
+        assertEquals("사장님", SmashBossService.label(null, "사장님"));
+        assertEquals("김 대표이사사장님입", SmashBossService.label("김", "대표이사사장님입니다"), "직함 8글자 제한");
+        assertEquals("김 과장", SmashBossService.label("김<script>", "과<장>"), "꺾쇠 제거");
+        // "님" 있든 없든, 띄어쓰기 있든 없든 같은 상사로 묶음
+        assertEquals("김부장", SmashBossService.labelKey("김 부장님"));
+        assertEquals("김부장", SmashBossService.labelKey("김 부장"));
+        assertEquals("kim팀장", SmashBossService.labelKey("Kim 팀장님"));
+    }
+
+    @Test
+    void bossLabelRulesAndHitCaps() {
+        assertTrue(SmashBossService.allowedLabel(SmashBossService.labelKey("김 부장님")));
+        assertTrue(SmashBossService.allowedLabel(SmashBossService.labelKey("부장님")), "직함만 바꿔도 올라감");
+        assertTrue(SmashBossService.allowedLabel(SmashBossService.labelKey("김 사장님")), "성 붙은 사장님은 올라감");
+        assertFalse(SmashBossService.allowedLabel(SmashBossService.labelKey("사장님")), "기본 상사는 뺌");
+        assertFalse(SmashBossService.allowedLabel(SmashBossService.labelKey("사장")), "기본 상사는 뺌");
+        assertFalse(SmashBossService.allowedLabel(SmashBossService.labelKey("ㅅㅂ 부장")), "회사 금칙어");
+        assertFalse(SmashBossService.allowedLabel(SmashBossService.labelKey("ㅅ1ㅂ 부장")), "숫자 끼운 욕");
+        assertFalse(SmashBossService.allowedLabel(SmashBossService.labelKey("또라이 부장")), "상사 전용 금칙어");
+        assertFalse(SmashBossService.allowedLabel(SmashBossService.labelKey("김 미친놈")), "상사 전용 금칙어");
+        assertFalse(SmashBossService.allowedLabel("김"), "너무 짧음");
+        assertFalse(SmashBossService.allowedLabel("12345"), "숫자만");
+        assertEquals(600, SmashBossService.plausible(99_999, 10_000), "한 판 상한");
+        assertEquals(4 * 20, SmashBossService.plausible(1_000, 20), "초당 상한");
+        assertEquals(37, SmashBossService.plausible(37, 60));
+        assertEquals(0, SmashBossService.plausible(-3, 60));
+    }
+
+    @Test
+    void bossSubmitSkipsDefaultShortAndBadAndClampsHits() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        SmashBossService s = new SmashBossService(jdbc);
+        assertFalse(s.submit("", "사장님", 30, 60, "1.1.1.1"), "기본 상사");
+        assertFalse(s.submit("김", "부장님", 30, 10, "1.1.1.1"), "15초 안 됨");
+        assertFalse(s.submit("김", "부장님", 0, 60, "1.1.1.1"), "안 날림");
+        assertFalse(s.submit("씨", "발부장", 30, 60, "1.1.1.1"), "금칙어");
+        verify(jdbc, never()).update(anyString(), any(Object[].class));
+        assertTrue(s.submit("김철수", "부장님", 9_999, 30, "1.1.1.1"));
+        // 이름 나머지는 안 들어가고, 횟수는 30초 × 4 로 잘림. 처음 본 사람이라 player +1
+        verify(jdbc).update(anyString(), eq("김부장"), eq("김 부장님"), eq(120), eq(1));
+        assertTrue(s.submit("김영희", "부장", 5, 30, "1.1.1.1"));
+        verify(jdbc).update(anyString(), eq("김부장"), eq("김 부장"), eq(5), eq(0));
     }
 
     @Test

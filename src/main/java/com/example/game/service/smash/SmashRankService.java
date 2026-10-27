@@ -63,8 +63,13 @@ public class SmashRankService {
     static boolean allowedName(String display, String key) {
         if (key.length() < 2 || key.length() > 30 || display.length() > 30) return false;
         if (key.matches("\\d+") || key.contains("http") || key.contains("www")) return false;
-        for (String b : BANNED) if (key.contains(b)) return false;
-        return true;
+        return !banned(key);
+    }
+
+    /** 금칙어 들었는지 (상사 랭킹도 같이 씀) */
+    static boolean banned(String key) {
+        for (String b : BANNED) if (key.contains(b)) return true;
+        return false;
     }
 
     /** 화면이 보낸 피해액을 상한으로 자른다 */

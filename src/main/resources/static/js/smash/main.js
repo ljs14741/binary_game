@@ -32,7 +32,7 @@ const store = {
 const track = (name, params) => { if (typeof window.gtag === 'function') window.gtag('event', name, params || {}); };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
-// ── 상사 꾸미기: 이름·직함·성별·머리·안경·옷. 이 기기에만 저장하고 서버·공유·랭킹에는 보내지 않는다 ──
+// ── 상사 꾸미기: 이름·직함·성별·머리·안경·옷. 이 기기에 저장하고, 상사 랭킹에는 성(이름 첫 글자) + 직함만 보냄 ──
 const BOSS_DEFAULT = { name: '', title: '사장님', gender: 'm', hair: 'bald', glasses: true, suit: 'navy' };
 const bossLook = (() => {
     try { return { ...BOSS_DEFAULT, ...JSON.parse(store.get('smash.boss') || '{}') }; } catch (e) { return { ...BOSS_DEFAULT }; }
@@ -86,7 +86,7 @@ function drawBossPreview(dt) {
     preview.renderer.render(preview.scene, preview.camera);
 }
 /*
- * 욕설·비하 거르기. 상사 이름·직함은 서버로 가지 않지만 간판·말풍선·캡처로 퍼질 수 있다
+ * 욕설·비하 거르기. 상사 이름·직함은 간판·말풍선·캡처·상사 랭킹으로 퍼질 수 있다
  * ("이진수 과장씹색기" 같은 것). 띄어쓰기·숫자·기호를 빼고 찾는다 — "씹 색 기", "ㅅ1발" 도 걸리게.
  */
 const BAD_WORDS = ['씨발', '시발', '씨빨', 'ㅅㅂ', 'ㅆㅂ', 'ㅅ발', '씹', '병신', '븅신', 'ㅂㅅ', '좆', '존나', '졸라', '개새', '개색', '새끼', '색기', '섀끼',
@@ -822,17 +822,28 @@ function roofSpot(b, camDir) {
     return best || { x: b.cx, z: b.cz };
 }
 
-// ── 회사 파괴 랭킹: 판이 끝나면 회사 이름(사용자가 입력한 것)과 피해액만 보낸다 ──
+// ── 회사 파괴 랭킹: 판이 끝나면 회사 이름(사용자가 입력한 것)과 피해액만 보낸다. 상사는 성 + 직함 + 날린 횟수만 ──
 function playSeconds() {
     return Math.round((performance.now() - game.startAt) / 1000);
 }
 
+/** 상사 랭킹용: 이름은 첫 글자(성)만. 손대지 않은 기본 "사장님"·욕 섞인 이름·한 번도 안 날렸으면 안 보냄 */
+function bossPayload() {
+    const title = (bossLook.title || '').trim();
+    const surname = [...(bossLook.name || '').trim()][0] || '';
+    if (game.stats.boss < 1 || !title || (!surname && title === BOSS_DEFAULT.title) || badWord(surname + title)) return null;
+    return { bossName: surname, bossTitle: title, bossHits: game.stats.boss };
+}
+
 function rankPayload() {
-    if (game.submitted || game.phase !== 'play' || !game.target || !game.rankable) return null;
+    if (game.submitted || game.phase !== 'play' || !game.target) return null;
+    if (game.damage < 1 || playSeconds() < 15) return null;
     const name = (game.name || '').trim();
-    if (!name || name === T.defaultName || game.damage < 1 || playSeconds() < 15) return null;
+    const company = game.rankable && name && name !== T.defaultName ? name : null;
+    const boss = bossPayload();
+    if (!company && !boss) return null;
     game.submitted = true;
-    return JSON.stringify({ company: name, damage: Math.round(game.damage), seconds: playSeconds() });
+    return JSON.stringify({ company, damage: Math.round(game.damage), seconds: playSeconds(), ...boss });
 }
 
 /** 기록하고 결과(누적·순위)를 돌려준다. 보낼 게 없으면 null */
@@ -860,27 +871,34 @@ async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false
         const r = await fetch('/api/smash/rankings?limit=' + limit, fresh ? { cache: 'no-cache' } : undefined);
         if (!r.ok) return;
         const data = await r.json();
-        const ol = $(olId);
         const detail = olId === 'smash-pagerank-ol';
-        ol.innerHTML = '';
-        for (const e of data.top || []) {
-            const li = document.createElement('li');
-            const i = document.createElement('i'); i.textContent = detail && e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : e.rank;
-            const s = document.createElement('span'); s.textContent = e.name;
-            if (detail) { const d = document.createElement('small'); d.textContent = fmt(T.rankDetail, e.players, e.plays); s.append(d); }
-            const m = document.createElement('em'); m.textContent = score(e.damage);
-            li.append(i, s, m);
-            ol.appendChild(li);
-        }
-        if (!(data.top || []).length) {
-            const li = document.createElement('li');
-            li.className = 'empty';
-            li.textContent = fmt(T.rankEmpty, data.minPlayers || 2);
-            ol.appendChild(li);
-        }
-        // 폰은 5위까지만 보이고 나머지는 "더 보기" (CSS 가 숨긴다)
-        if (detail) $('smash-pagerank-more').hidden = !((data.top || []).length > 5 && matchMedia('(max-width: 640px)').matches) || $('smash-pagerank').classList.contains('more');
+        fillRanking(olId, 'smash-pagerank', detail, data.top || [], e => score(e.damage), T.rankDetail, fmt(T.rankEmpty, data.minPlayers || 2));
+        // 상사 응징 랭킹은 페이지 아래 목록에만
+        if (detail) fillRanking('smash-bossrank-ol', 'smash-bossrank', true, data.bosses || [], e => fmt(T.timesUnit, e.hits.toLocaleString()), T.bossRankDetail, T.bossRankEmpty);
     } catch (e) { /* 랭킹이 안 떠도 게임은 된다 */ }
+}
+
+/** 랭킹 목록 한 개 그리기. detail: 페이지 아래 목록 (메달·부가 설명·폰 "더 보기") */
+function fillRanking(olId, sectionId, detail, list, value, detailText, emptyText) {
+    const ol = $(olId);
+    ol.innerHTML = '';
+    for (const e of list) {
+        const li = document.createElement('li');
+        const i = document.createElement('i'); i.textContent = detail && e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : e.rank;
+        const s = document.createElement('span'); s.textContent = e.name;
+        if (detail) { const d = document.createElement('small'); d.textContent = fmt(detailText, e.players, e.plays); s.append(d); }
+        const m = document.createElement('em'); m.textContent = value(e);
+        li.append(i, s, m);
+        ol.appendChild(li);
+    }
+    if (!list.length) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = emptyText;
+        ol.appendChild(li);
+    }
+    // 폰은 5위까지만 보이고 나머지는 "더 보기" (CSS 가 숨긴다)
+    if (detail) $(sectionId + '-more').hidden = !(list.length > 5 && matchMedia('(max-width: 640px)').matches) || $(sectionId).classList.contains('more');
 }
 
 /** 페이지 위 TOP 10 (기록을 보낸 뒤엔 fresh) */
@@ -1363,6 +1381,7 @@ const unlockAudio = () => {
 };
 UNLOCK.forEach(t => document.addEventListener(t, unlockAudio, true));
 $('smash-pagerank-more').addEventListener('click', e => { $('smash-pagerank').classList.add('more'); e.currentTarget.hidden = true; });
+$('smash-bossrank-more').addEventListener('click', e => { $('smash-bossrank').classList.add('more'); e.currentTarget.hidden = true; });
 const syncBgm = () => {
     const v = Math.round(bgmVolume() * 100);
     volRange.value = v;

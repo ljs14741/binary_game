@@ -99,6 +99,16 @@
         <button type="button" id="smash-pagerank-more" class="bw-smash-rank-more" hidden th:text="#{smash.page.rankMore}">6~10위 더 보기</button>
     </section>
 
+    <!--/* 상사 응징 랭킹: 성 + 직함별 누적 날린 횟수. 회사와 묶지 않음. 채우는 건 loadRanking 이 같이 받은 bosses, 모양은 회사 랭킹과 같음 */-->
+    <section class="bw-smash-rank" id="smash-bossrank">
+        <div class="bw-smash-rank-head">
+            <h2 th:text="#{smash.page.bossRankTitle}">👔 상사 응징 랭킹 TOP 10</h2>
+        </div>
+        <p th:text="#{smash.page.bossRankDesc}">가장 많이 날아간 상사예요.</p>
+        <ol id="smash-bossrank-ol"></ol>
+        <button type="button" id="smash-bossrank-more" class="bw-smash-rank-more" hidden th:text="#{smash.page.rankMore}">6~10위 더 보기</button>
+    </section>
+
     <!--/* 게임 박스. id 는 js/smash/main.js 가 찾는다. */-->
     <div class="bw-smash-stage" id="smash-stage">
         <div id="smash-canvas" role="img" th:aria-label="#{smash.ui.canvasAria}"></div>
@@ -211,7 +221,7 @@
                     </div>
                 </div>
                 <button id="smash-boss-done" type="button" class="smash-primary" th:text="#{smash.ui.bossDone}">완료</button>
-                <small class="smash-note" th:text="#{smash.ui.bossNote}">상사 이름은 이 기기에서만 쓰이고, 공유·랭킹에는 올라가지 않아요</small>
+                <small class="smash-note" th:text="#{smash.ui.bossNote}">상사 랭킹에는 성과 직함만 올라가요 (김철수 부장님 → 김 부장님). 회사 이름과는 따로 쌓여요</small>
             </div>
         </div>
 

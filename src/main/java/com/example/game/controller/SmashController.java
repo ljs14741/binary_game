@@ -1,6 +1,7 @@
 package com.example.game.controller;
 
 import com.example.game.service.smash.OsmConverter;
+import com.example.game.service.smash.SmashBossService;
 import com.example.game.service.smash.SmashAreaService;
 import com.example.game.service.smash.SmashPlaceService;
 import com.example.game.service.smash.SmashRankService;
@@ -8,6 +9,7 @@ import com.example.game.service.smash.SmashVWorldService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,6 +41,7 @@ public class SmashController {
     private final SmashAreaService areas;
     private final SmashVWorldService vworld;
     private final SmashRankService ranks;
+    private final SmashBossService bosses;
     private final Map<String, Deque<Long>> hits = new ConcurrentHashMap<>();
 
     @GetMapping("/search")
@@ -91,26 +95,50 @@ public class SmashController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(places.exits(st, lat, lng));
     }
 
-    public record PlayReq(String company, long damage, int seconds) {
+    /** bossName 은 성(첫 글자)만, bossHits 는 이번 판 상사 날린 횟수. 회사 없이 상사만 와도 됨 */
+    public record PlayReq(String company, long damage, int seconds, String bossName, String bossTitle, int bossHits) {
     }
 
-    /** 한 판 기록. 회사 이름은 사용자가 입력한 그대로만 받는다 (상사 이름·카카오 장소 정보는 받지 않는다) */
+    /**
+     * 한 판 기록. 회사 이름은 사용자가 입력한 그대로만 받음 (카카오 장소 정보는 안 받음).
+     * 상사는 성 + 직함만 따로 쌓고 회사와는 묶지 않음
+     */
     @PostMapping("/plays")
     public ResponseEntity<?> play(@RequestBody PlayReq body, HttpServletRequest req) {
-        if (body == null || body.company() == null) return ResponseEntity.badRequest().body(Map.of("error", "param"));
+        if (body == null || (body.company() == null && body.bossTitle() == null)) return ResponseEntity.badRequest().body(Map.of("error", "param"));
         if (!allow(req, "p", 30)) return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("error", "rate"));
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(ranks.submit(body.company(), body.damage(), body.seconds(), clientIp(req)));
+        String ip = clientIp(req);
+        if (body.bossTitle() != null && body.bossHits() > 0) {
+            // 상사 랭킹이 안 돼도 회사 기록은 남게
+            try {
+                bosses.submit(body.bossName(), body.bossTitle(), body.bossHits(), body.seconds(), ip);
+            } catch (DataAccessException e) {
+                log.warn("smash boss submit failed: {}", e.getMessage());
+            }
+        }
+        Object out = body.company() == null ? Map.of("counted", false) : ranks.submit(body.company(), body.damage(), body.seconds(), ip);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(out);
     }
 
-    /** 누적 랭킹 TOP N, company 를 주면 그 회사의 누적·순위도 */
+    /** 누적 랭킹 TOP N (회사·상사), company 를 주면 그 회사의 누적·순위도 */
     @GetMapping("/rankings")
     public ResponseEntity<?> rankings(@RequestParam(value = "company", required = false) String company,
                                       @RequestParam(value = "limit", defaultValue = "10") int limit) {
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         out.put("top", ranks.top(limit));
+        out.put("bosses", bossTop(limit));
         out.put("minPlayers", SmashRankService.MIN_PLAYERS);
         if (company != null && !company.isBlank()) out.put("company", ranks.status(company));
         return ResponseEntity.ok().cacheControl(CacheControl.maxAge(Duration.ofSeconds(20))).body(out);
+    }
+
+    private List<SmashBossService.Entry> bossTop(int limit) {
+        try {
+            return bosses.top(limit);
+        } catch (DataAccessException e) {
+            log.warn("smash boss top failed: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     private static String clientIp(HttpServletRequest req) {
