@@ -454,7 +454,8 @@ export class Boss {
             const land = this.rigid.step(dt, world);
             if (land > 0 && !this.rigid.flying) {
                 this.state = 'down';
-                this.timer = 2.2;
+                // 금방 털고 일어나야 또 때리는 맛이 있음
+                this.timer = 0.9;
                 this.stars.visible = true;
                 _e.set(-Math.PI / 2, Math.random() * Math.PI * 2, 0, 'YXZ');
                 this.lieQ = new THREE.Quaternion().setFromEuler(_e);
@@ -469,12 +470,12 @@ export class Boss {
             this.timer -= dt;
             const p = g.position;
             if (world.surface(p.x, p.y + 0.05, p.z, null) < p.y - 0.25) { this.rigid.launch(0, 0, 0, 1); this.state = 'fly'; }
-            else if (this.timer <= 0) { this.state = 'rise'; this.timer = 0.5; this.stars.visible = false; ev = 'up'; }
+            else if (this.timer <= 0) { this.state = 'rise'; this.timer = 0.3; this.stars.visible = false; ev = 'up'; }
         }
         if (this.state === 'rise') {
             const yaw = Math.atan2(camPos.x - g.position.x, camPos.z - g.position.z);
             _q2.setFromAxisAngle(UP, yaw);
-            g.quaternion.slerp(_q2, Math.min(1, dt * 8));
+            g.quaternion.slerp(_q2, Math.min(1, dt * 14));
             this.timer -= dt;
             if (this.timer <= 0) { this.state = 'stand'; this.stars.position.set(0, 3.05 + this.hatTop, 0); }
         }

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS smash_boss (
   play_count int NOT NULL DEFAULT 0 COMMENT '판 수',
   player_count int NOT NULL DEFAULT 0 COMMENT '날린 사람 수(서버 재시작 전까지 같은 사람은 하루 한 번만)',
   hidden tinyint(1) NOT NULL DEFAULT 0 COMMENT '랭킹 숨김(금칙어·관리자)',
+  look varchar(300) NULL COMMENT '상사 꾸미기 모습 JSON (랭킹 옆 작은 그림용, 가장 최근 값)',
   created_at datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   updated_at datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (smash_boss_id),

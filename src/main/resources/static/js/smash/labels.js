@@ -93,10 +93,8 @@ export class Labels {
         let n = 0;
         for (const it of this.list) {
             const b = it.b;
-            // 부서진 건물도 어디였는지 알게 이름표를 남김 (잔해 높이로 내려오고 흐리게)
+            // 부서진 건물도 어디였는지 알게 이름표를 남김 (잔해 높이로 내려옴)
             const y = this._top(b);
-            const gone = b.state === 'rubble' || b.state === 'sinking' || (b.voxel && b.voxel.ratio() > 0.6);
-            if (gone !== it.gone) { it.gone = gone; it.el.classList.toggle('gone', gone); it.w = 0; }
             let show = n < this.caps.max;
             let s = null;
             if (show && it.occ) show = false;

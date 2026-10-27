@@ -45,7 +45,34 @@ public class SmashBossService {
     private final Set<String> seenToday = ConcurrentHashMap.newKeySet();
     private volatile LocalDate day = LocalDate.now();
 
-    public record Entry(int rank, String name, long hits, int plays, int players) {
+    /** look: 상사 꾸미기 모습(성별·머리·옷 등). 랭킹 옆에 작은 그림으로 그림. 없으면 null */
+    public record Entry(int rank, String name, long hits, int plays, int players, Map<String, String> look) {
+    }
+
+    /** 꾸미기 칸 이름. 값은 영문 소문자·숫자 짧은 말만 받음 (화면이 모르는 값은 기본으로 그림) */
+    static final List<String> LOOK_KEYS = List.of("gender", "hair", "glasses", "beard", "face", "body", "outfit", "suit", "hat", "item");
+    private static final java.util.regex.Pattern LOOK_VALUE = java.util.regex.Pattern.compile("[a-z0-9]{1,12}");
+    private static final java.util.regex.Pattern LOOK_PAIR = java.util.regex.Pattern.compile("\"([a-z]+)\":\"([a-z0-9]{1,12})\"");
+
+    /** 화면이 보낸 꾸미기 값을 거름. 저장할 JSON 문자열, 받을 게 없으면 null */
+    static String lookJson(Map<String, String> look) {
+        if (look == null) return null;
+        StringBuilder sb = new StringBuilder("{");
+        for (String k : LOOK_KEYS) {
+            String v = look.get(k);
+            if (v == null || !LOOK_VALUE.matcher(v).matches()) continue;
+            if (sb.length() > 1) sb.append(',');
+            sb.append('"').append(k).append("\":\"").append(v).append('"');
+        }
+        return sb.length() > 1 ? sb.append('}').toString() : null;
+    }
+
+    static Map<String, String> parseLook(String json) {
+        if (json == null || json.isBlank()) return null;
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        java.util.regex.Matcher m = LOOK_PAIR.matcher(json);
+        while (m.find()) if (LOOK_KEYS.contains(m.group(1))) out.put(m.group(1), m.group(2));
+        return out.isEmpty() ? null : out;
     }
 
     /** 화면 표시 이름: 이름 + 직함 */
@@ -86,6 +113,11 @@ public class SmashBossService {
 
     /** 한 판 기록. 올렸으면 true */
     public boolean submit(String rawName, String rawTitle, int hits, int seconds, String ip) {
+        return submit(rawName, rawTitle, hits, seconds, ip, null);
+    }
+
+    /** look 은 가장 최근에 들어온 모습으로 덮어씀 */
+    public boolean submit(String rawName, String rawTitle, int hits, int seconds, String ip, Map<String, String> look) {
         rollDay();
         if (seconds < 15) return false;
         int h = plausible(hits, seconds);
@@ -97,18 +129,19 @@ public class SmashBossService {
         if (playsToday.merge(who, 1, Integer::sum) > MAX_PLAYS_PER_DAY) return false;
         int newPlayer = seenToday.add(who + "|" + key) ? 1 : 0;
         jdbc.update("""
-                INSERT INTO smash_boss (label_key, display_label, total_hits, play_count, player_count)
-                VALUES (?, ?, ?, 1, 1)
+                INSERT INTO smash_boss (label_key, display_label, total_hits, play_count, player_count, look)
+                VALUES (?, ?, ?, 1, 1, ?)
                 ON DUPLICATE KEY UPDATE total_hits = total_hits + VALUES(total_hits),
                                         play_count = play_count + 1,
-                                        player_count = player_count + ?
-                """, key, display, h, newPlayer);
+                                        player_count = player_count + ?,
+                                        look = COALESCE(VALUES(look), look)
+                """, key, display, h, lookJson(look), newPlayer);
         return true;
     }
 
     public List<Entry> top(int limit) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
-                SELECT display_label, total_hits, play_count, player_count FROM smash_boss
+                SELECT display_label, total_hits, play_count, player_count, look FROM smash_boss
                 WHERE hidden = 0 AND player_count >= ?
                 ORDER BY total_hits DESC LIMIT ?
                 """, SmashRankService.MIN_PLAYERS, Math.max(1, Math.min(limit, 50)));
@@ -116,7 +149,8 @@ public class SmashBossService {
         int i = 0;
         for (Map<String, Object> r : rows) {
             out.add(new Entry(++i, (String) r.get("display_label"), ((Number) r.get("total_hits")).longValue(),
-                    ((Number) r.get("play_count")).intValue(), ((Number) r.get("player_count")).intValue()));
+                    ((Number) r.get("play_count")).intValue(), ((Number) r.get("player_count")).intValue(),
+                    parseLook((String) r.get("look"))));
         }
         return out;
     }

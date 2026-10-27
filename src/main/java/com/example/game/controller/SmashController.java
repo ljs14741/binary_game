@@ -96,7 +96,7 @@ public class SmashController {
     }
 
     /** bossName·bossTitle 은 상사 꾸미기 값, bossHits 는 이번 판 상사 날린 횟수. 회사 없이 상사만 와도 됨 */
-    public record PlayReq(String company, long damage, int seconds, String bossName, String bossTitle, int bossHits) {
+    public record PlayReq(String company, long damage, int seconds, String bossName, String bossTitle, int bossHits, Map<String, String> bossLook) {
     }
 
     /**
@@ -111,7 +111,7 @@ public class SmashController {
         if (body.bossTitle() != null && body.bossHits() > 0) {
             // 상사 랭킹이 안 돼도 회사 기록은 남게
             try {
-                bosses.submit(body.bossName(), body.bossTitle(), body.bossHits(), body.seconds(), ip);
+                bosses.submit(body.bossName(), body.bossTitle(), body.bossHits(), body.seconds(), ip, body.bossLook());
             } catch (DataAccessException e) {
                 log.warn("smash boss submit failed: {}", e.getMessage());
             }

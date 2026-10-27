@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -187,6 +188,17 @@ class SmashServicesTest {
     }
 
     @Test
+    void bossLookIsFilteredAndRoundTrips() {
+        java.util.Map<String, String> in = new java.util.LinkedHashMap<>();
+        in.put("outfit", "golf"); in.put("hat", "crown"); in.put("evil", "x"); in.put("suit", "<b>"); in.put("gender", "f");
+        String json = SmashBossService.lookJson(in);
+        assertEquals("{\"gender\":\"f\",\"outfit\":\"golf\",\"hat\":\"crown\"}", json, "모르는 칸·이상한 값은 버림");
+        assertEquals(java.util.Map.of("gender", "f", "outfit", "golf", "hat", "crown"), SmashBossService.parseLook(json));
+        assertNull(SmashBossService.lookJson(java.util.Map.of("evil", "x")));
+        assertNull(SmashBossService.parseLook(null));
+    }
+
+    @Test
     void bossSubmitSkipsDefaultShortAndBadAndClampsHits() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         SmashBossService s = new SmashBossService(jdbc);
@@ -197,9 +209,9 @@ class SmashServicesTest {
         verify(jdbc, never()).update(anyString(), any(Object[].class));
         assertTrue(s.submit("김철수", "부장님", 9_999, 30, "1.1.1.1"));
         // 횟수는 30초 × 4 로 잘림. 처음 본 사람이라 player +1
-        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장님"), eq(120), eq(1));
+        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장님"), eq(120), eq((Object) null), eq(1));
         assertTrue(s.submit("김철수", "부장", 5, 30, "1.1.1.1"));
-        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장"), eq(5), eq(0));
+        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장"), eq(5), eq((Object) null), eq(0));
     }
 
     @Test

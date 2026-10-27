@@ -274,7 +274,7 @@ function hudRects(dt) {
     return hudAvoid;
 }
 const boss = new Boss(scene);
-const BOSS_BIG = 1.75;
+const BOSS_BIG = 2.3;
 
 // ── 상사 찾기: 상사가 화면 밖(뒤 포함)이면 가장자리에 화살표 + 직함 동그라미를 띄움. 누르면 카메라가 상사한테 감 ──
 // 화면 안이면 숨김 — 머리 위 이름표가 건물에 가려도 보이게 그려지니 따로 안 띄움
@@ -1003,7 +1003,10 @@ function bossPayload() {
     const title = (bossLook.title || '').trim();
     const name = (bossLook.name || '').trim();
     if (game.stats.boss < 1 || !title || (!name && title === BOSS_DEFAULT.title) || badWord(name + title)) return null;
-    return { bossName: name, bossTitle: title, bossHits: game.stats.boss };
+    // 랭킹 옆 작은 그림용 모습 (이름·직함은 위에서 따로)
+    const look = {};
+    for (const k of Object.keys(BOSS_LOOK)) look[k] = String(bossLook[k]);
+    return { bossName: name, bossTitle: title, bossHits: game.stats.boss, bossLook: look };
 }
 
 function rankPayload() {
@@ -1045,7 +1048,10 @@ async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false
         const detail = olId === 'smash-pagerank-ol';
         fillRanking(olId, 'smash-pagerank', detail, data.top || [], e => score(e.damage), T.rankDetail, fmt(T.rankEmpty, data.minPlayers || 2));
         // 상사 응징 랭킹은 페이지 아래 목록에만
-        if (detail) fillRanking('smash-bossrank-ol', 'smash-bossrank', true, data.bosses || [], e => fmt(T.timesUnit, e.hits.toLocaleString()), T.bossRankDetail, T.bossRankEmpty);
+        if (detail) {
+            fillRanking('smash-bossrank-ol', 'smash-bossrank', true, data.bosses || [], e => fmt(T.timesUnit, e.hits.toLocaleString()), T.bossRankDetail, T.bossRankEmpty);
+            bossFaces('smash-bossrank-ol', data.bosses || []);
+        }
     } catch (e) { /* 랭킹이 안 떠도 게임은 된다 */ }
 }
 
@@ -1070,6 +1076,56 @@ function fillRanking(olId, sectionId, detail, list, value, detailText, emptyText
     }
     // 폰은 5위까지만 보이고 나머지는 "더 보기" (CSS 가 숨긴다)
     if (detail) $(sectionId + '-more').hidden = !(list.length > 5 && matchMedia('(max-width: 640px)').matches) || $(sectionId).classList.contains('more');
+}
+
+/**
+ * 상사 랭킹 옆 작은 상사 그림. 그림판 하나로 상사를 한 명씩 그려 이미지로 굳힘 (한 번만, 쉴 때).
+ * 같은 모습은 다시 안 그림. 모습이 없는 옛 기록은 기본 상사로
+ */
+const faceCache = new Map();
+let faceKit = null;
+function bossFaceUrl(look) {
+    const key = JSON.stringify(look || {});
+    if (faceCache.has(key)) return faceCache.get(key);
+    if (!faceKit) {
+        const cv = document.createElement('canvas');
+        const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true });
+        r.setPixelRatio(1);
+        r.setSize(112, 112, false);
+        const sc = new THREE.Scene();
+        sc.add(new THREE.HemisphereLight(0xffffff, 0x9aa3ad, 2.3));
+        const key2 = new THREE.DirectionalLight(0xfff4e0, 2.2);
+        key2.position.set(3, 5, 6);
+        sc.add(key2);
+        const cam = new THREE.PerspectiveCamera(28, 1, 0.1, 50);
+        // 가슴 위로 (얼굴·모자·안경이 잘 보이게)
+        cam.position.set(0, 2.75, 5.4);
+        cam.lookAt(0, 2.35, 0);
+        const b = new Boss(sc);
+        b.reset(0, 0, 0, 1);
+        faceKit = { r, sc, cam, b };
+    }
+    const { r, sc, cam, b } = faceKit;
+    b.setLook({ ...(look || {}), label: '' });
+    b.group.rotation.set(0, -0.35, 0);
+    b.armR.rotation.z = 2.4; b.armR.rotation.x = -0.3; b.armL.rotation.z = -0.25;
+    r.render(sc, cam);
+    const url = r.domElement.toDataURL('image/png');
+    faceCache.set(key, url);
+    return url;
+}
+function bossFaces(olId, list) {
+    const items = [...$(olId).querySelectorAll('li:not(.empty)')];
+    const run = () => {
+        items.forEach((li, i) => {
+            const e = list[i];
+            if (!e) return;
+            let img = li.querySelector('img.smash-bossface');
+            if (!img) { img = document.createElement('img'); img.className = 'smash-bossface'; img.alt = ''; li.insertBefore(img, li.children[1]); }
+            try { img.src = bossFaceUrl(e.look); } catch (err) { img.remove(); }
+        });
+    };
+    if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 1500 }); else setTimeout(run, 300);
 }
 
 /** 페이지 위 TOP 10 (기록을 보낸 뒤엔 fresh) */
