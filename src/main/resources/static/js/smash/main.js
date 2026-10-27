@@ -4,6 +4,7 @@ import { FX } from './fx.js';
 import { Boss, Sign, Banner, FONT } from './props.js';
 import { Street } from './street.js';
 import { Landmarks } from './landmarks.js';
+import { Labels } from './labels.js';
 import { Weapons, WEAPONS, NUKE } from './weapons.js';
 import { fakeArea } from './fallback.js';
 import { initAudio, sfx, setMuted, isMuted, setBgmVolume, bgmVolume } from './audio.js';
@@ -199,9 +200,24 @@ sun.shadow.bias = -0.0006;
 scene.add(sun, sun.target);
 
 const world = new World(scene, coarse ? { budget: 22000, perBuilding: 3600, targetBudget: 6500 } : { budget: 42000, perBuilding: 5200, targetBudget: 9500 });
-const fx = new FX(scene);
+const fx = new FX(scene, { mobile: coarse });
 const street = new Street(scene, world, fx, sfx);
 const landmarks = new Landmarks(scene, fx, sfx);
+const labels = new Labels(box, coarse ? { max: 7, minTop: 9, bottom: 96 } : { max: 14, minTop: 7, bottom: 84 });
+const _bossAt = new THREE.Vector3();
+// 이름표가 피할 위쪽 정보창 자리 (레이아웃 읽기는 0.5초에 한 번만)
+let hudAvoid = [], hudT = 0;
+function hudRects(dt) {
+    hudT -= dt;
+    if (hudT > 0) return hudAvoid;
+    hudT = 0.5;
+    const o = box.getBoundingClientRect();
+    hudAvoid = [...document.querySelectorAll('.smash-score, .smash-side')].map(e => {
+        const r = e.getBoundingClientRect();
+        return { x0: r.left - o.left - 4, y0: r.top - o.top - 4, x1: r.right - o.left + 4, y1: r.bottom - o.top + 4 };
+    });
+    return hudAvoid;
+}
 const boss = new Boss(scene);
 const sign = new Sign(scene);
 const banner = new Banner(scene);
@@ -521,8 +537,8 @@ function nukeBlast(p, dir) {
     ui.flash.classList.remove('go'); void ui.flash.offsetWidth; ui.flash.classList.add('go');
     fx.blast(p.x, p.y + 2, p.z, 26, 0xfff3c4);
     fx.ring(p.x, 0.3, p.z, 70, 0xffffff);
-    fx.ring(p.x, 0.3, p.z, 45, 0xffb347);
-    mushroom = { x: p.x, z: p.z, t: 0 };
+    fx.mushroom(p.x, p.y, p.z, 2 * Math.min(2, Math.max(1, game.wscale)));
+    slowmo = 0.45;
     say('nuke', true);
     // 가까운 곳은 블록으로 날리고, 그 바깥은 통째로 주저앉힌다
     hit(p, NUKE, dir);
@@ -541,12 +557,51 @@ function nukeBlast(p, dir) {
             addDamage(hitOut.value, null);
         }
     }
+    // 회사 건물은 높아도 확실히 무너지게: 폭심 쪽 절반을 여러 높이에서 한꺼번에 뜯어냄
+    const t = game.target, tv = t && t.voxel;
+    if (tv && distToPolygon(p.x, p.z, t.poly) < 60) {
+        const bb = tv.bbox, w = Math.max(bb.maxx - bb.minx, bb.maxz - bb.minz);
+        const cx = (bb.minx + bb.maxx) / 2, cz = (bb.minz + bb.maxz) / 2;
+        for (const fy of [0.12, 0.35, 0.6, 0.85]) {
+            hitOut.value = 0; hitOut.blocks = 0; hitOut.glass.length = 0; hitOut.chunks.length = 0; hitOut.windows.length = 0;
+            _c.set(cx + (p.x - cx) * 0.35, t.top * fy, cz + (p.z - cz) * 0.35);
+            tv.impact(_c, w * 0.42, 34, dir, 0.12, hitOut);
+            addDamage(hitOut.value, null);
+        }
+    }
     street.impact(p, 40, 40, dir);
     landmarks.impact(p, 40, 40, dir);
     cheer();
     track('smash_nuke');
 }
-let mushroom = null;
+/** 큰 폭발 직후 잠깐 느리게 (남은 초) */
+let slowmo = 0;
+
+/** 핵폭탄(무기): 필살기의 작은 판. 섬광 → 불덩이 → 충격파 → 버섯구름, 가까운 작은 건물은 주저앉힘 */
+function miniNuke(p, dir) {
+    sfx.boom(true);
+    sfx.rumble(10);
+    trauma = Math.min(1, trauma + 0.85);
+    ui.flash.classList.remove('go'); void ui.flash.offsetWidth; ui.flash.classList.add('go');
+    fx.mushroom(p.x, p.y, p.z, Math.min(2, Math.max(1, game.wscale)));
+    slowmo = 0.3;
+    fx.blast(p.x, p.y + 1, p.z, 12, 0xfff3c4);
+    const w = WEAPONS[5];
+    hit(p, w, dir);
+    const R = w.radius * game.wscale * 1.4;
+    for (const b of nearBuildings(p, R)) {
+        if (b.state !== 'intact' || b === game.target || b.top > 30) continue;
+        if (distToPolygon(p.x, p.z, b.poly) < R * 0.6) { world.collapse(b); onFlatten(b); }
+    }
+    street.impact(p, R, 30, dir);
+    landmarks.impact(p, R, 30, dir);
+    // 둘레에 불씨가 남아 한동안 탐
+    for (let k = 0; k < 5; k++) {
+        const a = Math.random() * Math.PI * 2, r = R * (0.3 + Math.random() * 0.5);
+        fx.burn(p.x + Math.cos(a) * r, 0.8, p.z + Math.sin(a) * r, 3 + Math.random() * 3, 1.2);
+    }
+    if (Math.random() < 0.5) say('nuke', true);
+}
 
 function cheer() {
     if (!game.target) return;
@@ -554,7 +609,7 @@ function cheer() {
     sfx.cheer();
 }
 
-const weapons = new Weapons(scene, fx, { hit, ignite, pull, nukeBlast, shake: n => { trauma = Math.min(1, trauma + n); } });
+const weapons = new Weapons(scene, fx, { hit, ignite, pull, nukeBlast, miniNuke, shake: n => { trauma = Math.min(1, trauma + n); } });
 
 // ── 시작: 검색 → 지도 → 부수기 ──
 /** 간판·결과에 쓰는 이름. ㈜ 는 붙이지 않는다 — "㈜칠곡중학교" 처럼 어색해지고, 유명한 회사는 없어도 안다 */
@@ -698,6 +753,7 @@ function setup(area, fake, placeName, preview = false) {
     weapons.clear();
     game.placeName = placeName;
     game.wscale = 1;
+    labels.reset();
     const { target: b, added } = world.load(area, game.name, placeName);
     game.target = b;
     street.populate(b);
@@ -1634,7 +1690,10 @@ function streamTick(dt) {
 
 function frame() {
     requestAnimationFrame(frame);
-    const dt = Math.min(clock.getDelta(), 1 / 30);
+    const raw = Math.min(clock.getDelta(), 1 / 30);
+    // 핵폭탄이 터진 순간 잠깐 슬로모션 (터지는 맛)
+    let dt = raw;
+    if (slowmo > 0) { slowmo -= raw; dt = raw * 0.3; }
     if (!visible || document.hidden) return;
     time += dt;
     const now = performance.now();
@@ -1681,24 +1740,12 @@ function frame() {
         const fv = v.stepFire(dt);
         if (fv) addDamage(fv, null);
         const em = v.embers;
-        for (let i = 0; i < em.length && i < 60; i += 3) fx.fire(em[i], em[i + 1] + 0.5, em[i + 2], 1, v.vs, 0.4);
+        for (let i = 0; i < em.length && i < 60; i += 3) fx.flameAt(em[i], em[i + 1] + 0.4, em[i + 2], v.vs * 1.3, 0.8);
         if (v.shatter.length) onShatter(v.shatter);
         if (v.meta && !game.stats.buildings.has(v.meta.id) && v.ratio() > 0.5) game.stats.buildings.add(v.meta.id);
     }
     world.stepCollapse(dt, (x, y, z) => fx.dust(x, y, z, 2, 3, 1.5));
 
-    if (mushroom) {
-        mushroom.t += dt;
-        const k = mushroom.t;
-        if (k < 3) {
-            for (let i = 0; i < 6; i++) {
-                const a = Math.random() * Math.PI * 2, r = Math.random() * (k < 1.2 ? 3 : 10);
-                const y = Math.min(k * 22, 45);
-                fx.fire(mushroom.x + Math.cos(a) * r, y + (Math.random() - 0.5) * 4, mushroom.z + Math.sin(a) * r, 1, 3, 2.5);
-            }
-            fx.dust(mushroom.x, Math.min(k * 18, 38), mushroom.z, 3, 8, 2.5);
-        } else mushroom = null;
-    }
 
     if (game.phase === 'play') {
         const bev = boss.update(dt, time, world, camera.position);
@@ -1724,7 +1771,7 @@ function frame() {
     }
     street.update(dt, time, camera.position);
     landmarks.update(dt, world);
-    fx.update(dt);
+    fx.update(dt, camera.position);
 
     if (game.phase === 'play') {
         game.lineT -= dt;
@@ -1767,9 +1814,23 @@ function frame() {
         }
     }
     streamTick(dt);
+    world.flushRoofs(coarse ? 1 : 2);
     drawBossPreview(dt);
     if (game.phase === 'start') orbit.theta += dt * 0.12;
     placeCamera(dt);
+    // 이름표는 이번 프레임 카메라로 잡아야 안 밀림
+    labels.setVisible(game.phase !== 'start');
+    if (game.phase !== 'start') {
+        camera.updateMatrixWorld();
+        // 옥상 상사와 말풍선 자리는 이름표가 가리지 않게
+        const avoid = hudRects(dt).slice();
+        if (boss.group.visible) {
+            boss.group.getWorldPosition(_bossAt);
+            const h = toScreen(_bossAt.x, _bossAt.y + 1.2, _bossAt.z);
+            if (!h.behind) avoid.push({ x0: h.x - 130, y0: h.y - 110, x1: h.x + 130, y1: h.y + 50 });
+        }
+        labels.update(dt, world, game.target, orbit.target, orbit.base * orbit.zoom * 1.8, toScreen, box.clientWidth, box.clientHeight, camera.position, avoid);
+    }
     renderer.render(scene, camera);
 }
 

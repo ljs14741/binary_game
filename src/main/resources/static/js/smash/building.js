@@ -13,6 +13,7 @@ const _dq = new THREE.Quaternion();
 const _v = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _c = new THREE.Color();
+const _glow = new THREE.Color(0xff5a14);
 
 export class VoxelBuilding {
     /**
@@ -23,6 +24,7 @@ export class VoxelBuilding {
     constructor(world, spec, pal, meta) {
         this.world = world;
         this.meta = meta;
+        this.pal = pal;
         Object.assign(this, { W: spec.W, H: spec.H, D: spec.D, ox: spec.ox, oz: spec.oz, vs: spec.vs });
         this.roofTop = spec.roofTop;
         const N = this.N = spec.count;
@@ -209,8 +211,12 @@ export class VoxelBuilding {
         if (!this.burning.size) return 0;
         let value = 0;
         this.embers.length = 0;
+        const now = performance.now() / 1000;
         for (const i of this.burning) {
             this.burn[i] -= dt;
+            // 타는 동안 벌겋게 달아 깜빡임
+            _c.setHex(this.pal.colors[this.type[i]]).lerp(_glow, 0.55 + 0.3 * Math.sin(now * 17 + i * 1.7));
+            this.mesh.setColorAt(i, _c);
             if (Math.random() < dt * 5) this.embers.push(this.pos[i * 3], this.pos[i * 3 + 1], this.pos[i * 3 + 2]);
             if (Math.random() < dt * 0.9) {
                 const x = this.gx[i], y = this.gy[i], z = this.gz[i];
@@ -235,6 +241,7 @@ export class VoxelBuilding {
                 } else this._setDynamic(i, (Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2, 2);
             }
         }
+        this.mesh.instanceColor.needsUpdate = true;
         return value;
     }
 

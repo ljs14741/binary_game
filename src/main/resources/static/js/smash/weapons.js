@@ -9,7 +9,8 @@ export const WEAPONS = [
     { id: 'bomb', icon: '✉️', cool: 0.55, hold: true, radius: 4.8, force: 22, vaporize: 0.2 },
     { id: 'flame', icon: '🔥', cool: 0.05, hold: true, radius: 2.6, force: 0 },
     { id: 'strike', icon: '💬', cool: 3.2, hold: false, radius: 4, force: 21, vaporize: 0.15 },
-    { id: 'meteor', icon: '☄️', cool: 2.2, hold: false, radius: 7.5, force: 36, vaporize: 0.35 },
+    // 미사일이 떨어져 버섯구름을 피움 (필살기의 작은 판)
+    { id: 'nuke', icon: '☢️', cool: 3.5, hold: false, radius: 9.5, force: 40, vaporize: 0.4 },
     { id: 'hole', icon: '🌀', cool: 7, hold: false, radius: 13, force: 30 },
     // 철거 현장의 쇠공: 크레인에 매달려 옆으로 휘두르며 지나가는 자리를 한 줄로 부순다
     { id: 'ball', icon: '🏗️', cool: 1.5, hold: true, radius: 3.2, force: 26 },
@@ -46,8 +47,7 @@ export class Weapons {
         const side = new THREE.MeshLambertMaterial({ color: 0xf4efe2 });
         this.bombGeo = new THREE.BoxGeometry(1.3, 0.16, 0.9);
         this.bombMats = [side, side, top, side, side, side];
-        this.meteorGeo = new THREE.DodecahedronGeometry(1.6, 0);
-        this.meteorMat = new THREE.MeshLambertMaterial({ color: 0xffb02e, emissive: 0xff6a00, emissiveIntensity: 1.2 });
+        this.missile = this._makeMissile();
         const badge = labelTexture(128, 128, (g) => {
             g.fillStyle = '#ff3b30'; g.beginPath(); g.arc(64, 64, 60, 0, Math.PI * 2); g.fill();
             g.fillStyle = '#fff'; g.font = `900 46px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('999+', 64, 68);
@@ -98,6 +98,29 @@ export class Weapons {
         g.visible = false;
         this.scene.add(g);
         this.hammer = { group: g, pivot, t: -1 };
+    }
+
+    /** 핵미사일: 흰 몸통 + 빨간 머리 + 꼬리 날개 (머리가 -y 쪽) */
+    _makeMissile() {
+        const g = new THREE.Group();
+        const white = new THREE.MeshLambertMaterial({ color: 0xf2f2ee });
+        const red = new THREE.MeshLambertMaterial({ color: 0xc8102e });
+        const yellow = new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x3a2a00 });
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 4.2, 14), white);
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.4, 14), red);
+        nose.rotation.x = Math.PI; nose.position.y = -2.8;
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.57, 0.57, 0.5, 14), yellow);
+        band.position.y = -1.2;
+        g.add(body, nose, band);
+        for (let k = 0; k < 4; k++) {
+            const fin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.2, 1.1), red);
+            fin.position.set(Math.cos(k * Math.PI / 2) * 0.6, 1.7, Math.sin(k * Math.PI / 2) * 0.6);
+            fin.rotation.y = -k * Math.PI / 2;
+            g.add(fin);
+        }
+        g.visible = false;
+        this.scene.add(g);
+        return g;
     }
 
     coolRatio(k) { return Math.max(0, this.cool[k] / WEAPONS[k].cool); }
@@ -154,16 +177,27 @@ export class Weapons {
                 const d = _v.subVectors(point, from);
                 const L = d.length();
                 d.normalize();
-                for (let i = 0; i < 3; i++) {
-                    const t = Math.random();
+                // 불줄기: 총구 쪽은 가늘고 밝게, 갈수록 굵게 퍼지며 식음
+                const n = this.fx.mobile ? 5 : 8;
+                for (let i = 0; i < n; i++) {
+                    const t = Math.pow(Math.random(), 0.7);
                     const p = _v2.copy(from).addScaledVector(d, L * t);
-                    this.fx.flame(p.x, p.y, p.z, d.x * 30, d.y * 30, d.z * 30, 0.3 + t * 1.6);
+                    const j = 0.4 + t * 2.2;
+                    this.fx.flames.spawn(p.x + (Math.random() - 0.5) * j, p.y + (Math.random() - 0.5) * j, p.z + (Math.random() - 0.5) * j,
+                        d.x * 26 + (Math.random() - 0.5) * 4, d.y * 26 + Math.random() * 3, d.z * 26 + (Math.random() - 0.5) * 4,
+                        0.5 + t * 2.4, 0.16 + Math.random() * 0.14 + t * 0.12, 0.9, Math.random(), 2.4);
                 }
+                // 맞은 자리에서 튀는 불과 검은 연기
+                for (let i = 0; i < 2; i++) this.fx.flameAt(point.x, point.y, point.z, 1.6, 1.4);
+                if (Math.random() < 0.35) this.fx.smokeAt(point.x, point.y + 1.5, point.z, 2.4, 0.5);
                 this.flameT = (this.flameT || 0) + w.cool;
                 if (this.flameT > 0.12) {
                     this.flameT = 0;
                     this.game.ignite(point, w.radius);
-                    this.fx.fire(point.x, point.y, point.z, 4, 1.4, 0.6);
+                    // 쏘고 난 뒤에도 잠깐 타오름
+                    if (!this.lastBurn || this.lastBurn.t > 0.4 || Math.hypot(this.lastBurn.x - point.x, this.lastBurn.z - point.z) > 2.5) {
+                        this.lastBurn = this.fx.burn(point.x, point.y, point.z, 1.8 + Math.random(), 0.9);
+                    }
                 }
                 sfx.flame();
                 break;
@@ -185,13 +219,19 @@ export class Weapons {
                 sfx.whoosh(1.2);
                 break;
             }
-            case 'meteor': {
-                const m = new THREE.Mesh(this.meteorGeo, this.meteorMat);
-                const from = point.clone().add(_v.set(-dir.x * 14 + 9, 60, -dir.z * 14 - 6));
+            case 'nuke': {
+                // 하늘 높이서 비스듬히 내리꽂힘. 한 번에 하나만
+                if (this.active.some(a => a.kind === 'missile')) { this.cool[k] = 0; return false; }
+                const m = this.missile;
+                const s = Math.max(1, camPos.distanceTo(point) / 45);
+                m.scale.setScalar(s);
+                const from = point.clone().add(_v.set(-dir.x * 18 + 10, 85, -dir.z * 18 - 8));
                 m.position.copy(from);
-                this.scene.add(m);
-                this.active.push({ kind: 'meteor', mesh: m, from, to: point.clone(), dir: new THREE.Vector3(0, -1, 0), t: 0, dur: 0.9 });
-                sfx.whoosh(0.9);
+                m.lookAt(point);
+                m.rotateX(-Math.PI / 2);
+                m.visible = true;
+                this.active.push({ kind: 'missile', from, to: point.clone(), dir: dir.clone(), t: 0, dur: 1.15, s });
+                sfx.whoosh(1.2);
                 break;
             }
             case 'ball': {
@@ -300,20 +340,18 @@ export class Weapons {
                     this.game.shake(0.35);
                     this.game.hit(a.to, WEAPONS[4], a.dir);
                 }
-            } else if (a.kind === 'meteor') {
+            } else if (a.kind === 'missile') {
                 const e = Math.min(1, a.t / a.dur);
-                a.mesh.position.lerpVectors(a.from, a.to, e * e);
-                a.mesh.rotation.x += dt * 6; a.mesh.rotation.z += dt * 4;
-                const p = a.mesh.position;
-                this.fx.fire(p.x, p.y, p.z, 3, 1.6, 0.6);
+                const m = this.missile;
+                m.position.lerpVectors(a.from, a.to, e * e);
+                // 꼬리 불꽃과 하얀 연기 줄
+                _v.subVectors(a.from, a.to).normalize().multiplyScalar(2.6 * a.s).add(m.position);
+                this.fx.flames.spawn(_v.x, _v.y, _v.z, 0, 0, 0, 1.6 * a.s, 0.22, 0.9, Math.random(), 0.2);
+                this.fx.smoke.spawn(_v.x, _v.y, _v.z, (Math.random() - 0.5), 0.3, (Math.random() - 0.5), 1.8 * a.s, 1.6, 0.45, 0.78, 0.9);
                 if (e >= 1) {
-                    this._remove(i, a);
-                    this.fx.blast(a.to.x, a.to.y, a.to.z, WEAPONS[5].radius * 1.2, 0xffd060);
-                    this.fx.ring(a.to.x, Math.min(a.to.y, 1), a.to.z, 22, 0xfff0c0);
-                    this.fx.dust(a.to.x, a.to.y, a.to.z, 30, 7, 2.5);
-                    sfx.boom(true);
-                    this.game.shake(0.9);
-                    this.game.hit(a.to, WEAPONS[5], a.dir);
+                    m.visible = false;
+                    this.active.splice(i, 1);
+                    this.game.miniNuke(a.to, a.dir);
                 }
             } else if (a.kind === 'hole') {
                 const e = a.t / a.dur;
@@ -378,5 +416,6 @@ export class Weapons {
         this.hammer.group.visible = false;
         this.hole.visible = false;
         this.ball.visible = this.chain.visible = false;
+        this.missile.visible = false;
     }
 }

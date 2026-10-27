@@ -543,3 +543,19 @@
 .smash-start-card .smash-result b { font-size: 14.5px; }
 .smash-start-card .smash-result small { margin-top: 1px; }
 .smash-lead-2 { display: block; margin-top: .45rem; }
+
+/* ── 건물 이름표 (labels.js): 지붕 위 꼬리표 ── */
+.smash-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.smash-tags[hidden] { display: none; }
+.smash-tag {
+  position: absolute; left: 0; top: 0; padding: 3px 8px 4px; border-radius: 6px; white-space: nowrap;
+  background: rgba(22, 26, 33, .84); color: #fff; font-size: 12px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.25;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .28); will-change: transform;
+}
+.smash-tag::after {
+  content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px;
+  border: 5px solid transparent; border-bottom: 0; border-top-color: rgba(22, 26, 33, .84);
+}
+.smash-tag.main { background: #d8333a; font-size: 13.5px; padding: 4px 10px 5px; z-index: 1; }
+.smash-tag.main::after { border-top-color: #d8333a; }
+@media (max-width: 480px) { .smash-tag { font-size: 11px; padding: 2px 6px 3px; } .smash-tag.main { font-size: 12px; } }

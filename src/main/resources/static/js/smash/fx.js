@@ -24,13 +24,308 @@ function paperTexture() {
     return t;
 }
 
+/** 부드러운 덩어리 무늬 (불·연기 공용). 가운데가 진하고 가장자리가 울퉁불퉁 */
+function puffTexture() {
+    const S = 64, c = document.createElement('canvas');
+    c.width = c.height = S;
+    const g = c.getContext('2d');
+    for (let k = 0; k < 7; k++) {
+        const a = Math.random() * Math.PI * 2, r = k ? 6 + Math.random() * 9 : 0;
+        const x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r, R = k ? 12 + Math.random() * 8 : 26;
+        const gr = g.createRadialGradient(x, y, 0, x, y, R);
+        gr.addColorStop(0, 'rgba(255,255,255,' + (k ? 0.55 : 0.9) + ')');
+        gr.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, S, S);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.NoColorSpace;
+    return t;
+}
+
+/**
+ * 불꽃·연기 입자 한 층. fire: 더해 그리기(빛남) + 나이에 따라 흰빛→주황→빨강으로 식음.
+ * smoke: 보통 그리기, 어두운 회색이 커지며 옅어짐
+ */
+class PuffLayer {
+    constructor(scene, max, tex, fire) {
+        this.max = max; this.fire = fire; this.next = 0;
+        this.pos = new Float32Array(max * 3); this.vel = new Float32Array(max * 3);
+        this.size = new Float32Array(max); this.grow = new Float32Array(max);
+        this.life = new Float32Array(max); this.maxLife = new Float32Array(max);
+        this.age = new Float32Array(max); this.alpha = new Float32Array(max);
+        this.rot = new Float32Array(max); this.shade = new Float32Array(max);
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aAge', new THREE.BufferAttribute(this.age, 1).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aRot', new THREE.BufferAttribute(this.rot, 1).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aShade', new THREE.BufferAttribute(this.shade, 1).setUsage(THREE.DynamicDrawUsage));
+        this.mat = new THREE.ShaderMaterial({
+            uniforms: { uScale: { value: 400 }, map: { value: tex } },
+            vertexShader: `
+                attribute float aSize; attribute float aAge; attribute float aAlpha; attribute float aRot; attribute float aShade;
+                uniform float uScale;
+                varying float vAge; varying float vA; varying float vR; varying float vS;
+                void main() {
+                    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                    gl_PointSize = aSize * uScale / max(-mv.z, 0.1);
+                    gl_Position = projectionMatrix * mv;
+                    vAge = aAge; vA = aAlpha; vR = aRot; vS = aShade;
+                }`,
+            fragmentShader: fire ? `
+                uniform sampler2D map;
+                varying float vAge; varying float vA; varying float vR; varying float vS;
+                void main() {
+                    vec2 c = gl_PointCoord - 0.5;
+                    float s = sin(vR), k = cos(vR);
+                    c = mat2(k, -s, s, k) * c;
+                    float t = texture2D(map, c + 0.5).a;
+                    vec3 col = mix(vec3(1.0, 0.93, 0.7), vec3(1.0, 0.52, 0.1), smoothstep(0.0, 0.35, vAge));
+                    col = mix(col, vec3(0.8, 0.16, 0.03), smoothstep(0.35, 0.85, vAge));
+                    float a = t * vA * (1.0 - smoothstep(0.55, 1.0, vAge));
+                    gl_FragColor = vec4(col * (0.75 + 0.5 * vS), a);
+                }` : `
+                uniform sampler2D map;
+                varying float vAge; varying float vA; varying float vR; varying float vS;
+                void main() {
+                    vec2 c = gl_PointCoord - 0.5;
+                    float s = sin(vR), k = cos(vR);
+                    c = mat2(k, -s, s, k) * c;
+                    float t = texture2D(map, c + 0.5).a;
+                    float a = t * vA * smoothstep(0.0, 0.12, vAge) * (1.0 - smoothstep(0.45, 1.0, vAge));
+                    // shade 가 1 보다 크면 불빛을 받아 주황으로 달아오른 연기 (버섯구름 갓)
+                    vec3 col = vS > 1.0 ? mix(vec3(0.42, 0.38, 0.36), vec3(1.0, 0.55, 0.22), min(1.0, vS - 1.0) * (1.0 - vAge)) : vec3(vS);
+                    gl_FragColor = vec4(col, a);
+                }`,
+            transparent: true,
+            depthWrite: false,
+            blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending,
+        });
+        this.points = new THREE.Points(geo, this.mat);
+        this.points.frustumCulled = false;
+        this.points.renderOrder = fire ? 4 : 3;
+        scene.add(this.points);
+        this.live = 0;
+    }
+
+    spawn(x, y, z, vx, vy, vz, size, life, alpha = 1, shade = 0.5, grow = 1) {
+        const i = this.next;
+        this.next = (i + 1) % this.max;
+        const i3 = i * 3;
+        this.pos[i3] = x; this.pos[i3 + 1] = y; this.pos[i3 + 2] = z;
+        this.vel[i3] = vx; this.vel[i3 + 1] = vy; this.vel[i3 + 2] = vz;
+        this.size[i] = size; this.grow[i] = size * grow;
+        this.life[i] = life; this.maxLife[i] = life;
+        this.alpha[i] = alpha; this.shade[i] = shade;
+        this.rot[i] = Math.random() * 6.28;
+        this.age[i] = 0;
+    }
+
+    update(dt, time) {
+        const buoy = this.fire ? 7 : 2.2, drag = this.fire ? 2.2 : 0.9;
+        let live = 0;
+        for (let i = 0; i < this.max; i++) {
+            if (this.life[i] <= 0) { if (this.age[i] < 1) { this.age[i] = 1; this.size[i] = 0; } continue; }
+            live++;
+            this.life[i] -= dt;
+            const i3 = i * 3;
+            const v = this.vel;
+            // 위로 뜨고, 살짝 흔들리며 퍼짐
+            v[i3] = v[i3] * (1 - drag * dt) + Math.sin(time * 3 + i) * 1.2 * dt;
+            v[i3 + 2] = v[i3 + 2] * (1 - drag * dt) + Math.cos(time * 2.6 + i * 1.7) * 1.2 * dt;
+            v[i3 + 1] = v[i3 + 1] * (1 - drag * dt) + buoy * dt;
+            this.pos[i3] += v[i3] * dt; this.pos[i3 + 1] += v[i3 + 1] * dt; this.pos[i3 + 2] += v[i3 + 2] * dt;
+            this.size[i] += this.grow[i] * dt;
+            this.rot[i] += (i % 2 ? 0.8 : -0.8) * dt;
+            this.age[i] = 1 - Math.max(0, this.life[i]) / this.maxLife[i];
+        }
+        this.live = live;
+        const a = this.points.geometry.attributes;
+        a.position.needsUpdate = a.aSize.needsUpdate = a.aAge.needsUpdate = a.aAlpha.needsUpdate = a.aRot.needsUpdate = a.aShade.needsUpdate = true;
+    }
+}
+
 export class FX {
-    constructor(scene) {
+    constructor(scene, opts = {}) {
         this.scene = scene;
+        this.mobile = !!opts.mobile;
+        this.time = 0;
         this._initDust();
         this._initPapers();
         this._initShards();
         this._initBlasts();
+        const tex = puffTexture();
+        this.flames = new PuffLayer(scene, this.mobile ? 700 : 1400, tex, true);
+        this.smoke = new PuffLayer(scene, this.mobile ? 380 : 800, tex, false);
+        this.burns = [];
+        this.clouds = [];
+        // 타는 자리를 비추는 일렁이는 불빛 (빛 개수가 바뀌면 셰이더를 다시 만드니 처음부터 하나 둠). 폰은 빛 하나가 화면 전체를 무겁게 해서 뺌
+        this.fireLight = null;
+        if (!this.mobile) {
+            this.fireLight = new THREE.PointLight(0xff7a2a, 0, 40, 1.6);
+            scene.add(this.fireLight);
+        }
+    }
+
+    /** 불꽃 한 줌 (빛나는 불 + 가끔 연기) */
+    flameAt(x, y, z, size = 1.4, power = 1) {
+        this.flames.spawn(x + (Math.random() - 0.5) * size, y + (Math.random() - 0.5) * size * 0.5, z + (Math.random() - 0.5) * size,
+            (Math.random() - 0.5) * 2 * power, (1 + Math.random() * 2.5) * power, (Math.random() - 0.5) * 2 * power,
+            size * (0.9 + Math.random() * 0.6), 0.45 + Math.random() * 0.4, 0.75, Math.random(), 0.4);
+        if (Math.random() < 0.18) this.smokeAt(x, y + size, z, size * 1.6);
+    }
+
+    smokeAt(x, y, z, size = 2, alpha = 0.55) {
+        this.smoke.spawn(x + (Math.random() - 0.5) * size * 0.5, y, z + (Math.random() - 0.5) * size * 0.5,
+            (Math.random() - 0.5) * 1.5, 1.5 + Math.random() * 2, (Math.random() - 0.5) * 1.5,
+            size * (0.8 + Math.random() * 0.5), 2.2 + Math.random() * 1.6, alpha, 0.14 + Math.random() * 0.16, 0.9);
+    }
+
+    /**
+     * 한동안 계속 타는 자리 (나무·차·무너진 자리). dur 초 동안 불과 연기를 내고, 끝나면 연기만 조금 더.
+     * @returns 타는 자리 (위치를 옮기려면 x,y,z 를 바꾸면 됨)
+     */
+    burn(x, y, z, dur = 4, scale = 1) {
+        if (this.burns.length >= (this.mobile ? 24 : 48)) this.burns.shift();
+        const b = { x, y, z, t: 0, dur, scale, acc: 0, sacc: 0 };
+        this.burns.push(b);
+        return b;
+    }
+
+    /**
+     * 버섯구름. 불덩이가 부풀었다 식으며 떠오르고, 기둥과 갓 모양 연기가 피어오름. scale 1 = 핵폭탄, 2 = 필살기
+     */
+    mushroom(x, y, z, scale = 1) {
+        if (this.clouds.length >= 3) this.clouds.shift().ball.visible = false;
+        const ball = this._fireball();
+        ball.position.set(x, Math.max(y, 1), z);
+        ball.scale.setScalar(0.1);
+        ball.visible = true;
+        this.clouds.push({ x, y: Math.max(y, 0.5), z, s: scale, t: 0, ball, acc: 0 });
+        this.ring(x, 0.3, z, 30 * scale, 0xffffff);
+        this.ring(x, 0.3, z, 18 * scale, 0xffb347);
+        // 땅을 쓸고 나가는 먼지 고리
+        const n = Math.round((this.mobile ? 26 : 48) * scale);
+        for (let k = 0; k < n; k++) {
+            const a = k / n * Math.PI * 2 + Math.random() * 0.2, v = (14 + Math.random() * 10) * scale;
+            this.smoke.spawn(x + Math.cos(a) * 2, 0.8, z + Math.sin(a) * 2, Math.cos(a) * v, 0.5 + Math.random(), Math.sin(a) * v,
+                (3 + Math.random() * 3) * scale, 2.6 + Math.random() * 1.4, 0.6, 0.55 + Math.random() * 0.15, 0.7);
+        }
+        this.light.position.set(x, y + 8 * scale, z);
+        this.light.intensity = 900 * scale;
+        this.light.distance = 160 * scale;
+        this.lightT = 1.6;
+    }
+
+    _fireball() {
+        const free = this._balls && this._balls.find(m => !m.visible);
+        if (free) return free;
+        if (!this._balls) this._balls = [];
+        const m = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 18), new THREE.ShaderMaterial({
+            uniforms: { uT: { value: 0 }, uHeat: { value: 1 }, uFade: { value: 1 } },
+            vertexShader: `
+                varying vec3 vP; varying vec3 vN; varying vec3 vV;
+                void main() {
+                    vP = position; vN = normalize(normalMatrix * normal);
+                    vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = normalize(-mv.xyz);
+                    gl_Position = projectionMatrix * mv;
+                }`,
+            fragmentShader: `
+                uniform float uT; uniform float uHeat; uniform float uFade;
+                varying vec3 vP; varying vec3 vN; varying vec3 vV;
+                float h(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+                float n3(vec3 p) {
+                    vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+                    return mix(mix(mix(h(i), h(i + vec3(1,0,0)), f.x), mix(h(i + vec3(0,1,0)), h(i + vec3(1,1,0)), f.x), f.y),
+                               mix(mix(h(i + vec3(0,0,1)), h(i + vec3(1,0,1)), f.x), mix(h(i + vec3(0,1,1)), h(i + vec3(1,1,1)), f.x), f.y), f.z);
+                }
+                void main() {
+                    vec3 p = vP * 2.5 + vec3(0.0, -uT * 1.6, 0.0);
+                    float n = n3(p) * 0.55 + n3(p * 2.1) * 0.3 + n3(p * 4.3) * 0.15;
+                    float rim = 1.0 - abs(dot(vN, vV));
+                    float heat = clamp(uHeat * (1.25 - rim * 0.9) + (n - 0.5) * 0.6, 0.0, 1.0);
+                    vec3 col = mix(vec3(0.16, 0.12, 0.11), vec3(0.85, 0.25, 0.05), smoothstep(0.1, 0.45, heat));
+                    col = mix(col, vec3(1.0, 0.72, 0.25), smoothstep(0.45, 0.75, heat));
+                    col = mix(col, vec3(1.0, 0.97, 0.85), smoothstep(0.78, 1.0, heat));
+                    // 식은 부분은 투명해져 연기에 묻힘 (공처럼 떠 있지 않게), 가장자리는 부드럽게
+                    float a = uFade * smoothstep(0.0, 0.3, uHeat) * smoothstep(0.12, 0.45, heat) * (1.0 - smoothstep(0.45, 0.95, rim));
+                    gl_FragColor = vec4(col, a);
+                }`,
+            transparent: true,
+            depthWrite: false,
+        }));
+        m.renderOrder = 3;
+        this.scene.add(m);
+        this._balls.push(m);
+        return m;
+    }
+
+    _stepBurns(dt, cam) {
+        let best = null, bd = Infinity;
+        for (let i = this.burns.length - 1; i >= 0; i--) {
+            const b = this.burns[i];
+            b.t += dt;
+            const smokeOnly = b.t > b.dur;
+            if (b.t > b.dur + 5) { this.burns.splice(i, 1); continue; }
+            // 타오르다 끝물엔 사그라듦
+            const k = smokeOnly ? 0 : Math.min(1, b.t * 3) * (b.t > b.dur - 1 ? Math.max(0.2, b.dur - b.t) : 1);
+            b.acc += dt * k * (this.mobile ? 16 : 30) * b.scale;
+            while (b.acc >= 1) { b.acc -= 1; this.flameAt(b.x, b.y, b.z, 1.1 * b.scale, 0.9); }
+            b.sacc += dt * (smokeOnly ? 1.5 : 4) * b.scale;
+            while (b.sacc >= 1) { b.sacc -= 1; this.smokeAt(b.x, b.y + 1.5 * b.scale, b.z, 2.2 * b.scale, smokeOnly ? 0.35 : 0.5); }
+            if (!smokeOnly && cam) {
+                const d = Math.hypot(b.x - cam.x, b.z - cam.z) - b.scale * 20;
+                if (d < bd) { bd = d; best = b; }
+            }
+        }
+        // 카메라에서 가까운 큰 불 하나를 일렁이는 불빛으로
+        if (!this.fireLight) return;
+        if (best) {
+            this.fireLight.position.set(best.x, best.y + 1.5, best.z);
+            this.fireLight.intensity = (40 + Math.sin(this.time * 23) * 10 + Math.sin(this.time * 37) * 8) * Math.min(2, best.scale);
+        } else this.fireLight.intensity *= Math.pow(0.02, dt);
+    }
+
+    _stepClouds(dt) {
+        for (let i = this.clouds.length - 1; i >= 0; i--) {
+            const c = this.clouds[i], s = c.s;
+            c.t += dt;
+            const t = c.t;
+            const top = c.y + Math.min(1, t / 4) * 42 * s;
+            // 불덩이: 순식간에 부풀었다가 갓 높이로 떠오르며 식음
+            const R = (t < 0.5 ? 1 - Math.pow(1 - t / 0.5, 3) : 1 + (t - 0.5) * 0.12) * 11 * s;
+            c.ball.scale.set(R, R * (t < 1 ? 1 : 0.8), R);
+            c.ball.position.set(c.x, t < 0.4 ? c.y + R * 0.3 : c.y + R * 0.3 + (top - c.y - R * 0.3) * Math.min(1, (t - 0.4) / 3), c.z);
+            const u = c.ball.material.uniforms;
+            u.uT.value = t;
+            u.uHeat.value = Math.max(0, 1.2 - t * 0.38);
+            u.uFade.value = t < 1.5 ? 1 : Math.max(0, 1 - (t - 1.5) / 2);
+            if (u.uFade.value <= 0) c.ball.visible = false;
+            // 기둥과 갓
+            c.acc += dt * (this.mobile ? 26 : 50);
+            while (c.acc >= 1 && t < 6.5) {
+                c.acc -= 1;
+                const capY = c.ball.position.y;
+                if (Math.random() < 0.4) {
+                    const y = c.y + Math.random() * (capY - c.y);
+                    const rr = (1.5 + (y - c.y) / Math.max(1, capY - c.y) * 1.5) * s;
+                    this.smoke.spawn(c.x + (Math.random() - 0.5) * rr, y, c.z + (Math.random() - 0.5) * rr, 0, 3 * s, 0,
+                        (3.2 + Math.random() * 2) * s, 2.2 + Math.random(), 0.7, t < 1.5 ? 1.5 : 0.5 + Math.random() * 0.15, 0.5);
+                    if (t < 2.2) this.flames.spawn(c.x + (Math.random() - 0.5) * rr, y, c.z + (Math.random() - 0.5) * rr, 0, 4 * s, 0, 3 * s, 0.6, 0.6, Math.random(), 0.3);
+                } else {
+                    // 갓: 도넛 모양으로 말려 나감
+                    const a = Math.random() * Math.PI * 2, rr = R * (0.7 + Math.random() * 0.5);
+                    this.smoke.spawn(c.x + Math.cos(a) * rr, capY + (Math.random() - 0.3) * R * 0.5, c.z + Math.sin(a) * rr,
+                        Math.cos(a) * 3 * s, (Math.random() - 0.2) * 3 * s, Math.sin(a) * 3 * s,
+                        (5 + Math.random() * 4) * s, 2.6 + Math.random() * 1.6, 0.75, t < 3 ? 1 + (1 - t / 3) : 0.58 + Math.random() * 0.14, 0.45);
+                    if (t < 2.5 && Math.random() < 0.5) this.flames.spawn(c.x + Math.cos(a) * rr * 0.6, capY, c.z + Math.sin(a) * rr * 0.6,
+                        Math.cos(a) * 2 * s, 1 * s, Math.sin(a) * 2 * s, 4.5 * s, 0.7, 0.65, Math.random(), 0.3);
+                }
+            }
+            if (t > 9) { c.ball.visible = false; this.clouds.splice(i, 1); }
+        }
     }
 
     _initDust() {
@@ -79,7 +374,9 @@ export class FX {
     }
 
     setScale(viewportHeightPx, fovDeg) {
-        this.dustMat.uniforms.uScale.value = viewportHeightPx / (2 * Math.tan(fovDeg * Math.PI / 360));
+        const k = viewportHeightPx / (2 * Math.tan(fovDeg * Math.PI / 360));
+        this.dustMat.uniforms.uScale.value = k;
+        if (this.flames) { this.flames.mat.uniforms.uScale.value = k; this.smoke.mat.uniforms.uScale.value = k; }
     }
 
     _spawnDust(x, y, z, vx, vy, vz, size, life, r, g, b, fire = 0) {
@@ -106,10 +403,11 @@ export class FX {
 
     fire(x, y, z, n = 10, spread = 1, power = 1) {
         for (let k = 0; k < n; k++) {
-            this._spawnDust(
+            this.flames.spawn(
                 x + (Math.random() - 0.5) * spread, y + (Math.random() - 0.5) * spread, z + (Math.random() - 0.5) * spread,
                 (Math.random() - 0.5) * 8 * power, Math.random() * 6 * power, (Math.random() - 0.5) * 8 * power,
-                2 + Math.random() * 2.5 * power, 0.5 + Math.random() * 0.6, 1, 0.65 + Math.random() * 0.25, 0.2, 1);
+                2 + Math.random() * 2.5 * power, 0.45 + Math.random() * 0.5, 0.8, Math.random(), 0.6);
+            if (Math.random() < 0.25) this.smokeAt(x, y + spread * 0.5, z, 1.5 + spread);
         }
     }
 
@@ -121,8 +419,8 @@ export class FX {
     }
 
     flame(x, y, z, vx, vy, vz, size) {
-        this._spawnDust(x, y, z, vx + (Math.random() - 0.5) * 3, vy + Math.random() * 2, vz + (Math.random() - 0.5) * 3,
-            size, 0.3 + Math.random() * 0.25, 1, 0.55 + Math.random() * 0.3, 0.15, 1);
+        this.flames.spawn(x, y, z, vx + (Math.random() - 0.5) * 3, vy + Math.random() * 2, vz + (Math.random() - 0.5) * 3,
+            size, 0.28 + Math.random() * 0.22, 0.85, Math.random(), 1.6);
     }
 
     swirl(x, y, z, r, n) {
@@ -230,13 +528,19 @@ export class FX {
         b.mesh.visible = true;
         b.t = 0; b.dur = 0.38; b.r = r;
         this.light.position.set(x, y + 1, z);
+        this.light.distance = 80;
         this.light.intensity = 60 * r;
         this.lightT = 0.35;
         this.fire(x, y, z, Math.round(10 + r * 6), r * 0.5, r / 3);
         this.dust(x, y, z, Math.round(8 + r * 4), r, r / 3);
     }
 
-    update(dt) {
+    update(dt, cam) {
+        this.time += dt;
+        this._stepBurns(dt, cam);
+        this._stepClouds(dt);
+        this.flames.update(dt, this.time);
+        this.smoke.update(dt, this.time);
         // 먼지·불
         for (let i = 0; i < DUST_MAX; i++) {
             if (this.dLife[i] <= 0) { this.dAlpha[i] = 0; continue; }

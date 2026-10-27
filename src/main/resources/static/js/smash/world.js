@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Ground } from './ground.js';
 import { VoxelBuilding } from './building.js';
-import { voxelize, palette, polygonArea, pointInPolygon, distToPolygon, STYLE, styleOf } from './voxelize.js';
+import { voxelize, palette, polygonArea, pointInPolygon, distToPolygon, STYLE, styleOf, TYPE } from './voxelize.js';
 
 // 1칸 = 1.6m. 층 높이 3.2m = 2칸이라 블록 두 줄이 한 층이 된다.
 export const UNIT_M = 1.6;
@@ -78,19 +78,41 @@ attribute float aStyle;
 varying vec3 vWall;
 varying vec3 vGlass;
 varying vec3 vBand;
-varying float vStyle;`)
+varying float vStyle;
+varying float vY;
+varying float vUp;`)
             .replace('#include <begin_vertex>', `#include <begin_vertex>
-vWall = aWall; vGlass = aGlass; vBand = aBand; vStyle = aStyle;`);
+vWall = aWall; vGlass = aGlass; vBand = aBand; vStyle = aStyle; vY = position.y; vUp = normal.y;`);
         // 줄 하나가 한 겉모습: 세로 좌표를 한 층 안에서 되풀이(fract)한 뒤 그 줄로 옮긴다 (캔버스 위가 v=1)
         sh.fragmentShader = sh.fragmentShader
             .replace('#include <common>', `#include <common>
 varying vec3 vWall;
 varying vec3 vGlass;
 varying vec3 vBand;
-varying float vStyle;`)
+varying float vStyle;
+varying float vY;
+varying float vUp;`)
             .replace('#include <map_fragment>', `vec2 fuv = vec2(vMapUv.x, (clamp(fract(vMapUv.y), 0.01, 0.99) + (4.0 - vStyle)) / 5.0);
 vec4 tx = texture2D(map, fuv);
-diffuseColor.rgb = mix(mix(vWall, vBand, tx.g), vGlass, tx.r) * (0.8 + 0.2 * tx.b);`);
+float fl = floor(vMapUv.y);
+// 창마다 블라인드·반사가 달라 보이게 밝기를 조금씩
+float cell = floor(vMapUv.x * 4.0) * 7.31 + fl * 13.7;
+vec3 gl = vGlass * (0.92 + 0.3 * fract(sin(cell) * 43758.5453));
+vec3 col = mix(mix(vWall, vBand, tx.g), gl, tx.r) * (0.8 + 0.2 * tx.b);
+if (vUp < 0.5) {
+    // 1층: 오피스·상가는 띠 없이 통유리 로비 + 돌기둥, 위쪽에 어두운 차양
+    if (fl < 0.5 && (vStyle < 0.5 || abs(vStyle - 2.0) < 0.5)) {
+        float fx = fract(vMapUv.x * 2.0), fy = fract(vMapUv.y);
+        col = fx < 0.1 ? vWall * 0.72 : vGlass * 0.5 + vec3(0.05, 0.045, 0.035);
+        if (fy > 0.82) col = vec3(0.2, 0.21, 0.23);
+    }
+    // 유리에 하늘이 비침 (비스듬히 볼수록 많이)
+    float fr = pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0);
+    col = mix(col, vec3(0.74, 0.83, 0.93), tx.r * (0.08 + fr * 0.5));
+    // 땅에 닿는 쪽은 살짝 어둡게 (모서리 그림자 흉내)
+    col *= mix(0.7, 1.0, smoothstep(0.0, 3.5, vY));
+}
+diffuseColor.rgb = col;`);
     };
     return mat;
 }
@@ -219,6 +241,7 @@ export class World {
             return { ...p, x, z };
         });
         if (rebuild) this._addToChunks(newB);
+        this.roofsForNew();
         return { buildings: newB, roads, pois };
     }
 
@@ -598,7 +621,72 @@ export class World {
                 mat.map = tex;
                 mat.needsUpdate = true;
                 mesh.visible = true;
+                mesh.userData.roof = this._roofData(tex.image, west, east, north, south);
+                this._applyRoofs(mesh.userData.roof);
             }, undefined, () => { /* 사진이 없는 조각은 바탕 땅이 보인다 */ });
+        }
+    }
+
+    /**
+     * 항공사진에서 지붕 색을 따옴. 건물 가운데 몇 군데를 평균 내고, 너무 튀지 않게 기본 회색과 조금 섞음.
+     * 바뀐 청크는 한꺼번에 다시 만들면 끊기니 flushRoofs 가 프레임마다 몇 개씩 처리
+     */
+    _roofData(img, west, east, north, south) {
+        if (!img || !img.width) return null;
+        const N = 128;
+        if (!this._roofCv) { this._roofCv = document.createElement('canvas'); this._roofCv.width = this._roofCv.height = N; }
+        const g = this._roofCv.getContext('2d', { willReadFrequently: true });
+        try {
+            g.drawImage(img, 0, 0, N, N);
+            return { data: g.getImageData(0, 0, N, N).data, N, west, east, north, south };
+        } catch (e) { return null; }
+    }
+
+    /** 이미 받아 둔 항공사진 조각들로 새로 생긴 건물 지붕도 칠함 */
+    roofsForNew() {
+        for (const m of this.sat.values()) if (m.userData.roof) this._applyRoofs(m.userData.roof);
+    }
+
+    _applyRoofs(sat) {
+        if (!sat) return;
+        const { data, N, west, east, north, south } = sat;
+        const px = (x, z) => {
+            const i = Math.floor((x - west) / (east - west) * N), j = Math.floor((z - north) / (south - north) * N);
+            if (i < 0 || j < 0 || i >= N || j >= N) return null;
+            const k = (j * N + i) * 4;
+            return [data[k], data[k + 1], data[k + 2]];
+        };
+        const c = new THREE.Color(), base = new THREE.Color();
+        for (const b of this.buildings) {
+            if (b.roofDone || b.cx < west || b.cx > east || b.cz < north || b.cz > south) continue;
+            const bb = b.bbox;
+            let r = 0, gg = 0, bl = 0, n = 0;
+            for (const [fx, fz] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) {
+                const x = bb.minx + (bb.maxx - bb.minx) * fx, z = bb.minz + (bb.maxz - bb.minz) * fz;
+                if (!pointInPolygon(x, z, b.poly)) continue;
+                const p = px(x, z);
+                if (p) { r += p[0]; gg += p[1]; bl += p[2]; n++; }
+            }
+            if (!n) continue;
+            b.roofDone = true;
+            c.setRGB(r / n / 255, gg / n / 255, bl / n / 255, THREE.SRGBColorSpace);
+            const hsl = {};
+            c.getHSL(hsl);
+            c.setHSL(hsl.h, hsl.s * 0.8, Math.min(0.78, Math.max(0.28, hsl.l)));
+            base.setHex(b.pal.roof);
+            c.lerp(base, 0.25);
+            b.pal.roof = b.pal.colors[TYPE.ROOF] = c.getHex();
+            if (b.state === 'intact' && b.chunk) (this._roofDirty || (this._roofDirty = new Set())).add(b.chunk);
+        }
+    }
+
+    /** 지붕 색이 바뀐 청크를 n 개까지 다시 만듦 (매 프레임) */
+    flushRoofs(n = 2) {
+        if (!this._roofDirty || !this._roofDirty.size) return;
+        for (const key of this._roofDirty) {
+            this._roofDirty.delete(key);
+            if (this.chunks.has(key)) this._rebuildChunk(key);
+            if (--n <= 0) break;
         }
     }
 

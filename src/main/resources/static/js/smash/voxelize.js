@@ -49,8 +49,9 @@ function hash(s) {
     return h >>> 0;
 }
 
-const WALLS = [0xefe9de, 0xdedad2, 0xd2c3a8, 0xb9785e, 0xf2f2ef, 0xa9b4c0, 0xe6dccb, 0xc9ccd1];
-const GLASS = [0x5b8fc4, 0x4a7fa8, 0x6aa0c8, 0x3f6f8f, 0x5d7f9a];
+// 실제 도시처럼 채도 낮은 색 위주 (흰·회색·베이지 외벽, 회청색 유리)
+const WALLS = [0xe9e5dc, 0xd9d6cf, 0xcfc2ab, 0xa9705a, 0xefefec, 0xa7aeb5, 0xdfd6c6, 0xc4c6c8];
+const GLASS = [0x587a94, 0x4a6a82, 0x6a889c, 0x3f5d70, 0x5d7486];
 const ROOFS = [0x8f8c86, 0x7d8189, 0x9a958c, 0x6f747c];
 
 /** 겉모습 종류. 외벽 텍스처 줄 번호와 블록 무늬가 이 순서를 같이 쓴다 */
@@ -78,9 +79,10 @@ export function palette(id, style) {
     let wall = WALLS[h % WALLS.length];
     let band = [0x6f7a88, 0x8b8378, 0x7a6f66, 0x5d6670][(h >>> 8) % 4];
     if (style === STYLE.OFFICE) {
-        glass = [0x3f6f8f, 0x4a7fa8, 0x2f5f7a, 0x6a8fa8, 0x3b5f6e][h % 5];
-        wall = [0xd6dde4, 0xc3ccd6, 0xe4e7ea, 0xaab6c3][h % 4];
-        band = 0x4a5562;
+        // 짙은 회청·청록·은회색 커튼월, 외벽은 밝은 회색이나 어두운 화강석
+        glass = [0x3d5566, 0x55707f, 0x6f8796, 0x2f4a55, 0x4d6a80, 0x7a8b96, 0x344652][h % 7];
+        wall = [0xd3d8dc, 0xbfc5cb, 0xe2e4e6, 0x8e959c, 0x5f6469][h % 5];
+        band = [0x4a5562, 0x3a4048, 0x7a838c][(h >>> 8) % 3];
     } else if (style === STYLE.APART) {
         wall = APART_WALLS[h % APART_WALLS.length];
         glass = 0x52606d;

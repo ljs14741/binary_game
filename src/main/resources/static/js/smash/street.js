@@ -9,6 +9,7 @@ const _v = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _e = new THREE.Euler();
 const _c = new THREE.Color();
+const EMBER = new THREE.Color(0xe0581c), CHAR = new THREE.Color(0x1d1a17);
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** 인덱스 없는 지오메트리 여러 개를 하나로 (position·normal 만) */
@@ -362,7 +363,7 @@ export class Street {
         let n = 0;
         for (const t of this.trees) {
             if (t.state === 3 || t.burn > 0 || t.burnt) continue;
-            if (Math.hypot(t.p.x - p.x, t.p.z - p.z) < r + 1 && p.y < 5 + r) { t.burn = 2.5 + Math.random() * 2; n++; }
+            if (Math.hypot(t.p.x - p.x, t.p.z - p.z) < r + 1 && p.y < 5 + r) { this._lightTree(t); n++; }
         }
         for (const c of this.cars) {
             if (Math.hypot(c.p.x - p.x, c.p.z - p.z) < r + 1.2 && Math.abs(c.p.y - p.y) < r + 1.5) {
@@ -376,6 +377,12 @@ export class Street {
             }
         }
         return n;
+    }
+
+    /** 나무에 불: 몇 초 활활 타면서 까맣게 그을리고 옆 나무로 번짐 */
+    _lightTree(t) {
+        t.burn = t.burnMax = 4 + Math.random() * 2.5;
+        this.fx.burn(t.p.x, 2.1 * t.s, t.p.z, t.burn, 1.15 * t.s);
     }
 
     pull(p, r, strength, dt) {
@@ -461,7 +468,13 @@ export class Street {
             }
             if (t.burn > 0) {
                 t.burn -= dt;
-                if (Math.random() < dt * 10) this.fx.fire(t.p.x, 2.3 * t.s, t.p.z, 1, 1, 0.5);
+                // 옆 나무로 옮겨붙음
+                if (Math.random() < dt * 0.7) {
+                    for (const o of this.trees) {
+                        if (o === t || o.burn > 0 || o.burnt || o.state === 3) continue;
+                        if (Math.abs(o.p.x - t.p.x) < 5 && Math.abs(o.p.z - t.p.z) < 5) { this._lightTree(o); break; }
+                    }
+                }
                 if (t.burn <= 0) { t.burnt = true; this._topple(t, { x: t.p.x + Math.random() - 0.5, z: t.p.z + Math.random() - 0.5 }, 4); }
             }
         }
@@ -544,8 +557,12 @@ export class Street {
             if (t.state === 3) continue;
             _m.compose(t.p, t.q, _s.setScalar(t.s));
             this.trunks.setMatrixAt(n, _m); this.leaves.setMatrixAt(n, _m);
-            _c.setHex(t.burnt ? 0x2b2622 : t.leaf);
-            if (t.burn > 0) _c.lerp(_v.set(0.3, 0.1, 0.05), 0.5);
+            _c.setHex(t.burnt ? 0x1d1a17 : t.leaf);
+            if (t.burn > 0) {
+                // 처음엔 벌겋게 달았다가 점점 숯처럼 까매짐
+                const k = 1 - t.burn / (t.burnMax || 4);
+                _c.lerp(EMBER, Math.min(1, k * 2.5) * 0.65).lerp(CHAR, Math.max(0, (k - 0.35) / 0.65));
+            }
             this.leaves.setColorAt(n, _c);
             n++;
         }
