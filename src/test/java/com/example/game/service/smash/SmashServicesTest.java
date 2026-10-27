@@ -267,6 +267,21 @@ class SmashServicesTest {
         assertFalse(SmashPlaceService.looksLikeCompany("인덕원역 4호선", "교통,수송 > 지하철,전철 > 수도권4호선", "SW8"));
         assertFalse(SmashPlaceService.looksLikeCompany("서울대학교병원", "의료,건강 > 병원 > 종합병원", "HP8"));
 
+        // 네이버 지역 검색: <b> 태그 떼고, 좌표는 1e7 로 나눈다
+        String nav = """
+                {"items":[{"title":"<b>지비아이티</b>","category":"IT,컴퓨터>소프트웨어개발","address":"서울특별시 금천구 가산동 1","roadAddress":"서울특별시 금천구 가산디지털1로 1",
+                           "mapx":"1268833000","mapy":"374800000"},
+                          {"title":"좌표없음","category":"","address":"","roadAddress":"","mapx":"0","mapy":"0"}]}
+                """;
+        List<SmashPlaceService.Place> nv = SmashPlaceService.parseNaver(om.readTree(nav));
+        assertEquals(1, nv.size(), "좌표가 이상한 곳은 뺀다");
+        assertEquals("지비아이티", nv.get(0).name());
+        assertEquals("서울특별시 금천구 가산디지털1로 1", nv.get(0).address());
+        assertEquals("소프트웨어개발", nv.get(0).category());
+        assertEquals(37.48, nv.get(0).lat(), 1e-9);
+        assertEquals(126.8833, nv.get(0).lng(), 1e-9);
+        assertTrue(nv.get(0).company());
+
         String nomi = """
                 [{"name":"네이버 그린팩토리","display_name":"네이버 그린팩토리, 불정로, 정자동, 분당구, 성남시, 경기도, 13561, 대한민국",
                   "type":"office","lat":"37.3594","lon":"127.1051"}]

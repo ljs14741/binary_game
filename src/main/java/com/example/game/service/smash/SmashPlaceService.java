@@ -24,6 +24,9 @@ import java.util.Map;
  *
  * <p>카카오 로컬 키워드 검색이 우선이다 (한국 회사 이름 검색이 정확하다).
  * 약관상 결과를 저장하면 안 되므로 캐시하지 않고 매번 실시간으로 부른다.
+ * 카카오맵에 장소로 등록 안 된 회사가 많아 키워드 결과가 비면 네이버 지역 검색으로 한 번 더 찾는다
+ * (네이버 플레이스에만 있는 회사가 많다. 2026-07 부터 NAVER API HUB(네이버 클라우드)로 옮겨감.
+ * 하루 25,000건, 다 쓰면 그날은 건너뛴다).
  * 키가 없거나 앱에 카카오맵이 꺼져 있으면 OSM Nominatim 으로 대신 찾는다.
  * Nominatim 은 초당 1건 제한이라 전역으로 간격을 두고, 결과는 하루 캐시한다 (Nominatim 정책상 허용).
  */
@@ -45,6 +48,8 @@ public class SmashPlaceService {
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private final String kakaoKey;
     private volatile long kakaoOffUntil = 0;
+    private final String naverId, naverSecret;
+    private volatile long naverOffUntil = 0;
     private long lastNominatim = 0;
     private final Map<String, CachedPlaces> osmCache = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
@@ -57,8 +62,12 @@ public class SmashPlaceService {
     }
 
     public SmashPlaceService(
-            @Value("${smash.kakao-key:${KAKAO_REST_KEY:${spring.security.oauth2.client.registration.kakao.client-id:}}}") String kakaoKey) {
+            @Value("${smash.kakao-key:${KAKAO_REST_KEY:${spring.security.oauth2.client.registration.kakao.client-id:}}}") String kakaoKey,
+            @Value("${smash.naver-id:${NAVER_CLIENT_ID:}}") String naverId,
+            @Value("${smash.naver-secret:${NAVER_CLIENT_SECRET:}}") String naverSecret) {
         this.kakaoKey = kakaoKey == null ? "" : kakaoKey.trim();
+        this.naverId = naverId == null ? "" : naverId.trim();
+        this.naverSecret = naverSecret == null ? "" : naverSecret.trim();
     }
 
     public Result search(String query) throws IOException {
@@ -151,7 +160,58 @@ public class SmashPlaceService {
         } catch (java.util.concurrent.CompletionException e) {
             log.warn("kakao address failed: {}", e.getMessage());
         }
+        // 카카오에 없는 회사는 네이버에서 한 번 더
+        if (places.isEmpty() && !looksLikeAddress(q)) places = naver(q);
         return merge(looksLikeAddress(q) ? addrs : places, looksLikeAddress(q) ? places : addrs);
+    }
+
+    /** 네이버 지역 검색. 키가 없거나 하루 한도를 넘겼거나 실패하면 빈 목록 (카카오 결과만으로 간다) */
+    private List<Place> naver(String q) {
+        if (naverId.isEmpty() || naverSecret.isEmpty() || System.currentTimeMillis() < naverOffUntil) return List.of();
+        String url = "https://naverapihub.apigw.ntruss.com/search/v1/local?display=5&query=" + URLEncoder.encode(q, StandardCharsets.UTF_8);
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(5))
+                .header("X-NCP-APIGW-API-KEY-ID", naverId).header("X-NCP-APIGW-API-KEY", naverSecret).GET().build();
+        try {
+            HttpResponse<String> res = send(req);
+            if (res.statusCode() == 429) {
+                // 하루 한도 초과: 한국 시간 자정까지 쉰다
+                naverOffUntil = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul")).toLocalDate().plusDays(1)
+                        .atStartOfDay(java.time.ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
+                log.warn("naver local quota exceeded, off until midnight: {}", res.body());
+                return List.of();
+            }
+            if (res.statusCode() == 401 || res.statusCode() == 403) {
+                naverOffUntil = System.currentTimeMillis() + Duration.ofMinutes(10).toMillis();
+                log.warn("naver local unauthorized: {}", res.body());
+                return List.of();
+            }
+            if (res.statusCode() != 200) {
+                log.warn("naver local HTTP {}", res.statusCode());
+                return List.of();
+            }
+            return parseNaver(om.readTree(res.body()));
+        } catch (IOException e) {
+            log.warn("naver local failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** 네이버 지역 검색 결과. 이름에 <b> 태그가 붙어 오고, 좌표는 경위도 × 1e7 정수 (경위도 그대로 와도 받는다) */
+    static List<Place> parseNaver(JsonNode root) {
+        List<Place> out = new ArrayList<>();
+        for (JsonNode d : root.path("items")) {
+            String name = d.path("title").asText("").replaceAll("<[^>]+>", "")
+                    .replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&#39;", "'").trim();
+            String addr = d.path("roadAddress").asText("");
+            if (addr.isEmpty()) addr = d.path("address").asText("");
+            String cat = d.path("category").asText("");
+            double lng = d.path("mapx").asDouble(), lat = d.path("mapy").asDouble();
+            if (lng > 1000) { lng /= 1e7; lat /= 1e7; }
+            if (name.isEmpty() || lat < 33 || lat > 39 || lng < 124 || lng > 132) continue;
+            int gt = cat.lastIndexOf('>');
+            out.add(new Place(name, addr, gt >= 0 ? cat.substring(gt + 1).trim() : cat, lat, lng, looksLikeCompany(name, cat, "")));
+        }
+        return out;
     }
 
     private HttpRequest kakaoReq(String url) {
