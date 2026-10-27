@@ -4,22 +4,26 @@ import { sfx } from './audio.js';
 
 // hold: 누르고 있으면 cool 간격으로 계속 쏜다.
 export const WEAPONS = [
-    { id: 'hammer', icon: '🔨', cool: 0.12, hold: true, radius: 2.3, force: 12 },
+    // 빡침 펀치 (예전 망치 자리. 기록·통계 호환 때문에 id 는 hammer 그대로)
+    { id: 'hammer', icon: '👊', cool: 0.16, hold: true, radius: 2.8, force: 16 },
     { id: 'gun', icon: '📎', cool: 0.065, hold: true, radius: 1.1, force: 7 },
-    { id: 'bomb', icon: '✉️', cool: 0.55, hold: true, radius: 4.8, force: 22, vaporize: 0.2 },
+    { id: 'bomb', icon: '✉️', cool: 0.55, hold: true, radius: 5.2, force: 24, vaporize: 0.22 },
     { id: 'flame', icon: '🔥', cool: 0.05, hold: true, radius: 2.6, force: 0 },
-    { id: 'strike', icon: '💬', cool: 3.2, hold: false, radius: 4, force: 21, vaporize: 0.15 },
+    // 전투기가 화면 가로로 지나가며 한 줄로 차례차례 떨어뜨리는 융단폭격
+    { id: 'strike', icon: '💬', cool: 4, hold: false, radius: 3.8, force: 22, vaporize: 0.15 },
     // 미사일이 떨어져 버섯구름을 피움 (필살기의 작은 판)
-    { id: 'nuke', icon: '☢️', cool: 3.5, hold: false, radius: 9.5, force: 40, vaporize: 0.4 },
+    { id: 'nuke', icon: '☢️', cool: 5, hold: false, radius: 14, force: 46, vaporize: 0.45 },
     { id: 'hole', icon: '🌀', cool: 7, hold: false, radius: 13, force: 30 },
     // 철거 현장의 쇠공: 크레인에 매달려 옆으로 휘두르며 지나가는 자리를 한 줄로 부순다
-    { id: 'ball', icon: '🏗️', cool: 1.5, hold: true, radius: 3.2, force: 26 },
+    { id: 'ball', icon: '🏗️', cool: 1.5, hold: true, radius: 3.8, force: 28 },
 ];
 export const NUKE = { id: 'nuke', radius: 16, force: 48, vaporize: 0.5 };
 
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
+const _q = new THREE.Quaternion();
 const UP = new THREE.Vector3(0, 1, 0);
+const PUNCH_WORDS = ['퍽!', '쾅!', '빡!', '팍!', '퍽퍽!'];
 
 function stamp(text, bg, fg, border, w = 256, h = 128, size = 64) {
     return labelTexture(w, h, (g) => {
@@ -48,6 +52,20 @@ export class Weapons {
         this.bombGeo = new THREE.BoxGeometry(1.3, 0.16, 0.9);
         this.bombMats = [side, side, top, side, side, side];
         this.missile = this._makeMissile();
+        this.plane = this._makePlane();
+        // 총구 불꽃: 더해 그리는 별 모양
+        const fl = labelTexture(64, 64, (g) => {
+            const gr = g.createRadialGradient(32, 32, 0, 32, 32, 30);
+            gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(0.35, 'rgba(255,190,80,0.9)'); gr.addColorStop(1, 'rgba(255,120,0,0)');
+            g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+            g.fillStyle = 'rgba(255,240,200,0.9)';
+            for (let k = 0; k < 4; k++) { g.save(); g.translate(32, 32); g.rotate(k * Math.PI / 4); g.fillRect(-30, -2, 60, 4); g.restore(); }
+        });
+        this.flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: fl, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+        this.flash.visible = false;
+        this.flash.renderOrder = 5;
+        this.scene.add(this.flash);
+        this.flashT = 0;
         const badge = labelTexture(128, 128, (g) => {
             g.fillStyle = '#ff3b30'; g.beginPath(); g.arc(64, 64, 60, 0, Math.PI * 2); g.fill();
             g.fillStyle = '#fff'; g.font = `900 46px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('999+', 64, 68);
@@ -57,47 +75,109 @@ export class Weapons {
         this.tracers = [];
         const tg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, 1)]);
         for (let i = 0; i < 10; i++) {
-            const l = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: 0xfff1a8, transparent: true }));
+            const l = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: 0xffe066, transparent: true, blending: THREE.AdditiveBlending }));
             l.visible = false; l.frustumCulled = false;
             scene.add(l);
             this.tracers.push({ line: l, t: 0 });
         }
         this.tracerNext = 0;
         // 블랙홀
-        this.holeCore = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0x0a0612 }));
-        this.holeRing = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.35, 10, 48), new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.85 }));
-        this.holeRing2 = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.18, 8, 48), new THREE.MeshBasicMaterial({ color: 0xff7ad9, transparent: true, opacity: 0.6 }));
+        // 블랙홀: 검은 핵 + 빛나는 강착 원반(더해 그리기) + 보랏빛 후광
+        this.holeCore = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0x050308 }));
+        const add = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+        const diskTex = labelTexture(256, 256, (g) => {
+            const gr = g.createRadialGradient(128, 128, 40, 128, 128, 128);
+            gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.12, 'rgba(255,240,255,1)'); gr.addColorStop(0.35, 'rgba(216,140,255,0.9)');
+            gr.addColorStop(0.7, 'rgba(120,60,220,0.45)'); gr.addColorStop(1, 'rgba(60,20,140,0)');
+            g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+            // 소용돌이 줄무늬
+            g.globalCompositeOperation = 'destination-out';
+            for (let k = 0; k < 7; k++) {
+                g.beginPath();
+                for (let a = 0; a < 5; a += 0.05) { const r = 50 + a * 15; g.lineTo(128 + Math.cos(a + k * 0.9) * r, 128 + Math.sin(a + k * 0.9) * r); }
+                g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,0.5)'; g.stroke();
+            }
+        });
+        const dm = add(0xffffff, 0.95); dm.map = diskTex;
+        this.holeRing = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), dm);
+        this.holeRing2 = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.12, 8, 48), add(0xf5d0fe, 0.95));
+        const haloTex = labelTexture(128, 128, (g) => {
+            const gr = g.createRadialGradient(64, 64, 10, 64, 64, 64);
+            gr.addColorStop(0, 'rgba(190,120,255,0.7)'); gr.addColorStop(1, 'rgba(90,30,180,0)');
+            g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+        });
+        this.holeHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+        this.holeHalo.scale.setScalar(14);
         this.hole = new THREE.Group();
-        this.hole.add(this.holeCore, this.holeRing, this.holeRing2);
+        this.hole.add(this.holeHalo, this.holeRing, this.holeRing2, this.holeCore);
         this.hole.visible = false;
         scene.add(this.hole);
         // 레킹볼: 쇠공 + 쇠사슬(선 하나)
-        this.ball = new THREE.Mesh(new THREE.SphereGeometry(1.7, 20, 14), new THREE.MeshLambertMaterial({ color: 0x2b2f36 }));
-        this.ball.castShadow = true;
+        this.ball = new THREE.Group();
+        const iron = new THREE.MeshLambertMaterial({ color: 0x30343b });
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(2.2, 22, 16), iron);
+        sphere.castShadow = true;
+        // 고리와 띠
+        const band = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.16, 8, 32), new THREE.MeshLambertMaterial({ color: 0x55595f }));
+        band.rotation.x = Math.PI / 2;
+        const lug = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.16, 8, 16), iron);
+        lug.position.y = 2.5;
+        this.ball.add(sphere, band, lug);
         this.ball.visible = false;
-        this.chain = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, -1, 0)]),
-            new THREE.LineBasicMaterial({ color: 0x1f2328 }));
+        // 굵은 쇠줄 (길이 1 짜리 원기둥을 늘려 씀)
+        const cg = new THREE.CylinderGeometry(0.16, 0.16, 1, 8);
+        cg.translate(0, -0.5, 0);
+        this.chain = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x1f2328 }));
         this.chain.frustumCulled = false;
         this.chain.visible = false;
         scene.add(this.ball, this.chain);
     }
 
+    /** 거대한 권투 장갑 + 정장 소매. 카메라 쪽에서 날아와 벽을 때리고 돌아감 (그룹 앞쪽 = +z = 카메라 쪽) */
     _makeHammer() {
         const g = new THREE.Group();
-        const pivot = new THREE.Group();
-        pivot.position.set(0, 0.5, 2.4);
-        g.add(pivot);
-        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 2.4, 10), new THREE.MeshLambertMaterial({ color: 0x8a5a2b }));
-        handle.rotation.x = Math.PI / 2;
-        handle.position.set(0, -0.25, -1.2);
-        const faceMat = new THREE.MeshLambertMaterial({ map: stamp('야근', '#3a3f47', '#ffd23f', '#ffd23f') });
-        const steel = new THREE.MeshLambertMaterial({ color: 0x4a5059 });
-        const head = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 0.8), [faceMat, faceMat, steel, steel, steel, steel]);
-        head.position.set(0, -0.5, -2.4);
-        pivot.add(handle, head);
+        const fist = new THREE.Group();
+        g.add(fist);
+        const red = new THREE.MeshLambertMaterial({ color: 0xd8232a, emissive: 0x2a0000 });
+        const white = new THREE.MeshLambertMaterial({ color: 0xf4f1ea });
+        const sleeve = new THREE.MeshLambertMaterial({ color: 0x23324a });
+        const glove = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 14), red);
+        glove.scale.set(1.15, 1, 1.35);
+        const thumb = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), red);
+        thumb.position.set(0.85, -0.25, 0.25);
+        const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.7, 16), white);
+        cuff.rotation.x = Math.PI / 2; cuff.position.z = 1.5;
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.7, 4, 12), sleeve);
+        arm.rotation.x = Math.PI / 2; arm.position.z = 3.8;
+        const lace = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.9), white);
+        lace.position.set(0, 0.95, 0.9);
+        fist.add(glove, thumb, cuff, arm, lace);
+        for (const m of fist.children) m.castShadow = true;
         g.visible = false;
         this.scene.add(g);
-        this.hammer = { group: g, pivot, t: -1 };
+        this.hammer = { group: g, pivot: fist, t: -1, n: 0 };
+    }
+
+    /** 폭격기: 회색 동체 + 날개 + 꼬리 (앞 = -z) */
+    _makePlane() {
+        const g = new THREE.Group();
+        const gray = new THREE.MeshLambertMaterial({ color: 0x8a96a3 });
+        const dark = new THREE.MeshLambertMaterial({ color: 0x4b5563 });
+        const yellow = new THREE.MeshLambertMaterial({ color: 0xfee500 });
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.45, 8, 12), gray);
+        body.rotation.x = Math.PI / 2;
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2, 12), dark);
+        nose.rotation.x = -Math.PI / 2; nose.position.z = -5;
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(9, 0.18, 2.2), gray);
+        wing.position.z = 0.3;
+        const tailW = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.14, 1.1), gray);
+        tailW.position.z = 3.6;
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.8, 1.4), yellow);
+        fin.position.set(0, 0.9, 3.6);
+        g.add(body, nose, wing, tailW, fin);
+        g.visible = false;
+        this.scene.add(g);
+        return g;
     }
 
     /** 핵미사일: 흰 몸통 + 빨간 머리 + 꼬리 날개 (머리가 -y 쪽) */
@@ -123,6 +203,9 @@ export class Weapons {
         return g;
     }
 
+    /** 폭발 그림 배율 (회사 건물이 크면 크게) */
+    _fs() { return this.game.fxScale ? this.game.fxScale() : 1; }
+
     coolRatio(k) { return Math.max(0, this.cool[k] / WEAPONS[k].cool); }
     holeActive() { return this.active.some(a => a.kind === 'hole'); }
 
@@ -141,7 +224,9 @@ export class Weapons {
                 const h = this.hammer;
                 const s = Math.max(1.1, camPos.distanceTo(point) / 28);
                 h.group.position.copy(point);
-                h.group.rotation.set(0, Math.atan2(camPos.x - point.x, camPos.z - point.z), 0);
+                // 카메라 쪽을 보게 (살짝 기울여 매번 다른 각도로)
+                h.group.lookAt(camPos);
+                h.group.rotateZ((Math.random() - 0.5) * 0.9);
                 h.group.visible = true;
                 h.scale = s;
                 h.group.scale.setScalar(s);
@@ -156,9 +241,17 @@ export class Weapons {
                 tr.line.position.copy(from);
                 tr.line.scale.set(1, 1, from.distanceTo(point));
                 tr.line.lookAt(point);
-                tr.line.visible = true; tr.t = 0.06;
+                tr.line.visible = true; tr.t = 0.07;
                 sfx.gun();
-                this.fx.sparks(point.x, point.y, point.z, 4);
+                // 총구 불꽃과 맞은 자리 불티·먼지
+                this.flash.position.copy(from);
+                this.flash.scale.setScalar(1.2 + Math.random() * 0.8);
+                this.flash.material.rotation = Math.random() * 3;
+                this.flash.visible = true; this.flashT = 0.04;
+                this.fx.sparks(point.x, point.y, point.z, 7);
+                if (Math.random() < 0.5) this.fx.dust(point.x, point.y, point.z, 1, 0.6, 0.6);
+                this.fx.flames.spawn(point.x, point.y, point.z, 0, 0, 0, 0.9, 0.08, 0.9, Math.random(), 0);
+                this.game.shake(0.025);
                 this.game.hit(point, w, dir);
                 break;
             }
@@ -168,7 +261,8 @@ export class Weapons {
                 const from = this._muzzle(camPos, dir, new THREE.Vector3());
                 m.position.copy(from);
                 this.scene.add(m);
-                this.active.push({ kind: 'bomb', mesh: m, from, to: point.clone(), dir: dir.clone(), t: 0, dur: 0.3 + from.distanceTo(point) * 0.006, fuse: 0.5, spin: 10 + Math.random() * 6 });
+                // 멀리 던져도 0.9초 안에 닿게
+                this.active.push({ kind: 'bomb', mesh: m, from, to: point.clone(), dir: dir.clone(), t: 0, dur: Math.min(0.9, 0.3 + from.distanceTo(point) * 0.004), fuse: 0.4, spin: 10 + Math.random() * 6 });
                 sfx.toss();
                 break;
             }
@@ -203,20 +297,22 @@ export class Weapons {
                 break;
             }
             case 'strike': {
-                // 화면 가로 방향으로 한 줄
-                const right = new THREE.Vector3().crossVectors(dir, UP).normalize();
-                for (let i = 0; i < 8; i++) {
-                    const off = (i - 3.5) * 3.6;
-                    const to = point.clone().addScaledVector(right, off);
-                    to.y = Math.max(point.y + (Math.random() - 0.5) * 2, 0.5);
-                    const s = new THREE.Sprite(this.badgeMat);
-                    s.scale.setScalar(2.2);
-                    const from = to.clone().add(_v.set(-dir.x * 8, 40 + i * 2, -dir.z * 8));
-                    s.position.copy(from);
-                    this.scene.add(s);
-                    this.active.push({ kind: 'strike', mesh: s, from, to, dir: dir.clone(), t: -i * 0.12, dur: 0.75 });
-                }
-                sfx.whoosh(1.2);
+                // 화면 가로 방향으로 날아가며 조준한 줄에 10발을 차례로 떨어뜨림
+                if (this.active.some(a => a.kind === 'plane')) { this.cool[k] = 0; return false; }
+                const right = new THREE.Vector3().crossVectors(dir, UP).setY(0).normalize();
+                const sc = Math.max(1, camPos.distanceTo(point) / 50);
+                const alt = Math.max(point.y + 22, 34) * Math.min(1.6, sc);
+                const span = 60 * sc;
+                const from = point.clone().addScaledVector(right, -span).setY(alt);
+                const to = point.clone().addScaledVector(right, span).setY(alt);
+                const drops = [];
+                for (let n = 0; n < 10; n++) drops.push({ off: (n - 4.5) * 3.6 * Math.sqrt(sc), done: false });
+                this.plane.scale.setScalar(sc);
+                this.plane.position.copy(from);
+                this.plane.lookAt(_v.copy(from).sub(right));
+                this.plane.visible = true;
+                this.active.push({ kind: 'plane', from, to, right, point: point.clone(), dir: dir.clone(), t: 0, dur: 1.9, drops, span, sc });
+                sfx.whoosh(1.9);
                 break;
             }
             case 'nuke': {
@@ -276,6 +372,7 @@ export class Weapons {
 
     update(dt) {
         for (let k = 0; k < this.cool.length; k++) this.cool[k] -= dt;
+        if (this.flashT > 0) { this.flashT -= dt; if (this.flashT <= 0) this.flash.visible = false; }
         for (const tr of this.tracers) {
             if (!tr.line.visible) continue;
             tr.t -= dt;
@@ -285,20 +382,28 @@ export class Weapons {
         const h = this.hammer;
         if (h.t >= 0) {
             h.t += dt;
-            const SWING = 0.075, HOLD = 0.09, OUT = 0.14;
-            if (h.t < SWING) {
-                const e = h.t / SWING;
-                h.pivot.rotation.x = 1.7 * (1 - e * e);
+            const IN = 0.07, HOLD = 0.07, OUT = 0.13;
+            if (h.t < IN) {
+                // 뒤로 젖혔다가 쭉 뻗음
+                const e = h.t / IN;
+                h.pivot.position.z = 6 * (1 - e * e) + 0.6;
             } else {
-                h.pivot.rotation.x = 0;
+                h.pivot.position.z = 0.6;
                 if (!h.hit) {
                     h.hit = true;
+                    h.n++;
                     sfx.hammer();
-                    this.game.hit(h.point, WEAPONS[0], h.dir);
+                    const p = h.point;
+                    this.game.hit(p, WEAPONS[0], h.dir);
+                    this.fx.dust(p.x, p.y, p.z, 5, 1.2 * h.scale, 1.2);
+                    this.fx.sparks(p.x, p.y, p.z, 5);
+                    if (h.n % 2 === 1) this.fx.pow(p.x, p.y + 1.2 * h.scale, p.z, PUNCH_WORDS[Math.floor(Math.random() * PUNCH_WORDS.length)], 1.6 * h.scale);
+                    this.game.shake(0.16);
+                    if (this.game.hitStop) this.game.hitStop(0.045);
                 }
-                if (h.t > SWING + HOLD) {
-                    const e = Math.min(1, (h.t - SWING - HOLD) / OUT);
-                    h.pivot.rotation.x = e * 0.9;
+                if (h.t > IN + HOLD) {
+                    const e = Math.min(1, (h.t - IN - HOLD) / OUT);
+                    h.pivot.position.z = 0.6 + e * 5;
                     h.group.scale.setScalar(h.scale * (1 - e));
                     if (e >= 1) { h.t = -1; h.group.visible = false; }
                 }
@@ -318,26 +423,55 @@ export class Weapons {
                     a.mesh.position.copy(a.to);
                     a.fuse -= dt;
                     a.mesh.material[2].color.setHex(Math.sin(a.fuse * 40) > 0 ? 0xff5555 : 0xffffff);
-                    a.mesh.scale.setScalar(1 + (0.5 - a.fuse) * 1.2);
+                    a.mesh.scale.setScalar(1 + (0.4 - a.fuse) * 1.5);
                     if (!a.ticked) { a.ticked = true; sfx.tick(); }
                     if (a.fuse <= 0) {
                         this._remove(i, a);
-                        this.fx.blast(a.to.x, a.to.y, a.to.z, WEAPONS[2].radius);
-                        this.fx.papersBurst(a.to.x, a.to.y, a.to.z, 14, 1.4);
+                        // 벽 속에 묻히지 않게 카메라 쪽으로 조금 당겨서 터뜨림
+                        const R = 4.2 * this._fs();
+                        _v.copy(a.to).addScaledVector(a.dir, -R * 1.4);
+                        this.fx.explosion(_v.x, _v.y, _v.z, R, { ball: 1.7 });
+                        this.fx.papersBurst(a.to.x, a.to.y, a.to.z, this.fx.mobile ? 20 : 34, 1.8);
+                        this.fx.pow(a.to.x, a.to.y + 3, a.to.z, '펑!', 2.4, '#ffffff');
                         sfx.boom(false);
-                        this.game.shake(0.5);
+                        this.game.shake(0.55);
+                        if (this.game.hitStop) this.game.hitStop(0.06);
                         this.game.hit(a.to, WEAPONS[2], a.dir);
                     }
                 }
-            } else if (a.kind === 'strike') {
-                if (a.t < 0) continue;
+            } else if (a.kind === 'plane') {
+                const e = Math.min(1, a.t / a.dur);
+                this.plane.position.lerpVectors(a.from, a.to, e);
+                this.plane.rotation.z = Math.sin(a.t * 3) * 0.08;
+                const pp = this.plane.position;
+                // 날개 끝 하얀 비행운
+                if (Math.random() < 0.8) this.fx.smoke.spawn(pp.x - a.right.x * 3 * a.sc, pp.y, pp.z - a.right.z * 3 * a.sc, 0, 0.2, 0, 1.2 * a.sc, 1.4, 0.35, 0.9, 0.6);
+                // 조준한 줄 위를 지나갈 때마다 한 발씩
+                const along = (e - 0.5) * 2 * a.span;
+                for (const d of a.drops) {
+                    if (d.done || along < d.off) continue;
+                    d.done = true;
+                    const x = a.point.x + a.right.x * d.off, z = a.point.z + a.right.z * d.off;
+                    const ground = this.game.surface ? this.game.surface(x, z) : 0;
+                    const y = Math.max(ground, Math.min(a.point.y, ground + 30)) + 0.3;
+                    const s = new THREE.Sprite(this.badgeMat);
+                    s.scale.setScalar(2 * a.sc);
+                    s.position.copy(pp);
+                    this.scene.add(s);
+                    this.active.push({ kind: 'drop', mesh: s, from: pp.clone(), to: new THREE.Vector3(x, y, z), dir: a.dir, t: 0, dur: 0.45 });
+                }
+                if (e >= 1) { this.plane.visible = false; this.active.splice(i, 1); }
+            } else if (a.kind === 'drop') {
                 const e = Math.min(1, a.t / a.dur);
                 a.mesh.position.lerpVectors(a.from, a.to, e * e);
                 if (e >= 1) {
                     this._remove(i, a);
-                    this.fx.blast(a.to.x, a.to.y, a.to.z, WEAPONS[4].radius);
+                    const R = 3.2 * this._fs();
+                    _v.copy(a.to).addScaledVector(a.dir, -R * 1.1);
+                    this.fx.explosion(_v.x, _v.y, _v.z, R, { ball: 1.5 });
+                    if (Math.random() < 0.35) this.fx.pow(a.to.x, a.to.y + 2.5, a.to.z, '쾅!', 1.8, '#fee500');
                     sfx.boom(false);
-                    this.game.shake(0.35);
+                    this.game.shake(0.28);
                     this.game.hit(a.to, WEAPONS[4], a.dir);
                 }
             } else if (a.kind === 'missile') {
@@ -355,38 +489,59 @@ export class Weapons {
                 }
             } else if (a.kind === 'hole') {
                 const e = a.t / a.dur;
-                const grow = Math.min(1, a.t * 3);
-                this.hole.scale.setScalar(grow * (1 + Math.sin(a.t * 30) * 0.04));
-                this.holeRing.rotation.x = Math.PI / 2 + Math.sin(a.t * 2) * 0.3;
-                this.holeRing.rotation.z += dt * 6;
-                this.holeRing2.rotation.y += dt * 4;
-                this.holeRing2.rotation.x = Math.PI / 2.4;
-                this.fx.swirl(a.at.x, a.at.y, a.at.z, 12, 3);
+                // 커지면서 빨아들이다가 마지막 0.25초에 확 오그라든 뒤 터짐
+                const grow = Math.min(1, a.t * 2.5);
+                const end = e > 0.93 ? Math.max(0.05, 1 - (e - 0.93) / 0.07) : 1;
+                this.hole.scale.setScalar(grow * end * (1 + Math.sin(a.t * 30) * 0.04));
+                this.holeRing.rotation.x = -Math.PI / 2 + 0.35 + Math.sin(a.t * 1.7) * 0.15;
+                this.holeRing.rotation.z -= dt * 5;
+                this.holeRing2.rotation.x = Math.PI / 2.3;
+                this.holeRing2.rotation.z += dt * 3;
+                this.holeHalo.material.opacity = 0.7 + Math.sin(a.t * 12) * 0.2;
+                this.fx.swirl(a.at.x, a.at.y, a.at.z, 12, this.fx.mobile ? 2 : 4);
+                // 빨려 들어가는 빛줄기
+                if (Math.random() < 0.6) {
+                    const ang = Math.random() * Math.PI * 2, r = 9 + Math.random() * 5;
+                    this.fx.flames.spawn(a.at.x + Math.cos(ang) * r, a.at.y + (Math.random() - 0.5) * 4, a.at.z + Math.sin(ang) * r,
+                        -Math.cos(ang) * 22 - Math.sin(ang) * 10, 0, -Math.sin(ang) * 22 + Math.cos(ang) * 10, 0.9, 0.45, 0.7, 0.2, 0);
+                }
                 this.game.pull(a.at, WEAPONS[6].radius, 70, dt);
                 this.game.shake(0.08);
                 if (e >= 1) {
                     this.active.splice(i, 1);
                     this.hole.visible = false;
-                    this.fx.blast(a.at.x, a.at.y, a.at.z, 7, 0xc084fc);
-                    this.fx.ring(a.at.x, Math.max(0.3, a.at.y - 3), a.at.z, 18, 0xe9d5ff);
+                    this.fx.explosion(a.at.x, a.at.y, a.at.z, 7 * this._fs(), { ring: false });
+                    this.fx.ring(a.at.x, Math.max(0.3, a.at.y - 3), a.at.z, 22, 0xe9d5ff);
+                    this.fx.pow(a.at.x, a.at.y + 4, a.at.z, '펑!!', 3.2, '#e9d5ff');
                     sfx.boom(true);
-                    this.game.shake(0.7);
-                    this.game.hit(a.at, { id: 'holeblast', radius: 6.5, force: WEAPONS[6].force, vaporize: 0.3 }, a.dir);
+                    this.game.shake(0.8);
+                    if (this.game.hitStop) this.game.hitStop(0.08);
+                    this.game.hit(a.at, { id: 'holeblast', radius: 7, force: WEAPONS[6].force, vaporize: 0.3 }, a.dir);
                 }
             } else if (a.kind === 'ball') {
                 // 진자처럼: 양 끝에서 느리고 가운데(조준한 곳)에서 가장 빠르다
                 const e = Math.min(1, a.t / a.dur);
                 const ang = -1.15 * Math.cos(Math.PI * e);
                 const p = this.ball.position.copy(a.pivot).addScaledVector(a.right, Math.sin(ang) * a.L).addScaledVector(UP, -Math.cos(ang) * a.L);
-                this.ball.rotation.z += dt * 3;
-                const pos = this.chain.geometry.attributes.position;
-                pos.setXYZ(0, a.pivot.x, a.pivot.y, a.pivot.z);
-                pos.setXYZ(1, p.x, p.y, p.z);
-                pos.needsUpdate = true;
+                this.ball.quaternion.setFromUnitVectors(UP, _v2.subVectors(a.pivot, p).normalize());
+                // 쇠줄: 매단 점에서 쇠공 고리까지
+                _v.subVectors(p, a.pivot);
+                const L = _v.length() - 2.5 * a.s;
+                this.chain.position.copy(a.pivot);
+                this.chain.quaternion.setFromUnitVectors(_v2.set(0, -1, 0), _v.normalize());
+                this.chain.scale.set(a.s, Math.max(0.1, L), a.s);
                 a.hitT -= dt;
                 if (Math.abs(ang) < 0.6 && a.hitT <= 0) {
                     a.hitT = 0.045;
-                    if (a.first) { a.first = false; sfx.hammer(); this.game.shake(0.35); }
+                    if (a.first) {
+                        a.first = false;
+                        sfx.hammer(); sfx.thump(14);
+                        this.game.shake(0.5);
+                        if (this.game.hitStop) this.game.hitStop(0.07);
+                        this.fx.pow(p.x, p.y + 3 * a.s, p.z, '쿵!', 2.6 * a.s, '#ffd23f');
+                        this.fx.dust(p.x, p.y, p.z, 14, 3 * a.s, 2);
+                    }
+                    if (Math.random() < 0.4) this.fx.dust(p.x, p.y, p.z, 3, 2 * a.s, 1.4);
                     this.game.hit(p.clone(), a.spec, a.right);
                 }
                 if (e >= 1) {
@@ -417,5 +572,7 @@ export class Weapons {
         this.hole.visible = false;
         this.ball.visible = this.chain.visible = false;
         this.missile.visible = false;
+        this.plane.visible = false;
+        this.flash.visible = false;
     }
 }

@@ -253,7 +253,8 @@ Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, n
 sun.shadow.bias = -0.0006;
 scene.add(sun, sun.target);
 
-const world = new World(scene, coarse ? { budget: 22000, perBuilding: 3600, targetBudget: 6500 } : { budget: 42000, perBuilding: 5200, targetBudget: 9500 });
+const world = new World(scene, coarse ? { budget: 22000, perBuilding: 3600, targetBudget: 6500, aniso: 4 }
+    : { budget: 42000, perBuilding: 5200, targetBudget: 9500, aniso: Math.min(8, renderer.capabilities.getMaxAnisotropy()) });
 const fx = new FX(scene, { mobile: coarse });
 const street = new Street(scene, world, fx, sfx);
 const landmarks = new Landmarks(scene, fx, sfx);
@@ -636,8 +637,8 @@ function nukeBlast(p, dir) {
     ui.flash.classList.remove('go'); void ui.flash.offsetWidth; ui.flash.classList.add('go');
     fx.blast(p.x, p.y + 2, p.z, 26, 0xfff3c4);
     fx.ring(p.x, 0.3, p.z, 70, 0xffffff);
-    fx.mushroom(p.x, p.y, p.z, 2 * Math.min(2, Math.max(1, game.wscale)));
-    slowmo = 0.45;
+    fx.mushroom(p.x, p.y, p.z, 2 * Math.min(2, Math.max(1, game.wscale)), game.target ? game.target.top * 1.1 : 0);
+    slowmo = 0.45; slowK = 0.3;
     say('nuke', true);
     // 가까운 곳은 블록으로 날리고, 그 바깥은 통째로 주저앉힌다
     hit(p, NUKE, dir);
@@ -673,8 +674,13 @@ function nukeBlast(p, dir) {
     cheer();
     track('smash_nuke');
 }
-/** 큰 폭발 직후 잠깐 느리게 (남은 초) */
-let slowmo = 0;
+/** 큰 폭발 직후 잠깐 느리게 (남은 초, 그동안 시간 배율). 세게 때린 순간의 짧은 멈춤(hitStop)도 같은 걸 씀 */
+let slowmo = 0, slowK = 0.3;
+function hitStop(sec) {
+    if (slowmo > 0 && slowK > 0.1) return;
+    slowmo = Math.max(slowmo, sec);
+    slowK = 0.06;
+}
 
 /** 핵폭탄(무기): 필살기의 작은 판. 섬광 → 불덩이 → 충격파 → 버섯구름, 가까운 작은 건물은 주저앉힘 */
 function miniNuke(p, dir) {
@@ -682,15 +688,16 @@ function miniNuke(p, dir) {
     sfx.rumble(10);
     trauma = Math.min(1, trauma + 0.85);
     ui.flash.classList.remove('go'); void ui.flash.offsetWidth; ui.flash.classList.add('go');
-    fx.mushroom(p.x, p.y, p.z, Math.min(2, Math.max(1, game.wscale)));
-    slowmo = 0.3;
-    fx.blast(p.x, p.y + 1, p.z, 12, 0xfff3c4);
+    fx.mushroom(p.x, p.y, p.z, 1.2 * Math.min(2, Math.max(1, game.wscale)), game.target ? game.target.top : 0);
+    slowmo = 0.35; slowK = 0.3;
+    fx.blast(p.x, p.y + 1, p.z, 14, 0xfff3c4);
+    fx.pow(p.x, p.y + 10, p.z, '콰광!!', 5, '#ffd23f');
     const w = WEAPONS[5];
     hit(p, w, dir);
-    const R = w.radius * game.wscale * 1.4;
+    const R = w.radius * game.wscale * 1.5;
     for (const b of nearBuildings(p, R)) {
-        if (b.state !== 'intact' || b === game.target || b.top > 30) continue;
-        if (distToPolygon(p.x, p.z, b.poly) < R * 0.6) { world.collapse(b); onFlatten(b); }
+        if (b.state !== 'intact' || b === game.target || b.top > 45) continue;
+        if (distToPolygon(p.x, p.z, b.poly) < R * 0.75) { world.collapse(b); onFlatten(b); }
     }
     street.impact(p, R, 30, dir);
     landmarks.impact(p, R, 30, dir);
@@ -708,7 +715,13 @@ function cheer() {
     sfx.cheer();
 }
 
-const weapons = new Weapons(scene, fx, { hit, ignite, pull, nukeBlast, miniNuke, shake: n => { trauma = Math.min(1, trauma + n); } });
+const weapons = new Weapons(scene, fx, {
+    hit, ignite, pull, nukeBlast, miniNuke, hitStop,
+    // 초고층 사옥은 무기 범위를 키우니(wscale) 폭발 그림도 같이 키움
+    fxScale: () => Math.min(2.2, Math.max(1, game.wscale)),
+    shake: n => { trauma = Math.min(1, trauma + n); },
+    surface: (x, z) => world.surface(x, 500, z, null),
+});
 
 // ── 시작: 검색 → 지도 → 부수기 ──
 /** 간판·결과에 쓰는 이름. ㈜ 는 붙이지 않는다 — "㈜칠곡중학교" 처럼 어색해지고, 유명한 회사는 없어도 안다 */
@@ -1795,7 +1808,7 @@ function frame() {
     const raw = Math.min(clock.getDelta(), 1 / 30);
     // 핵폭탄이 터진 순간 잠깐 슬로모션 (터지는 맛)
     let dt = raw;
-    if (slowmo > 0) { slowmo -= raw; dt = raw * 0.3; }
+    if (slowmo > 0) { slowmo -= raw; dt = raw * slowK; }
     if (!visible || document.hidden) return;
     time += dt;
     const now = performance.now();
@@ -1945,5 +1958,5 @@ function frame() {
 requestAnimationFrame(frame);
 // 자동 테스트용 손잡이. 주소에 ?debug 가 있을 때만 연다
 if (new URLSearchParams(location.search).has('debug')) {
-    window.__smash = { game, world, boss, street, landmarks, stream, orbit, camera, attack, setWeapon, setup, lineFor, timeKind, finish, drawCard, shareUrl, sfx };
+    window.__smash = { game, world, boss, street, landmarks, stream, orbit, camera, attack, setWeapon, setup, lineFor, timeKind, finish, drawCard, shareUrl, sfx, weapons, fx, dbg: () => ({ slowmo, slowK, trauma }) };
 }

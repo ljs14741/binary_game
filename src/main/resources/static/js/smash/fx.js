@@ -4,6 +4,7 @@ const DUST_MAX = 1500;
 const PAPER_MAX = 180;
 const SHARD_MAX = 420;
 const BLAST_MAX = 6;
+const POW_FONT = '"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -147,6 +148,135 @@ class PuffLayer {
     }
 }
 
+/**
+ * 버섯구름 덩어리 (한 구름 = Points 하나). 덩어리마다 자리(기둥/갓/바닥 고리)가 정해져 있고
+ * 시간에 따라 기둥이 자라고 갓이 떠오르며 넓어지고 안쪽으로 말려 돎. 처음엔 불빛에 달아오른 주황, 식으면 회갈색.
+ */
+class MushroomCloud {
+    constructor(scene, tex, n) {
+        this.n = n;
+        this.pos = new Float32Array(n * 3); this.col = new Float32Array(n * 3);
+        this.size = new Float32Array(n); this.alpha = new Float32Array(n); this.rot = new Float32Array(n);
+        this.kind = new Uint8Array(n); this.u = new Float32Array(n); this.v = new Float32Array(n); this.w = new Float32Array(n); this.r = new Float32Array(n);
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aColor', new THREE.BufferAttribute(this.col, 3).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
+        geo.setAttribute('aRot', new THREE.BufferAttribute(this.rot, 1));
+        this.mat = new THREE.ShaderMaterial({
+            uniforms: { uScale: { value: 400 }, map: { value: tex } },
+            vertexShader: `
+                attribute float aSize; attribute float aAlpha; attribute float aRot; attribute vec3 aColor;
+                uniform float uScale;
+                varying float vA; varying float vR; varying vec3 vC;
+                void main() {
+                    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                    gl_PointSize = min(aSize * uScale / max(-mv.z, 0.1), 900.0);
+                    gl_Position = projectionMatrix * mv;
+                    vA = aAlpha; vR = aRot; vC = aColor;
+                }`,
+            fragmentShader: `
+                uniform sampler2D map;
+                varying float vA; varying float vR; varying vec3 vC;
+                void main() {
+                    vec2 c = gl_PointCoord - 0.5;
+                    float s = sin(vR), k = cos(vR);
+                    vec2 q = mat2(k, -s, s, k) * c;
+                    float t = texture2D(map, q + 0.5).a;
+                    // 위쪽이 밝고 아래쪽이 어두운 뭉게구름 음영
+                    float lit = 0.68 + 0.6 * (0.5 - c.y);
+                    gl_FragColor = vec4(vC * lit, t * vA);
+                }`,
+            transparent: true,
+            depthWrite: false,
+        });
+        this.points = new THREE.Points(geo, this.mat);
+        this.points.frustumCulled = false;
+        this.points.renderOrder = 3;
+        this.points.visible = false;
+        scene.add(this.points);
+        this.capY = 0;
+    }
+
+    start(x, y, z, s, height = 0) {
+        this.x = x; this.y = y; this.z = z; this.s = s;
+        // 갓 높이: 크기에 비례하되, 옆 건물보다 확실히 위로 솟게
+        this.H = Math.max(48 * s, height * 1.5);
+        const n = this.n;
+        // 0 기둥 18%, 1 갓 도넛 52%, 2 갓 윗부분 12%, 3 바닥 먼지 고리 18%
+        for (let i = 0; i < n; i++) {
+            const f = i / n;
+            this.kind[i] = f < 0.18 ? 0 : f < 0.7 ? 1 : f < 0.82 ? 2 : 3;
+            this.u[i] = Math.random() * Math.PI * 2;
+            this.v[i] = Math.random();
+            this.w[i] = Math.random() * Math.PI * 2;
+            this.r[i] = 0.75 + Math.random() * 0.5;
+            this.rot[i] = Math.random() * 6.28;
+        }
+        this.points.geometry.attributes.aRot.needsUpdate = true;
+        this.points.visible = true;
+    }
+
+    update(dt, t) {
+        const s = this.s, n = this.n;
+        const ease = k => 1 - Math.pow(1 - Math.min(1, Math.max(0, k)), 3);
+        const H = this.H;
+        const capY = this.y + 6 * s + H * ease(t / 4.5);
+        this.capY = capY;
+        // 갓 크기도 높이에 맞춰 (높이가 크면 갓도 큼)
+        const k = H / (48 * s);
+        const Rc = (5 + 11 * ease(t / 4.5)) * s * Math.sqrt(k), rc = (4 + 4 * ease(t / 3)) * s * Math.sqrt(k);
+        const roll = t * 0.7;
+        const heat = Math.max(0, 1 - t / 3.2);
+        const fade = t < 8 ? 1 : Math.max(0, 1 - (t - 8) / 3);
+        const appear = Math.min(1, t / 0.35);
+        for (let i = 0; i < n; i++) {
+            const k = this.kind[i], u = this.u[i], v = this.v[i], i3 = i * 3;
+            let x, y, z, size, a = 0.85, hot;
+            if (k === 0) {
+                // 기둥: 위로 갈수록 살짝 굵어지고 천천히 꼬이며 올라감
+                const h = v * (capY - this.y - rc * 0.5);
+                const rr = (3 + 2.4 * v) * s * Math.sqrt(k) * this.r[i];
+                const ang = u + t * 0.5 + v * 2;
+                x = this.x + Math.cos(ang) * rr; z = this.z + Math.sin(ang) * rr; y = this.y + h;
+                size = (6 + 3 * v) * s * Math.sqrt(k); hot = heat * (0.6 + 0.4 * v);
+                a *= Math.min(1, (capY - this.y) / (6 * s) + 0.2);
+            } else if (k === 1) {
+                // 갓 도넛: 둘레로 돌며 안쪽에서 바깥 위로 말려 올라감
+                const ph = this.w[i] + roll;
+                const R = Rc + rc * Math.cos(ph) * this.r[i];
+                x = this.x + Math.cos(u) * R; z = this.z + Math.sin(u) * R;
+                y = capY + rc * Math.sin(ph) * 0.75;
+                size = (8 + 3.5 * this.r[i]) * s * Math.sqrt(k) * (0.55 + 0.45 * ease(t / 2.5)); hot = heat;
+            } else if (k === 2) {
+                // 갓 윗부분: 도넛 가운데를 덮는 둥근 머리
+                const R = Rc * 0.75 * Math.sqrt(v);
+                x = this.x + Math.cos(u) * R; z = this.z + Math.sin(u) * R;
+                y = capY + rc * (0.7 + 0.35 * (1 - v));
+                size = 10 * s * Math.sqrt(k) * (0.5 + 0.5 * ease(t / 2.5)); hot = heat * 0.8;
+            } else {
+                // 바닥 먼지 고리: 빠르게 밖으로 퍼지며 옅어짐
+                const R = (4 + 26 * ease(t / 2.2)) * s * (0.85 + 0.3 * v);
+                x = this.x + Math.cos(u) * R; z = this.z + Math.sin(u) * R; y = this.y + (1 + 2 * this.r[i]) * s;
+                size = (5 + 3 * v) * s; hot = heat * 0.3;
+                a *= Math.max(0, 1 - t / 6);
+            }
+            this.pos[i3] = x; this.pos[i3 + 1] = y; this.pos[i3 + 2] = z;
+            this.size[i] = size;
+            this.alpha[i] = a * fade * appear;
+            // 달아오른 주황 → 회갈색 연기 (위쪽 덩어리는 조금 더 밝게)
+            const g = 0.55 + 0.12 * this.r[i] + (k === 3 ? 0.12 : 0);
+            this.col[i3] = g * (1 - hot) + 1.0 * hot;
+            this.col[i3 + 1] = g * 0.94 * (1 - hot) + 0.55 * hot;
+            this.col[i3 + 2] = g * 0.88 * (1 - hot) + 0.22 * hot;
+        }
+        const at = this.points.geometry.attributes;
+        at.position.needsUpdate = at.aColor.needsUpdate = at.aSize.needsUpdate = at.aAlpha.needsUpdate = true;
+        if (fade <= 0) this.points.visible = false;
+    }
+}
+
 export class FX {
     constructor(scene, opts = {}) {
         this.scene = scene;
@@ -156,7 +286,7 @@ export class FX {
         this._initPapers();
         this._initShards();
         this._initBlasts();
-        const tex = puffTexture();
+        const tex = this.puffTex = puffTexture();
         this.flames = new PuffLayer(scene, this.mobile ? 700 : 1400, tex, true);
         this.smoke = new PuffLayer(scene, this.mobile ? 380 : 800, tex, false);
         this.burns = [];
@@ -195,28 +325,123 @@ export class FX {
     }
 
     /**
-     * 버섯구름. 불덩이가 부풀었다 식으며 떠오르고, 기둥과 갓 모양 연기가 피어오름. scale 1 = 핵폭탄, 2 = 필살기
+     * 버섯구름. 불덩이가 부풀며 떠오르고, 기둥 위로 도넛처럼 말려 올라가는 갓이 생겨 10초 가까이 남음.
+     * 구름 모양은 연기 덩어리를 정해진 자리(기둥·갓·바닥 고리)에 붙여 움직여서 늘 버섯 모양을 지킴.
+     * scale 1 = 핵폭탄, 2 이상 = 필살기
      */
-    mushroom(x, y, z, scale = 1) {
-        if (this.clouds.length >= 3) this.clouds.shift().ball.visible = false;
+    mushroom(x, y, z, scale = 1, height = 0) {
+        if (this.clouds.length >= 2) { const o = this.clouds.shift(); o.ball.visible = false; o.cloud.points.visible = false; }
         const ball = this._fireball();
+        ball.userData.boom = null;
         ball.position.set(x, Math.max(y, 1), z);
         ball.scale.setScalar(0.1);
         ball.visible = true;
-        this.clouds.push({ x, y: Math.max(y, 0.5), z, s: scale, t: 0, ball, acc: 0 });
-        this.ring(x, 0.3, z, 30 * scale, 0xffffff);
-        this.ring(x, 0.3, z, 18 * scale, 0xffb347);
-        // 땅을 쓸고 나가는 먼지 고리
-        const n = Math.round((this.mobile ? 26 : 48) * scale);
-        for (let k = 0; k < n; k++) {
-            const a = k / n * Math.PI * 2 + Math.random() * 0.2, v = (14 + Math.random() * 10) * scale;
-            this.smoke.spawn(x + Math.cos(a) * 2, 0.8, z + Math.sin(a) * 2, Math.cos(a) * v, 0.5 + Math.random(), Math.sin(a) * v,
-                (3 + Math.random() * 3) * scale, 2.6 + Math.random() * 1.4, 0.6, 0.55 + Math.random() * 0.15, 0.7);
-        }
+        const cloud = this._cloudMesh();
+        cloud.start(x, 0, z, scale, height);
+        this.clouds.push({ x, y: Math.max(y, 0.5), z, s: scale, t: 0, ball, cloud });
+        this.ring(x, 0.3, z, 34 * scale, 0xffffff);
+        this.ring(x, 0.3, z, 20 * scale, 0xffb347);
         this.light.position.set(x, y + 8 * scale, z);
         this.light.intensity = 900 * scale;
-        this.light.distance = 160 * scale;
-        this.lightT = 1.6;
+        this.light.distance = 180 * scale;
+        this.lightT = 1.8;
+        // 불티
+        for (let k = 0; k < (this.mobile ? 20 : 40); k++) {
+            const a = Math.random() * Math.PI * 2, v = (10 + Math.random() * 18) * scale;
+            this.flames.spawn(x, y + 2, z, Math.cos(a) * v, 6 + Math.random() * 12 * scale, Math.sin(a) * v, 1.4 * scale, 0.6 + Math.random() * 0.5, 0.9, Math.random(), 0.2);
+        }
+    }
+
+    _cloudMesh() {
+        if (!this._cloudPool) this._cloudPool = [];
+        const free = this._cloudPool.find(c => !c.points.visible);
+        if (free) return free;
+        const c = new MushroomCloud(this.scene, this.puffTex, this.mobile ? 110 : 190);
+        if (this.pointScale) c.mat.uniforms.uScale.value = this.pointScale;
+        this._cloudPool.push(c);
+        return c;
+    }
+
+    /**
+     * 보통 폭발 한 방: 작은 불덩이 + 불꽃·연기·불티 + 충격 고리 + 번쩍임.
+     * r 은 반지름(칸). ring=false 면 바닥 고리 없음 (벽 중간에서 터질 때)
+     */
+    explosion(x, y, z, r = 3, opt = {}) {
+        const b = this._fireball();
+        b.position.set(x, y, z);
+        b.scale.setScalar(0.1);
+        b.visible = true;
+        b.userData.boom = { t: 0, r: r * (opt.ball || 1.1), dur: 0.6 + r * 0.03 };
+        const u = b.material.uniforms;
+        u.uT.value = Math.random() * 10; u.uHeat.value = 1.2; u.uFade.value = 1;
+        const n = Math.round((this.mobile ? 6 : 12) + r * (this.mobile ? 2 : 4));
+        for (let k = 0; k < n; k++) {
+            const a = Math.random() * Math.PI * 2, e = Math.random() * 2 - 1, v = (6 + Math.random() * 10) * Math.sqrt(r);
+            this.flames.spawn(x, y, z, Math.cos(a) * v * Math.sqrt(1 - e * e), Math.abs(e) * v + 2, Math.sin(a) * v * Math.sqrt(1 - e * e),
+                (0.8 + Math.random()) * r * 0.45, 0.35 + Math.random() * 0.35, 0.9, Math.random(), 0.8);
+        }
+        for (let k = 0; k < Math.round(n * 0.4); k++) this.smokeAt(x + (Math.random() - 0.5) * r, y + Math.random() * r * 0.5, z + (Math.random() - 0.5) * r, r * 0.9, 0.55);
+        this.sparks(x, y, z, Math.round(n * 0.6));
+        if (opt.ring !== false && y < 3) this.ring(x, 0.3, z, r * 2.6, opt.color || 0xffe0a0);
+        this.light.position.set(x, y + 1, z);
+        this.light.distance = 40 + r * 8;
+        this.light.intensity = 50 * r;
+        this.lightT = 0.35;
+        this.dust(x, Math.max(0.5, y - 1), z, Math.round(4 + r * 2), r, r / 3);
+    }
+
+    /** 만화 글자 ("쾅!" "퍽!") 가 튀어나왔다 사라짐 */
+    pow(x, y, z, text, size = 3, color = '#ffd23f') {
+        if (!this._pows) {
+            this._pows = [];
+            this._powTex = new Map();
+        }
+        const key = text + color;
+        let tex = this._powTex.get(key);
+        if (!tex) {
+            const c = document.createElement('canvas');
+            c.width = 256; c.height = 128;
+            const g = c.getContext('2d');
+            g.font = `900 92px ${POW_FONT}`;
+            g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.lineJoin = 'round';
+            g.lineWidth = 18; g.strokeStyle = '#1b1b1f'; g.strokeText(text, 128, 68);
+            g.fillStyle = color; g.fillText(text, 128, 68);
+            tex = new THREE.CanvasTexture(c);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            this._powTex.set(key, tex);
+        }
+        let sp = this._pows.find(p => !p.visible);
+        if (!sp) {
+            if (this._pows.length >= 8) sp = this._pows.reduce((a, b) => (a.userData.t > b.userData.t ? a : b));
+            else {
+                sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false, depthWrite: false }));
+                sp.renderOrder = 10;
+                this.scene.add(sp);
+                this._pows.push(sp);
+            }
+        }
+        sp.material.map = tex;
+        sp.material.rotation = (Math.random() - 0.5) * 0.5;
+        sp.material.needsUpdate = true;
+        sp.position.set(x, y, z);
+        sp.visible = true;
+        sp.userData = { t: 0, size };
+    }
+
+    _stepPows(dt) {
+        if (!this._pows) return;
+        for (const sp of this._pows) {
+            if (!sp.visible) continue;
+            const u = sp.userData;
+            u.t += dt;
+            // 툭 튀어나왔다가 살짝 줄고, 위로 뜨며 사라짐
+            const k = u.t < 0.1 ? u.t / 0.1 * 1.35 : u.t < 0.2 ? 1.35 - (u.t - 0.1) * 3.5 : 1;
+            sp.scale.set(u.size * 2 * k, u.size * k, 1);
+            sp.position.y += dt * 1.5;
+            sp.material.opacity = u.t < 0.45 ? 1 : Math.max(0, 1 - (u.t - 0.45) / 0.25);
+            if (u.t > 0.7) sp.visible = false;
+        }
     }
 
     _fireball() {
@@ -293,39 +518,37 @@ export class FX {
             const c = this.clouds[i], s = c.s;
             c.t += dt;
             const t = c.t;
-            const top = c.y + Math.min(1, t / 4) * 42 * s;
-            // 불덩이: 순식간에 부풀었다가 갓 높이로 떠오르며 식음
-            const R = (t < 0.5 ? 1 - Math.pow(1 - t / 0.5, 3) : 1 + (t - 0.5) * 0.12) * 11 * s;
-            c.ball.scale.set(R, R * (t < 1 ? 1 : 0.8), R);
-            c.ball.position.set(c.x, t < 0.4 ? c.y + R * 0.3 : c.y + R * 0.3 + (top - c.y - R * 0.3) * Math.min(1, (t - 0.4) / 3), c.z);
+            c.cloud.update(dt, t);
+            // 불덩이: 순식간에 부풀었다가 갓 자리로 떠오르며 식고, 갓 연기 속으로 사라짐
+            const R = (t < 0.45 ? 1 - Math.pow(1 - t / 0.45, 3) : 1 + (t - 0.45) * 0.15) * 10 * s;
+            const capY = c.cloud.capY;
+            c.ball.scale.set(R, R * (t < 0.8 ? 1 : 0.75), R);
+            c.ball.position.set(c.x, t < 0.35 ? c.y + R * 0.25 : Math.max(c.y + R * 0.25, capY), c.z);
             const u = c.ball.material.uniforms;
             u.uT.value = t;
-            u.uHeat.value = Math.max(0, 1.2 - t * 0.38);
-            u.uFade.value = t < 1.5 ? 1 : Math.max(0, 1 - (t - 1.5) / 2);
+            u.uHeat.value = Math.max(0, 1.25 - t * 0.42);
+            u.uFade.value = t < 1.2 ? 1 : Math.max(0, 1 - (t - 1.2) / 1.6);
             if (u.uFade.value <= 0) c.ball.visible = false;
-            // 기둥과 갓
-            c.acc += dt * (this.mobile ? 26 : 50);
-            while (c.acc >= 1 && t < 6.5) {
-                c.acc -= 1;
-                const capY = c.ball.position.y;
-                if (Math.random() < 0.4) {
-                    const y = c.y + Math.random() * (capY - c.y);
-                    const rr = (1.5 + (y - c.y) / Math.max(1, capY - c.y) * 1.5) * s;
-                    this.smoke.spawn(c.x + (Math.random() - 0.5) * rr, y, c.z + (Math.random() - 0.5) * rr, 0, 3 * s, 0,
-                        (3.2 + Math.random() * 2) * s, 2.2 + Math.random(), 0.7, t < 1.5 ? 1.5 : 0.5 + Math.random() * 0.15, 0.5);
-                    if (t < 2.2) this.flames.spawn(c.x + (Math.random() - 0.5) * rr, y, c.z + (Math.random() - 0.5) * rr, 0, 4 * s, 0, 3 * s, 0.6, 0.6, Math.random(), 0.3);
-                } else {
-                    // 갓: 도넛 모양으로 말려 나감
-                    const a = Math.random() * Math.PI * 2, rr = R * (0.7 + Math.random() * 0.5);
-                    this.smoke.spawn(c.x + Math.cos(a) * rr, capY + (Math.random() - 0.3) * R * 0.5, c.z + Math.sin(a) * rr,
-                        Math.cos(a) * 3 * s, (Math.random() - 0.2) * 3 * s, Math.sin(a) * 3 * s,
-                        (5 + Math.random() * 4) * s, 2.6 + Math.random() * 1.6, 0.75, t < 3 ? 1 + (1 - t / 3) : 0.58 + Math.random() * 0.14, 0.45);
-                    if (t < 2.5 && Math.random() < 0.5) this.flames.spawn(c.x + Math.cos(a) * rr * 0.6, capY, c.z + Math.sin(a) * rr * 0.6,
-                        Math.cos(a) * 2 * s, 1 * s, Math.sin(a) * 2 * s, 4.5 * s, 0.7, 0.65, Math.random(), 0.3);
-                }
-            }
-            if (t > 9) { c.ball.visible = false; this.clouds.splice(i, 1); }
+            // 기둥 속 불티와 피어오르는 연기 조금
+            if (t < 2.2 && Math.random() < dt * 30) this.flames.spawn(c.x + (Math.random() - 0.5) * 3 * s, c.y + Math.random() * (capY - c.y), c.z + (Math.random() - 0.5) * 3 * s, 0, 8 * s, 0, 2.6 * s, 0.5, 0.7, Math.random(), 0.3);
+            if (!c.cloud.points.visible) { c.ball.visible = false; this.clouds.splice(i, 1); }
         }
+        // 보통 폭발 불덩이
+        if (this._balls) for (const b of this._balls) {
+            const bo = b.userData.boom;
+            if (!bo || !b.visible) continue;
+            bo.t += dt;
+            const k = bo.t / bo.dur;
+            if (k >= 1) { b.visible = false; b.userData.boom = null; continue; }
+            const e = 1 - Math.pow(1 - Math.min(1, k * 2.2), 3);
+            b.scale.setScalar(0.2 + bo.r * e);
+            b.position.y += dt * bo.r * 0.8;
+            const u = b.material.uniforms;
+            u.uT.value += dt * 2;
+            u.uHeat.value = 1.35 - k * 1.1;
+            u.uFade.value = 1 - Math.max(0, (k - 0.6) / 0.4);
+        }
+        this._stepPows(dt);
     }
 
     _initDust() {
@@ -377,6 +600,8 @@ export class FX {
         const k = viewportHeightPx / (2 * Math.tan(fovDeg * Math.PI / 360));
         this.dustMat.uniforms.uScale.value = k;
         if (this.flames) { this.flames.mat.uniforms.uScale.value = k; this.smoke.mat.uniforms.uScale.value = k; }
+        this.pointScale = k;
+        if (this._cloudPool) for (const c of this._cloudPool) c.mat.uniforms.uScale.value = k;
     }
 
     _spawnDust(x, y, z, vx, vy, vz, size, life, r, g, b, fire = 0) {

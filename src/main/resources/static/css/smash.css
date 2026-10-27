@@ -607,5 +607,9 @@
   border: 5px solid transparent; border-bottom: 0; border-top-color: rgba(22, 26, 33, .84);
 }
 .smash-tag.main { background: #d8333a; font-size: 13.5px; padding: 4px 10px 5px; z-index: 1; }
+/* 무너진 건물: 흐린 회색 + 가운데 줄 */
+.smash-tag.gone { background: rgba(70, 72, 78, .72); color: #e5e7eb; text-decoration: line-through; text-decoration-thickness: 2px; }
+.smash-tag.gone::after { border-top-color: rgba(70, 72, 78, .72); }
+.smash-tag.main.gone { background: rgba(160, 30, 36, .85); }
 .smash-tag.main::after { border-top-color: #d8333a; }
 @media (max-width: 480px) { .smash-tag { font-size: 11px; padding: 2px 6px 3px; } .smash-tag.main { font-size: 12px; } }

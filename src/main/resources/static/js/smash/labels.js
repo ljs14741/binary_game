@@ -51,7 +51,7 @@ export class Labels {
         const best = new Map();
         for (const b of buildings) {
             // 이름 없거나 "1" "B동" 처럼 짧은 건 뺌
-            if (!b.name || b.name.trim().length < 2 || /^[\d\s-]+$/.test(b.name) || b.state === 'rubble' || b.state === 'sinking') continue;
+            if (!b.name || b.name.trim().length < 2 || /^[\d\s-]+$/.test(b.name)) continue;
             if (b !== target && b.top < this.caps.minTop) continue;
             const d = Math.hypot(b.cx - cx, b.cz - cz);
             if (d > radius && b !== target) continue;
@@ -93,13 +93,16 @@ export class Labels {
         let n = 0;
         for (const it of this.list) {
             const b = it.b;
-            // 거의 다 부서진 건물은 이름표를 뗌
-            let show = n < this.caps.max && b.state !== 'rubble' && b.state !== 'sinking' && !(b.voxel && b.voxel.ratio() > 0.6);
+            // 부서진 건물도 어디였는지 알게 이름표를 남김 (잔해 높이로 내려오고 흐리게)
+            const y = this._top(b);
+            const gone = b.state === 'rubble' || b.state === 'sinking' || (b.voxel && b.voxel.ratio() > 0.6);
+            if (gone !== it.gone) { it.gone = gone; it.el.classList.toggle('gone', gone); it.w = 0; }
+            let show = n < this.caps.max;
             let s = null;
             if (show && it.occ) show = false;
             if (show) {
                 const a = b === target ? this._front(b, cam) : null;
-                s = a ? toScreen(a.x, b.top + 0.4, a.z) : toScreen(b.cx, b.top + 1.2, b.cz);
+                s = a ? toScreen(a.x, y + 0.4, a.z) : toScreen(b.cx, y + 1.2, b.cz);
                 show = !s.behind && s.x > -40 && s.x < W + 40 && s.y > 30 && s.y < bottom;
             }
             if (show) {
@@ -128,9 +131,16 @@ export class Labels {
         }
     }
 
+    /** 이름표를 달 높이: 멀쩡하면 지붕, 부서지는 중이면 남은 만큼, 무너졌으면 잔해 위 */
+    _top(b) {
+        if (b.state === 'rubble' || b.state === 'sinking') return (b.rubbleTop || 2);
+        if (b.voxel) return Math.max(b.rubbleTop || 2, b.top * (1 - b.voxel.ratio() * 0.85));
+        return b.top;
+    }
+
     /** 지붕 위 점에서 카메라 쪽으로 가다 다른 건물 벽에 막히면 가려진 것 */
     _hidden(world, b, cam) {
-        const ax = b.cx, ay = b.top + 1.2, az = b.cz;
+        const ax = b.cx, ay = this._top(b) + 1.2, az = b.cz;
         const dx = cam.x - ax, dy = cam.y - ay, dz = cam.z - az;
         const L = Math.hypot(dx, dy, dz);
         const n = Math.min(60, Math.floor(Math.min(L, 360) / 4));

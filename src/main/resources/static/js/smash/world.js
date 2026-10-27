@@ -121,7 +121,9 @@ const ROAD_COLOR = { major: 0x45494f, mid: 0x4d5158, minor: 0x5a5e64, foot: 0xbd
 const AREA_COLOR = { park: 0x8dbf6a, grass: 0x97c375, wood: 0x5f9a4c, water: 0x6fa8dc, pitch: 0x7fb069 };
 
 export class World {
-    constructor(scene, { budget = 45000, perBuilding = VOXEL_BUDGET_PER, targetBudget = 9000 } = {}) {
+    constructor(scene, { budget = 45000, perBuilding = VOXEL_BUDGET_PER, targetBudget = 9000, aniso = 4 } = {}) {
+        // 항공사진을 비스듬히 볼 때 뭉개지지 않게 (PC 는 더 높게)
+        this.aniso = aniso;
         this.scene = scene;
         this.ground = new Ground();
         this.cellSize = 280 / UNIT_M;
@@ -617,7 +619,7 @@ export class World {
             this.texLoader.load(`/api/smash/sat/${z}/${x}/${y}`, tex => {
                 if (!mesh.parent) { tex.dispose(); return; }
                 tex.colorSpace = THREE.SRGBColorSpace;
-                tex.anisotropy = 4;
+                tex.anisotropy = this.aniso;
                 mat.map = tex;
                 mat.needsUpdate = true;
                 mesh.visible = true;
