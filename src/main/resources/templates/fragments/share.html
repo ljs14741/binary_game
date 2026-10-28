@@ -71,6 +71,7 @@
         .bw-share-btn.line     { background: #06C755; color: #fff; }
         .bw-share-btn.x        { background: #111; color: #fff; border-color: rgba(255,255,255,.18); }
         .bw-share-btn.facebook { background: #1877F2; color: #fff; }
+        .bw-share-btn.instagram { background: linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 55%, #962fbf 80%, #4f5bd5 100%); color: #fff; }
         .bw-share-btn.copy,
         .bw-share-btn.native   { background: var(--bw-surface-strong, #14181e); color: var(--bw-text, #f3f1ec); border-color: var(--bw-border, rgba(255,255,255,.12)); }
         .bw-share-btn.native   { display: none; }
@@ -205,6 +206,10 @@
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.25-1.5 1.55-1.5H16.6V4.4c-.3-.04-1.3-.13-2.45-.13-2.43 0-4.1 1.48-4.1 4.2v2.03H7.3v3h2.75V21h3.45z"/></svg>
             <span th:text="#{common.share.facebook}">페이스북</span>
         </button>
+        <button type="button" class="bw-share-btn instagram" data-share="instagram" th:aria-label="#{common.share.aria.instagram}" aria-label="인스타그램으로 공유">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+            <span th:text="#{common.share.instagram}">인스타그램</span>
+        </button>
         <button type="button" class="bw-share-btn copy" data-share="copy" th:aria-label="#{common.share.aria.copy}" aria-label="링크 복사">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             <span th:text="#{common.share.copy}">링크 복사</span>
@@ -254,6 +259,7 @@
             copyFail:      /*[[#{common.share.copyFail}]]*/ '복사에 실패했어요. 주소창에서 복사해 주세요',
             kakaoFail:     /*[[#{common.share.kakaoFail}]]*/ '카카오톡 공유를 불러오지 못했어요',
             kakaoButton:   /*[[#{common.share.kakaoButton}]]*/ '게임 하러 가기',
+            instaCopied:   /*[[#{common.share.instaCopied}]]*/ '링크를 복사했어요. 인스타 스토리 링크 스티커나 DM에 붙여 넣어 주세요',
             acctCopied:    /*[[#{common.donate.copiedToast}]]*/ '계좌번호를 복사했어요',
             copiedLabel:   /*[[#{common.donate.copied}]]*/ '복사됨',
             copyLabel:     /*[[#{common.donate.copy}]]*/ '복사',
@@ -338,6 +344,12 @@
             if (kind === 'facebook') popup('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url));
             if (kind === 'copy')     copyText(url).then(function () { toast(MSG.copied); }, function () { toast(MSG.copyFail); });
             if (kind === 'native')   navigator.share({ title: title, text: desc, url: url }).catch(function () {});
+            // 인스타는 웹 공유 주소가 없음: 폰은 공유 창(여기서 인스타 고름), 아니면 링크 복사 + 붙여 넣는 법 안내
+            if (kind === 'instagram') {
+                copyText(url).then(function () {}, function () {});
+                if (navigator.share && matchMedia('(pointer: coarse)').matches) navigator.share({ title: title, text: desc, url: url }).catch(function () { toast(MSG.instaCopied); });
+                else toast(MSG.instaCopied);
+            }
         });
 
         // ── 후원 모달 ──

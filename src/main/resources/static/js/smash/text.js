@@ -70,6 +70,7 @@ const KO = {
     bgmOn: '배경음악 켜기',
     bgmOff: '배경음악 끄기',
     copied: '링크를 복사했어요',
+    shareInsta: '이미지를 저장하고 링크를 복사했어요. 인스타 앱에서 올려 주세요',
     copyFail: '복사에 실패했어요. 주소창에서 복사해 주세요',
     point: '{0}점',
     seconds: '{0}초',

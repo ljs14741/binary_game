@@ -1537,6 +1537,13 @@ function shareAct(act) {
     const popup = u => window.open(u, '_blank', 'noopener,width=600,height=560');
     track('smash_share', { method: act });
     if (act === 'save') saveImage();
+    else if (act === 'instagram') {
+        // 인스타는 웹 공유 주소가 없음: 폰은 결과 이미지로 공유 창(여기서 인스타 스토리·피드 고름), 안 되면 이미지 저장 + 링크 복사
+        copyText(url).catch(() => {});
+        if (sheet.file && navigator.canShare && navigator.canShare({ files: [sheet.file] })) {
+            navigator.share({ files: [sheet.file], text: text + '\n' + url }).catch(e => { if (!e || e.name !== 'AbortError') { saveImage(); toast(T.shareInsta); } });
+        } else { saveImage(); toast(T.shareInsta); }
+    }
     else if (act === 'native') {
         navigator.share({ files: [sheet.file], text: text + '\n' + url }).catch(e => { if (!e || e.name !== 'AbortError') saveImage(); });
     } else if (act === 'kakao') {

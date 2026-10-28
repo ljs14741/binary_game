@@ -350,10 +350,12 @@ export class Weapons {
             case 'truck': {
                 // 카메라 쪽에서 출발해 조준한 건물 1층을 뚫고 반대편으로 빠져나감
                 if (this.active.some(a => a.kind === 'truck')) { this.cool[k] = 0; return false; }
-                const fwd = new THREE.Vector3(dir.x, 0, dir.z).normalize();
-                const sc = Math.min(2.2, Math.max(1, this._fs()));
+                // 화면 옆에서 비스듬히 들어오게 (카메라 바로 아래서 출발하면 트럭이 안 보임)
+                const fwd = new THREE.Vector3(dir.x, 0, dir.z).normalize().applyAxisAngle(UP, (Math.random() < 0.5 ? -1 : 1) * 0.75);
+                // 건물을 들이받는 맛이 나게 크게 (예전의 약 2.6배). 회사 건물이 크면 더 크게
+                const sc = 2.6 * Math.min(2, Math.max(1, this._fs()));
                 const at = new THREE.Vector3(point.x, 0, point.z);
-                const from = at.clone().addScaledVector(fwd, -45 * sc), to = at.clone().addScaledVector(fwd, 35 * sc);
+                const from = at.clone().addScaledVector(fwd, -28 * sc), to = at.clone().addScaledVector(fwd, 22 * sc);
                 this.truck.scale.setScalar(sc);
                 this.truck.position.copy(from);
                 this.truck.lookAt(_v.copy(from).sub(fwd));
@@ -495,11 +497,13 @@ export class Weapons {
                 if (Math.random() < 0.7) this.fx.dust(tp.x - a.fwd.x * 4 * a.sc, 0.6, tp.z - a.fwd.z * 4 * a.sc, 2, 2 * a.sc, 1.2);
                 a.hitT -= dt;
                 if (a.hitT <= 0) {
-                    a.hitT = 0.07;
+                    a.hitT = 0.09;
                     // 범퍼 앞 1층·2층 높이를 같이 밀어냄
                     const front = _v.copy(tp).addScaledVector(a.fwd, 5 * a.sc);
-                    const spec = { id: 'truck', radius: WEAPONS[4].radius * a.sc, force: WEAPONS[4].force, vaporize: WEAPONS[4].vaporize };
-                    for (const h of [1.6, 4.6]) this.game.hit(new THREE.Vector3(front.x, h * a.sc, front.z), spec, a.fwd);
+                    // 트럭이 커진 만큼 범위도 넓게 (너무 커지면 한 번에 다 날아가니 0.6배)
+                    const spec = { id: 'truck', radius: WEAPONS[4].radius * a.sc * 0.6, force: WEAPONS[4].force, vaporize: WEAPONS[4].vaporize };
+                    const side = _v2.crossVectors(a.fwd, UP).normalize();
+                    for (const h of [1.2, 3.2]) for (const o of [-1, 1]) this.game.hit(new THREE.Vector3(front.x + side.x * o * a.sc, h * a.sc, front.z + side.z * o * a.sc), spec, a.fwd);
                     if (this.game.solidAt && this.game.solidAt(front.x, 2 * a.sc, front.z)) {
                         if (!a.honk) { a.honk = true; sfx.thump(14); this.fx.pow(front.x, 7 * a.sc, front.z, '쾅!!', 2.6 * a.sc, '#f2b630'); this.game.shake(0.45); }
                         this.fx.sparks(front.x, 2 * a.sc, front.z, 6);
