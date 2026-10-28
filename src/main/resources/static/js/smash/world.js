@@ -148,6 +148,11 @@ export class World {
         this.collapsing = [];
         this.chunks = new Map();
         this.hash = new Map();
+        // 다 부서져 멈춘 블록 건물은 그 모습 그대로 굳혀(움직이지 않는 잔해) 블록 예산을 돌려받음.
+        // 굳힌 잔해도 그려야 하니 양에 상한을 두고, 넘으면 오래된 것부터 낮은 잔해 더미로
+        this.baked = [];
+        this.bakedBlocks = 0;
+        this.bakeCap = Math.round(budget * 0.75);
     }
 
     clear() {
@@ -159,6 +164,8 @@ export class World {
         for (const v of this.voxels) v.dispose();
         this.voxels = [];
         this.collapsing = [];
+        this.baked = [];
+        this.bakedBlocks = 0;
         this.root.traverse(o => { if (o.isMesh) o.geometry.dispose(); });
         this.scene.remove(this.root);
         this.root = new THREE.Group();
@@ -495,12 +502,69 @@ export class World {
         const spec = voxelize({ poly: b.poly, h: b.Hc * b.vs, id: b.id, style: b.style }, b.budget);
         b.voxel = new VoxelBuilding(this, spec, b.pal, b);
         b.state = 'voxel';
+        b.voxel.owner = b;
         this.voxels.push(b.voxel);
         this._rebuildChunk(b.chunk);
         return b.voxel;
     }
 
     /** 블록 예산 밖의 건물: 먼지와 함께 땅으로 꺼지고 낮은 잔해 더미가 남는다 */
+    /**
+     * 매 프레임: 거의 다 부서졌고(85%↑) 3초 넘게 움직이는 블록·불이 없는 건물을 하나씩 굳힘.
+     * 회사 건물은 끝까지 부술 수 있게 굳히지 않음
+     */
+    tickBake(dt) {
+        for (const v of this.voxels) {
+            const b = v.owner;
+            if (!b || b.target) continue;
+            if (v.dynamicCount === 0 && v.burning.size === 0 && v.ratio() > 0.85) v.calm = (v.calm || 0) + dt;
+            else v.calm = 0;
+            if (v.calm > 3) { this._bake(v); return; }
+        }
+    }
+
+    _bake(v) {
+        const b = v.owner;
+        let n = 0, top = 0;
+        for (let i = 0; i < v.N; i++) if (v.alive(i)) { n++; top = Math.max(top, v.pos[i * 3 + 1] + v.vs * 0.5); }
+        const mesh = new THREE.InstancedMesh(v.mesh.geometry, this.blockMaterial, Math.max(1, n));
+        mesh.receiveShadow = true;
+        const m = new THREE.Matrix4(), c = new THREE.Color();
+        let k = 0;
+        for (let i = 0; i < v.N; i++) {
+            if (!v.alive(i)) continue;
+            v.mesh.getMatrixAt(i, m); mesh.setMatrixAt(k, m);
+            v.mesh.getColorAt(i, c); mesh.setColorAt(k, c);
+            k++;
+        }
+        mesh.count = n;
+        if (!n) mesh.visible = false;
+        mesh.computeBoundingSphere();
+        this.root.add(mesh);
+        // 블록 건물은 치움 (모양은 같음). 땅 높이 기록은 그대로 둬서 위에 떨어지는 것도 그 위에 얹힘
+        this.scene.remove(v.mesh);
+        v.mesh.dispose();
+        this.voxels.splice(this.voxels.indexOf(v), 1);
+        b.voxel = null;
+        b.state = 'rubble';
+        b.rubbleTop = Math.max(b.rubbleTop || 0, Math.min(top, b.top * 0.3, 6));
+        this.baked.push({ mesh, n, b });
+        this.bakedBlocks += n;
+        while (this.bakedBlocks > this.bakeCap && this.baked.length > 1) this._flatten(this.baked.shift());
+    }
+
+    /** 오래된 굳힌 잔해 → 바닥 모양 그대로 낮은 잔해 더미 하나 (그릴 블록 수를 줄임) */
+    _flatten(o) {
+        this.root.remove(o.mesh);
+        o.mesh.dispose();
+        this.bakedBlocks -= o.n;
+        const b = o.b;
+        const mound = new THREE.Mesh(buildingGeometry([b]), this.rubbleMat);
+        mound.scale.y = Math.max(0.05, Math.min(1, (b.rubbleTop || 2) / b.top));
+        mound.receiveShadow = true;
+        this.root.add(mound);
+    }
+
     collapse(b) {
         if (b.state !== 'intact') return;
         b.state = 'sinking';

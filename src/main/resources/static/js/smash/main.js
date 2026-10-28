@@ -1926,6 +1926,7 @@ function frame() {
         if (v.meta && !game.stats.buildings.has(v.meta.id) && v.ratio() > 0.5) game.stats.buildings.add(v.meta.id);
     }
     world.stepCollapse(dt, (x, y, z) => fx.dust(x, y, z, 2, 3, 1.5));
+    world.tickBake(dt);
 
 
     if (game.phase === 'play') {

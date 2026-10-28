@@ -146,6 +146,9 @@ export class VoxelBuilding {
 
     ratio() { return this.lost / this.N; }
 
+    /** 아직 화면에 있는 블록인가 (부서져 없어진 건 빼고) */
+    alive(i) { return this.state[i] !== GONE; }
+
     /** 폭발·타격. 반환: {value(억), blocks, glass[], chunks[], windows[]} */
     impact(p, radius, force, dir, vaporize, out) {
         const r2 = radius * radius;
