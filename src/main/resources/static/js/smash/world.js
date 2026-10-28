@@ -609,29 +609,72 @@ export class World {
         this.root.add(mound);
     }
 
-    collapse(b) {
+    /**
+     * 블록으로 못 부술 때(예산 초과·필살기) 무너지는 연출. 건물을 층 덩어리 몇 개로 나눠
+     * 아래부터 차례로 기울며 떨어뜨리고, 땅(쌓인 잔해)에 닿으면 덩어리가 부서져 사라짐.
+     * 덩어리 몇 개뿐이라 블록 예산과 상관없이 가벼움. 끝나면 낮은 잔해 더미만 남김
+     */
+    collapse(b, dir) {
         if (b.state !== 'intact') return;
         b.state = 'sinking';
         this._rebuildChunk(b.chunk);
-        const mesh = new THREE.Mesh(buildingGeometry([b]), this.facadeMat);
-        mesh.castShadow = true;
-        this.root.add(mesh);
-        this.collapsing.push({ b, mesh, t: 0, dur: 1.4 + Math.random() * 0.6 });
         b.rubbleTop = Math.min(b.top * 0.12, 3);
+        const d = dir || this.hitDir || new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5);
+        const fwd = new THREE.Vector3(d.x, 0, d.z);
+        if (fwd.lengthSq() < 1e-4) fwd.set(1, 0, 0);
+        fwd.normalize();
+        const axis = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), fwd).normalize();
+        const n = Math.max(2, Math.min(5, Math.round(b.top / 12)));
+        const H = b.top / n;
+        const slabs = [];
+        for (let j = 0; j < n; j++) {
+            const geo = buildingGeometry([{ ...b, top: H }]);
+            geo.translate(-b.cx, -H / 2, -b.cz);
+            const mesh = new THREE.Mesh(geo, this.facadeMat);
+            mesh.castShadow = true;
+            mesh.position.set(b.cx, j * H + H / 2, b.cz);
+            this.root.add(mesh);
+            slabs.push({ mesh, j, vy: 0, delay: j * 0.06 + Math.random() * 0.05, tilt: (0.35 + Math.random() * 0.45) * (Math.random() < 0.2 ? -1 : 1), done: false });
+        }
+        this.collapsing.push({ b, slabs, H, axis, fwd, t: 0, pile: 0, first: true });
     }
 
-    stepCollapse(dt, dustCb) {
+    stepCollapse(dt, dustCb, impactCb) {
+        const G = 26;
         for (let i = this.collapsing.length - 1; i >= 0; i--) {
-            const c = this.collapsing[i];
+            const c = this.collapsing[i], b = c.b;
             c.t += dt;
-            const k = Math.min(1, c.t / c.dur);
-            const e = k * k;
-            const h = Math.max(c.b.rubbleTop / c.b.top, 1 - e);
-            c.mesh.scale.y = h;
-            if (Math.random() < dt * 14) dustCb(c.b.cx + (Math.random() - 0.5) * (c.b.bbox.maxx - c.b.bbox.minx), c.b.top * h, c.b.cz + (Math.random() - 0.5) * (c.b.bbox.maxz - c.b.bbox.minz), c.b);
-            if (k >= 1) {
-                c.b.state = 'rubble';
-                c.mesh.material = this.rubbleMat;
+            let left = 0;
+            for (const s of c.slabs) {
+                if (s.done) continue;
+                left++;
+                if (c.t < s.delay) continue;
+                s.vy -= G * dt;
+                const m = s.mesh;
+                m.position.y += s.vy * dt;
+                // 위 덩어리일수록 더 기울고 더 밀려남
+                const a = Math.min(Math.abs(s.tilt), (c.t - s.delay) * 0.55 * (0.4 + s.j / c.slabs.length)) * Math.sign(s.tilt);
+                m.quaternion.setFromAxisAngle(c.axis, a);
+                m.position.x += c.fwd.x * dt * (1 + s.j * 1.2);
+                m.position.z += c.fwd.z * dt * (1 + s.j * 1.2);
+                if (Math.random() < dt * 6) dustCb(m.position.x, m.position.y, m.position.z, b);
+                // 덩어리 아래가 쌓인 잔해에 닿으면 부서짐
+                if (m.position.y - c.H * 0.5 <= c.pile) {
+                    s.done = true;
+                    this.root.remove(m);
+                    m.geometry.dispose();
+                    c.pile = Math.min(b.rubbleTop * 1.6, c.pile + c.H * 0.12);
+                    if (impactCb) impactCb(m.position.x, Math.max(0.5, c.pile), m.position.z, b, c.first, -s.vy);
+                    c.first = false;
+                }
+            }
+            if (!left) {
+                // 낮은 잔해 더미
+                const mound = new THREE.Mesh(buildingGeometry([b]), this.rubbleMat);
+                mound.scale.y = Math.max(0.03, b.rubbleTop / b.top);
+                mound.receiveShadow = true;
+                this.root.add(mound);
+                b.state = 'rubble';
                 this.collapsing.splice(i, 1);
             }
         }

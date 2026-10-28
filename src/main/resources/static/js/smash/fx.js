@@ -3,6 +3,7 @@ import * as THREE from 'three';
 const DUST_MAX = 1500;
 const PAPER_MAX = 180;
 const SHARD_MAX = 420;
+const CHUNK_MAX = 360;
 const BLAST_MAX = 6;
 const POW_FONT = '"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
 
@@ -285,6 +286,7 @@ export class FX {
         this._initDust();
         this._initPapers();
         this._initShards();
+        this._initChunks();
         this._initBlasts();
         const tex = this.puffTex = puffTexture();
         this.flames = new PuffLayer(scene, this.mobile ? 700 : 1400, tex, true);
@@ -711,6 +713,54 @@ export class FX {
         this.scene.add(this.shards);
     }
 
+    /** 효과용 콘크리트 덩어리 (진짜 블록이 아니라 예산과 상관없음). 튀었다가 바닥에 굴러 사라짐 */
+    _initChunks() {
+        const geo = new THREE.BoxGeometry(1, 1, 1);
+        this.chunkMesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), CHUNK_MAX);
+        this.chunkMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.chunkMesh.frustumCulled = false;
+        this.cp = new Float32Array(CHUNK_MAX * 3); this.cv = new Float32Array(CHUNK_MAX * 3);
+        this.cr = new Float32Array(CHUNK_MAX * 3); this.cs = new Float32Array(CHUNK_MAX); this.cl = new Float32Array(CHUNK_MAX);
+        this.cNext = 0;
+        const c = new THREE.Color();
+        for (let i = 0; i < CHUNK_MAX; i++) {
+            _m.makeScale(0, 0, 0); this.chunkMesh.setMatrixAt(i, _m);
+            this.chunkMesh.setColorAt(i, c.setHSL(0.08, 0.06, 0.45 + Math.random() * 0.3));
+        }
+        this.scene.add(this.chunkMesh);
+    }
+
+    chunks(x, y, z, n = 10, spread = 4, power = 1, size = 1) {
+        if (this.mobile) n = Math.ceil(n * 0.6);
+        for (let k = 0; k < n; k++) {
+            const i = this.cNext;
+            this.cNext = (i + 1) % CHUNK_MAX;
+            this.cp.set([x + (Math.random() - 0.5) * spread, y + Math.random() * spread * 0.3, z + (Math.random() - 0.5) * spread], i * 3);
+            const a = Math.random() * Math.PI * 2, v = (4 + Math.random() * 8) * power;
+            this.cv.set([Math.cos(a) * v, (4 + Math.random() * 9) * power, Math.sin(a) * v], i * 3);
+            this.cr.set([Math.random() * 6, Math.random() * 6, Math.random() * 6], i * 3);
+            this.cs[i] = size * (0.4 + Math.random() * 0.9);
+            this.cl[i] = 1.6 + Math.random() * 1.2;
+        }
+    }
+
+    _stepChunks(dt) {
+        for (let i = 0; i < CHUNK_MAX; i++) {
+            if (this.cl[i] <= 0) continue;
+            this.cl[i] -= dt;
+            const i3 = i * 3, p = this.cp, v = this.cv;
+            v[i3 + 1] -= 24 * dt;
+            p[i3] += v[i3] * dt; p[i3 + 1] += v[i3 + 1] * dt; p[i3 + 2] += v[i3 + 2] * dt;
+            if (p[i3 + 1] < this.cs[i] * 0.5) { p[i3 + 1] = this.cs[i] * 0.5; v[i3 + 1] *= -0.25; v[i3] *= 0.6; v[i3 + 2] *= 0.6; }
+            this.cr[i3] += 5 * dt; this.cr[i3 + 1] += 4 * dt;
+            const s = this.cs[i] * Math.min(1, this.cl[i] * 2);
+            _e.set(this.cr[i3], this.cr[i3 + 1], this.cr[i3 + 2]);
+            _m.compose(_p.set(p[i3], p[i3 + 1], p[i3 + 2]), _q.setFromEuler(_e), _s.set(s, s, s));
+            this.chunkMesh.setMatrixAt(i, _m);
+        }
+        this.chunkMesh.instanceMatrix.needsUpdate = true;
+    }
+
     glass(x, y, z, n = 6, dir = null, power = 1) {
         for (let k = 0; k < n; k++) {
             const i = this.sNext;
@@ -764,6 +814,7 @@ export class FX {
         this.time += dt;
         this._stepBurns(dt, cam);
         this._stepClouds(dt);
+        this._stepChunks(dt);
         this.flames.update(dt, this.time);
         this.smoke.update(dt, this.time);
         // 먼지·불

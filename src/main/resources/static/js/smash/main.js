@@ -523,6 +523,8 @@ function hit(point, w, dir) {
     // 초고층 사옥은 같은 무기로는 티가 안 난다 — 회사 건물 크기만큼 범위·위력을 키운다 (setup 의 wscale)
     const r = w.radius * game.wscale;
     const force = w.force * Math.sqrt(game.wscale);
+    // 예산이 차서 블록 대신 무너질 때 맞은 방향으로 쓰러지게
+    world.hitDir = dir;
     wake(point, r);
     hitOut.value = 0; hitOut.blocks = 0; hitOut.glass.length = 0; hitOut.chunks.length = 0; hitOut.windows.length = 0;
     for (const v of world.voxels) {
@@ -646,7 +648,7 @@ function nukeBlast(p, dir) {
     for (const b of nearBuildings(p, 40)) {
         if (b.state !== 'intact') continue;
         const d = distToPolygon(p.x, p.z, b.poly);
-        if (d < 40) { world.collapse(b); onFlatten(b); }
+        if (d < 40) { world.collapse(b, new THREE.Vector3(b.cx - p.x, 0, b.cz - p.z)); onFlatten(b); }
     }
     for (const v of world.voxels) {
         const bb = v.bbox;
@@ -698,7 +700,7 @@ function miniNuke(p, dir) {
     const R = w.radius * game.wscale * 1.5;
     for (const b of nearBuildings(p, R)) {
         if (b.state !== 'intact' || b === game.target || b.top > 45) continue;
-        if (distToPolygon(p.x, p.z, b.poly) < R * 0.75) { world.collapse(b); onFlatten(b); }
+        if (distToPolygon(p.x, p.z, b.poly) < R * 0.75) { world.collapse(b, new THREE.Vector3(b.cx - p.x, 0, b.cz - p.z)); onFlatten(b); }
     }
     street.impact(p, R, 30, dir);
     landmarks.impact(p, R, 30, dir);
@@ -1925,7 +1927,22 @@ function frame() {
         if (v.shatter.length) onShatter(v.shatter);
         if (v.meta && !game.stats.buildings.has(v.meta.id) && v.ratio() > 0.5) game.stats.buildings.add(v.meta.id);
     }
-    world.stepCollapse(dt, (x, y, z) => fx.dust(x, y, z, 2, 3, 1.5));
+    world.stepCollapse(dt, (x, y, z) => fx.dust(x, y, z, 2, 3, 1.5), (x, y, z, b, first, sp) => {
+        // 층 덩어리가 바닥에 부딪힐 때: 파편·유리·먼지 구름·쿵 소리
+        const w = Math.max(b.bbox.maxx - b.bbox.minx, b.bbox.maxz - b.bbox.minz);
+        fx.chunks(x, y, z, 14, w * 0.6, 1 + sp * 0.02, Math.max(0.6, w * 0.05));
+        fx.glass(x, y + 1, z, 10, null, 1.4);
+        fx.dust(x, y, z, 10, w * 0.7, 2.2);
+        if (Math.random() < 0.5) fx.papersBurst(x, y + 1, z, 4, 1.2);
+        sfx.thump(10 + Math.min(10, sp * 0.4));
+        sfx.crash(30);
+        trauma = Math.min(1, trauma + 0.12);
+        if (first) {
+            fx.ring(b.cx, 0.3, b.cz, w * 1.2, 0xe5dccb);
+            fx.pow(b.cx, b.top * 0.6, b.cz, '와르르!', Math.max(2, w * 0.12), '#ffffff');
+            for (let k = 0; k < 6; k++) fx.smokeAt(b.cx + (Math.random() - 0.5) * w, 1, b.cz + (Math.random() - 0.5) * w, w * 0.5, 0.5);
+        }
+    });
     world.tickBake(dt);
 
 
