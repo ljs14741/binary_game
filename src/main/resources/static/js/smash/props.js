@@ -218,6 +218,8 @@ export class Boss {
         this.hitCool = 0;
         this.stars.visible = false;
         this.stars.position.set(0, 3.05 + this.hatTop, 0);
+        // 날아가도 이 원 밖으로는 못 나감 (못 찾게 멀리 가지 않게). 반지름은 main 이 정함
+        this.bound = { x, z, r: 30 };
     }
 
     /**
@@ -406,7 +408,8 @@ export class Boss {
         this.hitCool = 0.3;
         this.state = 'fly';
         this.stars.visible = false;
-        this.rigid.launch(dir.x * force * 0.7, 7 + force * 0.45, dir.z * force * 0.7, 10);
+        // 옆으로는 덜, 위로는 더 날림 (멀리 사라지지 않고 높이 붕 뜨게)
+        this.rigid.launch(dir.x * force * 0.45, 9 + force * 0.5, dir.z * force * 0.45, 10);
         return true;
     }
 
@@ -452,10 +455,18 @@ export class Boss {
             this.armR.rotation.z = 2.6 + Math.sin(time * 30) * 0.6;
             this.armL.rotation.z = -2.6 - Math.sin(time * 30) * 0.6;
             const land = this.rigid.step(dt, world);
+            // 보이지 않는 울타리: 넘으면 안쪽으로 튕겨 돌아옴
+            const bd = this.bound, p = g.position, v = this.rigid.vel;
+            const ox = p.x - bd.x, oz = p.z - bd.z, d = Math.hypot(ox, oz);
+            if (d > bd.r) {
+                const nx = ox / d, nz = oz / d, out = v.x * nx + v.z * nz;
+                if (out > 0) { v.x -= 1.6 * out * nx; v.z -= 1.6 * out * nz; }
+                p.x = bd.x + nx * bd.r; p.z = bd.z + nz * bd.r;
+            }
             if (land > 0 && !this.rigid.flying) {
                 this.state = 'down';
                 // 금방 털고 일어나야 또 때리는 맛이 있음
-                this.timer = 0.9;
+                this.timer = 0.4;
                 this.stars.visible = true;
                 _e.set(-Math.PI / 2, Math.random() * Math.PI * 2, 0, 'YXZ');
                 this.lieQ = new THREE.Quaternion().setFromEuler(_e);
@@ -470,12 +481,12 @@ export class Boss {
             this.timer -= dt;
             const p = g.position;
             if (world.surface(p.x, p.y + 0.05, p.z, null) < p.y - 0.25) { this.rigid.launch(0, 0, 0, 1); this.state = 'fly'; }
-            else if (this.timer <= 0) { this.state = 'rise'; this.timer = 0.3; this.stars.visible = false; ev = 'up'; }
+            else if (this.timer <= 0) { this.state = 'rise'; this.timer = 0.15; this.stars.visible = false; ev = 'up'; }
         }
         if (this.state === 'rise') {
             const yaw = Math.atan2(camPos.x - g.position.x, camPos.z - g.position.z);
             _q2.setFromAxisAngle(UP, yaw);
-            g.quaternion.slerp(_q2, Math.min(1, dt * 14));
+            g.quaternion.slerp(_q2, Math.min(1, dt * 22));
             this.timer -= dt;
             if (this.timer <= 0) { this.state = 'stand'; this.stars.position.set(0, 3.05 + this.hatTop, 0); }
         }

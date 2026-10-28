@@ -550,7 +550,8 @@ function hit(point, w, dir) {
     if (w.id === 'hammer') {
         fx.dust(point.x, point.y, point.z, 5, 0.8, 0.8);
         if (res.blocks) fx.papersBurst(point.x, point.y, point.z, 2, 0.7);
-        trauma = Math.min(1, trauma + 0.15);
+        // 연타라 한 방 흔들림은 작게
+        trauma = Math.min(0.7, trauma + 0.06);
     } else if (w.id === 'gun') {
         trauma = Math.min(1, trauma + 0.02);
     }
@@ -721,6 +722,7 @@ const weapons = new Weapons(scene, fx, {
     fxScale: () => Math.min(2.2, Math.max(1, game.wscale)),
     shake: n => { trauma = Math.min(1, trauma + n); },
     surface: (x, z) => world.surface(x, 500, z, null),
+    solidAt: (x, y, z) => world.blocked(x, y, z, null),
 });
 
 // ── 시작: 검색 → 지도 → 부수기 ──
@@ -894,6 +896,9 @@ function setup(area, fake, placeName, preview = false) {
     const spot = roofSpot(b, camDir);
     // 괴롭히는 맛이 나게 건물에 비해 일부러 크게 (예전 1.6~4 → 2.8~7)
     boss.reset(spot.x, b.top, spot.z, bossSize);
+    // 상사 울타리: 회사 건물과 바로 옆까지만
+    boss.bound.x = b.cx; boss.bound.z = b.cz;
+    boss.bound.r = Math.max(b.bbox.maxx - b.bbox.minx, b.bbox.maxz - b.bbox.minz) * 0.5 + 12;
     applyBossLook();
     boss.group.visible = true;
     sign.setName(corpName());
@@ -1049,7 +1054,7 @@ async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false
         fillRanking(olId, 'smash-pagerank', detail, data.top || [], e => score(e.damage), T.rankDetail, fmt(T.rankEmpty, data.minPlayers || 2));
         // 상사 응징 랭킹은 페이지 아래 목록에만
         if (detail) {
-            fillRanking('smash-bossrank-ol', 'smash-bossrank', true, data.bosses || [], e => fmt(T.timesUnit, e.hits.toLocaleString()), T.bossRankDetail, T.bossRankEmpty);
+            fillRanking('smash-bossrank-ol', 'smash-bossrank', true, data.bosses || [], e => fmt(T.bossHitsUnit, e.hits.toLocaleString()), T.bossRankDetail, T.bossRankEmpty);
             bossFaces('smash-bossrank-ol', data.bosses || []);
         }
     } catch (e) { /* 랭킹이 안 떠도 게임은 된다 */ }
@@ -1151,6 +1156,11 @@ function rankSkipReason() {
 
 function showEndRank(res, skip) {
     const el = $('smash-end-rank');
+    // 이름 없는 기본 상사를 때렸으면 상사 랭킹 오르는 법을 알려 줌
+    let hint = $('smash-end-bosshint');
+    if (!hint) { hint = document.createElement('p'); hint.id = 'smash-end-bosshint'; hint.className = 'smash-end-rank'; el.after(hint); }
+    hint.textContent = T.bossRankHint;
+    hint.hidden = !(game.stats.boss > 0 && !(bossLook.name || '').trim() && bossLook.title === BOSS_DEFAULT.title);
     if (res && res.counted === false && res.reason) skip = res.reason;
     if (skip && T.rankSkip[skip]) { el.textContent = T.rankSkip[skip]; el.hidden = false; return; }
     if (!res || !res.name) { el.hidden = true; return; }
@@ -1777,7 +1787,7 @@ function holdFire(now) {
     if (p.pan || (p.moved && !p.firing)) return;
     const w = WEAPONS[game.weapon];
     if (game.nukeArmed || !w.hold) return;
-    const wait = w.id === 'gun' || w.id === 'flame' ? 110 : 240;
+    const wait = w.id === 'gun' || w.id === 'flame' || w.id === 'hammer' ? 110 : 240;
     if (now - p.t < wait) return;
     p.firing = true;
     if (attack(p.x, p.y)) p.fired = true;

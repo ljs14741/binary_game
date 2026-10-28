@@ -5,12 +5,13 @@ import { sfx } from './audio.js';
 // hold: 누르고 있으면 cool 간격으로 계속 쏜다.
 export const WEAPONS = [
     // 빡침 펀치 (예전 망치 자리. 기록·통계 호환 때문에 id 는 hammer 그대로)
-    { id: 'hammer', icon: '👊', cool: 0.16, hold: true, radius: 2.8, force: 16 },
+    { id: 'hammer', icon: '👊', cool: 0.075, hold: true, radius: 2.6, force: 15 },
     { id: 'gun', icon: '📎', cool: 0.065, hold: true, radius: 1.1, force: 7 },
-    { id: 'bomb', icon: '✉️', cool: 0.55, hold: true, radius: 5.2, force: 24, vaporize: 0.22 },
+    // 터지면 작은 사직서들이 사방으로 튀어 연쇄로 터짐
+    { id: 'bomb', icon: '✉️', cool: 0.6, hold: true, radius: 5.6, force: 26, vaporize: 0.25 },
     { id: 'flame', icon: '🔥', cool: 0.05, hold: true, radius: 2.6, force: 0 },
-    // 전투기가 화면 가로로 지나가며 한 줄로 차례차례 떨어뜨리는 융단폭격
-    { id: 'strike', icon: '💬', cool: 4, hold: false, radius: 3.8, force: 22, vaporize: 0.15 },
+    // 덤프트럭이 건물 1층을 뚫고 지나감. 아래가 비면 위층이 통째로 주저앉음
+    { id: 'truck', icon: '🚚', cool: 3.5, hold: false, radius: 4.6, force: 30, vaporize: 0.1 },
     // 미사일이 떨어져 버섯구름을 피움 (필살기의 작은 판)
     { id: 'nuke', icon: '☢️', cool: 5, hold: false, radius: 14, force: 46, vaporize: 0.45 },
     { id: 'hole', icon: '🌀', cool: 7, hold: false, radius: 13, force: 30 },
@@ -46,13 +47,17 @@ export class Weapons {
         this.game = game;
         this.cool = WEAPONS.map(() => 0);
         this.active = [];
-        this._makeHammer();
+        // 주먹 여러 개를 돌려 써서 꾹 누르면 다다다다 연타
+        this.fists = [];
+        for (let i = 0; i < 6; i++) { this._makeHammer(); this.fists.push(this.hammer); }
+        this.hammer = this.fists[0];
+        this.punchN = 0;
         const top = new THREE.MeshLambertMaterial({ map: stamp('사직서', '#fffdf6', '#c8102e', '#c8102e') });
         const side = new THREE.MeshLambertMaterial({ color: 0xf4efe2 });
         this.bombGeo = new THREE.BoxGeometry(1.3, 0.16, 0.9);
         this.bombMats = [side, side, top, side, side, side];
         this.missile = this._makeMissile();
-        this.plane = this._makePlane();
+        this.truck = this._makeTruck();
         // 총구 불꽃: 더해 그리는 별 모양
         const fl = labelTexture(64, 64, (g) => {
             const gr = g.createRadialGradient(32, 32, 0, 32, 32, 30);
@@ -158,23 +163,35 @@ export class Weapons {
         this.hammer = { group: g, pivot: fist, t: -1, n: 0 };
     }
 
-    /** 폭격기: 회색 동체 + 날개 + 꼬리 (앞 = -z) */
-    _makePlane() {
+    /** 덤프트럭: 노란 운전석 + 회색 짐칸 + 바퀴 6개 (앞 = -z) */
+    _makeTruck() {
         const g = new THREE.Group();
-        const gray = new THREE.MeshLambertMaterial({ color: 0x8a96a3 });
-        const dark = new THREE.MeshLambertMaterial({ color: 0x4b5563 });
-        const yellow = new THREE.MeshLambertMaterial({ color: 0xfee500 });
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.45, 8, 12), gray);
-        body.rotation.x = Math.PI / 2;
-        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2, 12), dark);
-        nose.rotation.x = -Math.PI / 2; nose.position.z = -5;
-        const wing = new THREE.Mesh(new THREE.BoxGeometry(9, 0.18, 2.2), gray);
-        wing.position.z = 0.3;
-        const tailW = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.14, 1.1), gray);
-        tailW.position.z = 3.6;
-        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.8, 1.4), yellow);
-        fin.position.set(0, 0.9, 3.6);
-        g.add(body, nose, wing, tailW, fin);
+        const yellow = new THREE.MeshLambertMaterial({ color: 0xf2b630 });
+        const gray = new THREE.MeshLambertMaterial({ color: 0x6b7280 });
+        const dark = new THREE.MeshLambertMaterial({ color: 0x1f2328 });
+        const glass = new THREE.MeshLambertMaterial({ color: 0x9cc7e6, emissive: 0x1a2a38 });
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3, 2.6), yellow);
+        cab.position.set(0, 2.4, -3.4);
+        const win = new THREE.Mesh(new THREE.BoxGeometry(2.9, 1.1, 0.1), glass);
+        win.position.set(0, 3.1, -4.72);
+        const bed = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.2, 5.6), gray);
+        bed.position.set(0, 2.3, 0.9);
+        bed.rotation.x = -0.12;
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(3, 0.6, 9), dark);
+        chassis.position.set(0, 0.95, -0.6);
+        const bumper = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.7, 0.5), dark);
+        bumper.position.set(0, 1.1, -4.9);
+        g.add(cab, win, bed, chassis, bumper);
+        const wg = new THREE.CylinderGeometry(0.75, 0.75, 0.6, 14);
+        wg.rotateZ(Math.PI / 2);
+        this.wheels = [];
+        for (const z of [-3.4, 0.4, 2.4]) for (const x of [-1.55, 1.55]) {
+            const w = new THREE.Mesh(wg, dark);
+            w.position.set(x, 0.75, z);
+            g.add(w);
+            this.wheels.push(w);
+        }
+        for (const m of g.children) m.castShadow = true;
         g.visible = false;
         this.scene.add(g);
         return g;
@@ -203,6 +220,37 @@ export class Weapons {
         return g;
     }
 
+    _stepFist(h, dt) {
+        if (h.t < 0) return;
+        h.t += dt;
+        const IN = 0.05, HOLD = 0.05, OUT = 0.1;
+        if (h.t < IN) {
+            // 뒤로 젖혔다가 쭉 뻗음
+            const e = h.t / IN;
+            h.pivot.position.z = 6 * (1 - e * e) + 0.6;
+            return;
+        }
+        h.pivot.position.z = 0.6;
+        if (!h.hit) {
+            h.hit = true;
+            h.n++;
+            sfx.hammer();
+            const p = h.point;
+            // 주먹이 닿은 자리에서 맞음 (흩어 친 경우 그 자리)
+            this.game.hit(h.group.position.clone(), WEAPONS[0], h.dir);
+            this.fx.dust(p.x, p.y, p.z, 3, 1.1 * h.scale, 1.1);
+            this.fx.sparks(p.x, p.y, p.z, 4);
+            if (Math.random() < 0.2) this.fx.pow(h.group.position.x, h.group.position.y + 1.2 * h.scale, h.group.position.z, PUNCH_WORDS[Math.floor(Math.random() * PUNCH_WORDS.length)], 1.5 * h.scale);
+            this.game.shake(0.09);
+        }
+        if (h.t > IN + HOLD) {
+            const e = Math.min(1, (h.t - IN - HOLD) / OUT);
+            h.pivot.position.z = 0.6 + e * 5;
+            h.group.scale.setScalar(h.scale * (1 - e));
+            if (e >= 1) { h.t = -1; h.group.visible = false; }
+        }
+    }
+
     /** 폭발 그림 배율 (회사 건물이 크면 크게) */
     _fs() { return this.game.fxScale ? this.game.fxScale() : 1; }
 
@@ -221,9 +269,12 @@ export class Weapons {
         this.cool[k] = w.cool;
         switch (w.id) {
             case 'hammer': {
-                const h = this.hammer;
-                const s = Math.max(1.1, camPos.distanceTo(point) / 28);
-                h.group.position.copy(point);
+                const h = this.fists.find(f => f.t < 0) || this.fists.reduce((a, b) => (a.t > b.t ? a : b));
+                const s = Math.max(1.1, camPos.distanceTo(point) / 28) * (0.85 + Math.random() * 0.3);
+                // 연타는 조준점 둘레로 조금씩 흩어서 (주먹이 겹쳐 보이지 않게)
+                const spread = this.punchN++ % 2 ? 1.6 * s : 0;
+                const right = _v2.crossVectors(dir, UP).normalize();
+                h.group.position.copy(point).addScaledVector(right, (Math.random() - 0.5) * spread).addScaledVector(UP, (Math.random() - 0.5) * spread * 0.7);
                 // 카메라 쪽을 보게 (살짝 기울여 매번 다른 각도로)
                 h.group.lookAt(camPos);
                 h.group.rotateZ((Math.random() - 0.5) * 0.9);
@@ -296,23 +347,19 @@ export class Weapons {
                 sfx.flame();
                 break;
             }
-            case 'strike': {
-                // 화면 가로 방향으로 날아가며 조준한 줄에 10발을 차례로 떨어뜨림
-                if (this.active.some(a => a.kind === 'plane')) { this.cool[k] = 0; return false; }
-                const right = new THREE.Vector3().crossVectors(dir, UP).setY(0).normalize();
-                const sc = Math.max(1, camPos.distanceTo(point) / 50);
-                const alt = Math.max(point.y + 22, 34) * Math.min(1.6, sc);
-                const span = 60 * sc;
-                const from = point.clone().addScaledVector(right, -span).setY(alt);
-                const to = point.clone().addScaledVector(right, span).setY(alt);
-                const drops = [];
-                for (let n = 0; n < 10; n++) drops.push({ off: (n - 4.5) * 3.6 * Math.sqrt(sc), done: false });
-                this.plane.scale.setScalar(sc);
-                this.plane.position.copy(from);
-                this.plane.lookAt(_v.copy(from).sub(right));
-                this.plane.visible = true;
-                this.active.push({ kind: 'plane', from, to, right, point: point.clone(), dir: dir.clone(), t: 0, dur: 1.9, drops, span, sc });
-                sfx.whoosh(1.9);
+            case 'truck': {
+                // 카메라 쪽에서 출발해 조준한 건물 1층을 뚫고 반대편으로 빠져나감
+                if (this.active.some(a => a.kind === 'truck')) { this.cool[k] = 0; return false; }
+                const fwd = new THREE.Vector3(dir.x, 0, dir.z).normalize();
+                const sc = Math.min(2.2, Math.max(1, this._fs()));
+                const at = new THREE.Vector3(point.x, 0, point.z);
+                const from = at.clone().addScaledVector(fwd, -45 * sc), to = at.clone().addScaledVector(fwd, 35 * sc);
+                this.truck.scale.setScalar(sc);
+                this.truck.position.copy(from);
+                this.truck.lookAt(_v.copy(from).sub(fwd));
+                this.truck.visible = true;
+                this.active.push({ kind: 'truck', from, to, fwd, dir: dir.clone(), t: 0, dur: 1.7, hitT: 0, sc, honk: false });
+                sfx.whoosh(1.4);
                 break;
             }
             case 'nuke': {
@@ -379,36 +426,7 @@ export class Weapons {
             tr.line.material.opacity = Math.max(0, tr.t / 0.06);
             if (tr.t <= 0) tr.line.visible = false;
         }
-        const h = this.hammer;
-        if (h.t >= 0) {
-            h.t += dt;
-            const IN = 0.07, HOLD = 0.07, OUT = 0.13;
-            if (h.t < IN) {
-                // 뒤로 젖혔다가 쭉 뻗음
-                const e = h.t / IN;
-                h.pivot.position.z = 6 * (1 - e * e) + 0.6;
-            } else {
-                h.pivot.position.z = 0.6;
-                if (!h.hit) {
-                    h.hit = true;
-                    h.n++;
-                    sfx.hammer();
-                    const p = h.point;
-                    this.game.hit(p, WEAPONS[0], h.dir);
-                    this.fx.dust(p.x, p.y, p.z, 5, 1.2 * h.scale, 1.2);
-                    this.fx.sparks(p.x, p.y, p.z, 5);
-                    if (h.n % 2 === 1) this.fx.pow(p.x, p.y + 1.2 * h.scale, p.z, PUNCH_WORDS[Math.floor(Math.random() * PUNCH_WORDS.length)], 1.6 * h.scale);
-                    this.game.shake(0.16);
-                    if (this.game.hitStop) this.game.hitStop(0.045);
-                }
-                if (h.t > IN + HOLD) {
-                    const e = Math.min(1, (h.t - IN - HOLD) / OUT);
-                    h.pivot.position.z = 0.6 + e * 5;
-                    h.group.scale.setScalar(h.scale * (1 - e));
-                    if (e >= 1) { h.t = -1; h.group.visible = false; }
-                }
-            }
-        }
+        for (const h of this.fists) this._stepFist(h, dt);
         for (let i = this.active.length - 1; i >= 0; i--) {
             const a = this.active[i];
             a.t += dt;
@@ -437,43 +455,58 @@ export class Weapons {
                         this.game.shake(0.55);
                         if (this.game.hitStop) this.game.hitStop(0.06);
                         this.game.hit(a.to, WEAPONS[2], a.dir);
+                        // 연쇄: 작은 사직서들이 튀어나감
+                        const n = this.fx.mobile ? 3 : 5, sp = R * 1.4;
+                        for (let k = 0; k < n; k++) {
+                            const ang = k / n * Math.PI * 2 + Math.random() * 0.6;
+                            const right = _v2.crossVectors(a.dir, UP).normalize();
+                            const to = a.to.clone().addScaledVector(right, Math.cos(ang) * sp).addScaledVector(UP, Math.sin(ang) * sp * 0.6 + 0.5);
+                            to.y = Math.max(0.5, to.y);
+                            const m = new THREE.Mesh(this.bombGeo, this.bombMats);
+                            m.scale.setScalar(0.7);
+                            m.position.copy(_v);
+                            this.scene.add(m);
+                            this.active.push({ kind: 'letter', mesh: m, from: _v.clone(), to, dir: a.dir, t: -k * 0.05, dur: 0.32 + Math.random() * 0.1, R: R * 0.6 });
+                        }
                     }
                 }
-            } else if (a.kind === 'plane') {
+            } else if (a.kind === 'letter') {
+                if (a.t < 0) continue;
                 const e = Math.min(1, a.t / a.dur);
-                this.plane.position.lerpVectors(a.from, a.to, e);
-                this.plane.rotation.z = Math.sin(a.t * 3) * 0.08;
-                const pp = this.plane.position;
-                // 날개 끝 하얀 비행운
-                if (Math.random() < 0.8) this.fx.smoke.spawn(pp.x - a.right.x * 3 * a.sc, pp.y, pp.z - a.right.z * 3 * a.sc, 0, 0.2, 0, 1.2 * a.sc, 1.4, 0.35, 0.9, 0.6);
-                // 조준한 줄 위를 지나갈 때마다 한 발씩
-                const along = (e - 0.5) * 2 * a.span;
-                for (const d of a.drops) {
-                    if (d.done || along < d.off) continue;
-                    d.done = true;
-                    const x = a.point.x + a.right.x * d.off, z = a.point.z + a.right.z * d.off;
-                    const ground = this.game.surface ? this.game.surface(x, z) : 0;
-                    const y = Math.max(ground, Math.min(a.point.y, ground + 30)) + 0.3;
-                    const s = new THREE.Sprite(this.badgeMat);
-                    s.scale.setScalar(2 * a.sc);
-                    s.position.copy(pp);
-                    this.scene.add(s);
-                    this.active.push({ kind: 'drop', mesh: s, from: pp.clone(), to: new THREE.Vector3(x, y, z), dir: a.dir, t: 0, dur: 0.45 });
-                }
-                if (e >= 1) { this.plane.visible = false; this.active.splice(i, 1); }
-            } else if (a.kind === 'drop') {
-                const e = Math.min(1, a.t / a.dur);
-                a.mesh.position.lerpVectors(a.from, a.to, e * e);
+                a.mesh.position.lerpVectors(a.from, a.to, e);
+                a.mesh.position.y += Math.sin(e * Math.PI) * 2;
+                a.mesh.rotation.y += dt * 18; a.mesh.rotation.x += dt * 9;
                 if (e >= 1) {
                     this._remove(i, a);
-                    const R = 3.2 * this._fs();
-                    _v.copy(a.to).addScaledVector(a.dir, -R * 1.1);
-                    this.fx.explosion(_v.x, _v.y, _v.z, R, { ball: 1.5 });
-                    if (Math.random() < 0.35) this.fx.pow(a.to.x, a.to.y + 2.5, a.to.z, '쾅!', 1.8, '#fee500');
+                    _v.copy(a.to).addScaledVector(a.dir, -a.R);
+                    this.fx.explosion(_v.x, _v.y, _v.z, a.R, { ball: 1.3 });
+                    this.fx.papersBurst(a.to.x, a.to.y, a.to.z, this.fx.mobile ? 4 : 8, 1.3);
                     sfx.boom(false);
-                    this.game.shake(0.28);
-                    this.game.hit(a.to, WEAPONS[4], a.dir);
+                    this.game.shake(0.18);
+                    this.game.hit(a.to, { id: 'letter', radius: 3.4, force: 18, vaporize: 0.15 }, a.dir);
                 }
+            } else if (a.kind === 'truck') {
+                // 빠르게 달려 들어감 (처음 0.3초는 가속)
+                const e = Math.min(1, a.t / a.dur);
+                const k2 = e < 0.18 ? (e / 0.18) * (e / 0.18) * 0.18 : e;
+                const tp = this.truck.position.lerpVectors(a.from, a.to, k2);
+                tp.y = Math.sin(a.t * 40) * 0.08 * a.sc;
+                for (const w of this.wheels) w.rotation.x -= dt * 25;
+                if (Math.random() < 0.7) this.fx.dust(tp.x - a.fwd.x * 4 * a.sc, 0.6, tp.z - a.fwd.z * 4 * a.sc, 2, 2 * a.sc, 1.2);
+                a.hitT -= dt;
+                if (a.hitT <= 0) {
+                    a.hitT = 0.07;
+                    // 범퍼 앞 1층·2층 높이를 같이 밀어냄
+                    const front = _v.copy(tp).addScaledVector(a.fwd, 5 * a.sc);
+                    const spec = { id: 'truck', radius: WEAPONS[4].radius * a.sc, force: WEAPONS[4].force, vaporize: WEAPONS[4].vaporize };
+                    for (const h of [1.6, 4.6]) this.game.hit(new THREE.Vector3(front.x, h * a.sc, front.z), spec, a.fwd);
+                    if (this.game.solidAt && this.game.solidAt(front.x, 2 * a.sc, front.z)) {
+                        if (!a.honk) { a.honk = true; sfx.thump(14); this.fx.pow(front.x, 7 * a.sc, front.z, '쾅!!', 2.6 * a.sc, '#f2b630'); this.game.shake(0.45); }
+                        this.fx.sparks(front.x, 2 * a.sc, front.z, 6);
+                        this.game.shake(0.06);
+                    }
+                }
+                if (e >= 1) { this.truck.visible = false; this.active.splice(i, 1); }
             } else if (a.kind === 'missile') {
                 const e = Math.min(1, a.t / a.dur);
                 const m = this.missile;
@@ -532,12 +565,12 @@ export class Weapons {
                 this.chain.scale.set(a.s, Math.max(0.1, L), a.s);
                 a.hitT -= dt;
                 if (Math.abs(ang) < 0.6 && a.hitT <= 0) {
-                    a.hitT = 0.045;
+                    // 너무 자주 부수면 계산이 몰려 끊김 → 0.08초마다
+                    a.hitT = 0.08;
                     if (a.first) {
                         a.first = false;
                         sfx.hammer(); sfx.thump(14);
                         this.game.shake(0.5);
-                        if (this.game.hitStop) this.game.hitStop(0.07);
                         this.fx.pow(p.x, p.y + 3 * a.s, p.z, '쿵!', 2.6 * a.s, '#ffd23f');
                         this.fx.dust(p.x, p.y, p.z, 14, 3 * a.s, 2);
                     }
@@ -567,12 +600,11 @@ export class Weapons {
     clear() {
         for (const a of this.active) if (a.mesh) this.scene.remove(a.mesh);
         this.active.length = 0;
-        this.hammer.t = -1;
-        this.hammer.group.visible = false;
+        for (const h of this.fists) { h.t = -1; h.group.visible = false; }
         this.hole.visible = false;
         this.ball.visible = this.chain.visible = false;
         this.missile.visible = false;
-        this.plane.visible = false;
+        this.truck.visible = false;
         this.flash.visible = false;
     }
 }
