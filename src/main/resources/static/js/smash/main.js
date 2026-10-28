@@ -213,6 +213,9 @@ function buildBossPanel() {
     const before = { name: bossLook.name, title: bossLook.title };
     nameIn.addEventListener('focus', () => { before.name = bossLook.name; });
     titleIn.addEventListener('focus', () => { before.title = bossLook.title; });
+    const head = $('smash-boss-head'), done = $('smash-boss-done'), skip = $('smash-boss-skip');
+    const headText = head.textContent, doneText = done.textContent;
+    let then = null;
     const close = () => {
         let changed = false;
         if (nameIn.classList.contains('bad')) { bossLook.name = before.name; nameIn.value = before.name || ''; nameIn.classList.remove('bad'); changed = true; }
@@ -220,8 +223,25 @@ function buildBossPanel() {
         if (changed) save();
         warn.hidden = true;
         sheet.hidden = true;
+        head.textContent = headText; done.textContent = doneText; skip.hidden = true;
+        const go = then; then = null;
+        if (go) { go(); return; }
         ui.start.hidden = game.phase !== 'start';
     };
+    /** 회사를 고른 뒤: 이름 안 지은 상사면 한 번 꾸미기 창을 띄우고, 닫으면 then() 으로 시작 */
+    bossAsk = (cb) => {
+        then = cb;
+        head.textContent = T.bossAskTitle;
+        done.textContent = T.bossAskGo;
+        skip.hidden = false;
+        ui.start.hidden = true;
+        sheet.hidden = false;
+        initBossPreview();
+        sizeBossPreview();
+        showTab('who');
+        track('smash_boss_ask');
+    };
+    skip.addEventListener('click', close);
     $('smash-boss-toggle').addEventListener('click', () => {
         ui.start.hidden = true;
         sheet.hidden = false;
@@ -802,7 +822,16 @@ function naming(query, place, typed) {
     return { name: place.name, company: false, rankable: true };
 }
 
+/** 상사 꾸미기 창을 "회사 고른 뒤" 모드로 여는 함수 (창 설정 때 채움) */
+let bossAsk = null, bossAsked = false;
+
 async function choose(query, place, typed) {
+    // 상사 이름을 안 지었으면 시작 전에 한 번 꾸미기 창을 보여 줌 (페이지당 한 번)
+    if (bossAsk && !bossAsked && !(bossLook.name || '').trim()) {
+        bossAsked = true;
+        bossAsk(() => choose(query, place, typed));
+        return;
+    }
     Object.assign(game, naming(query, place, typed));
     game.place = place;
     store.set('smash.name', query);

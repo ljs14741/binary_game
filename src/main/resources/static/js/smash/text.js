@@ -88,6 +88,8 @@ const KO = {
     rankEmpty: '아직 순위에 오른 회사가 없어요. 회사를 부수면 여기에 올라와요!',
     bossRankDetail: '{0}명에게 맞음',
     bossHitsUnit: '{0}대',
+    bossAskTitle: '오늘 날려 버릴 상사는?',
+    bossAskGo: '이 상사로 부수기 💥',
     bossRankHint: '💡 상사 꾸미기에서 이름을 넣고 때리면 상사 응징 랭킹에 올라가요',
     bossRankEmpty: '아직 맞은 상사가 없어요. 상사 꾸미기에서 이름을 넣고 때려 보세요!',
     rankPending: '🏆 {0} 누적 {1} · {2}명 이상 부수면 랭킹에 올라가요 (지금 {3}명)',

@@ -613,3 +613,9 @@
 /* 상사 응징 랭킹 옆 작은 상사 그림 */
 .smash-bossface { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #e9eef5, #c9d3df); object-fit: cover; margin-right: 2px; }
 @media (max-width: 480px) { .smash-bossface { width: 54px; height: 54px; flex-basis: 54px; } }
+
+/* 회사 고른 뒤 상사 꾸미기 창: 오른쪽 위 작은 건너뛰기 */
+.smash-boss-card { position: relative; }
+#smash-boss-skip { position: absolute; top: 12px; right: 14px; margin: 0; padding: 4px 6px; font-size: 13px; font-weight: 700; color: #6b7280; text-decoration: none; background: none; border: 0; cursor: pointer; }
+#smash-boss-skip[hidden] { display: none; }
+@media (max-width: 520px) { #smash-boss-skip { top: 8px; right: 8px; font-size: 12px; } .smash-boss-card h2#smash-boss-head { padding: 0 64px 0 0; text-align: left; } }
