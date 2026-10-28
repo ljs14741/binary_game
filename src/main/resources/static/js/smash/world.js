@@ -151,8 +151,9 @@ export class World {
         // 다 부서져 멈춘 블록 건물은 그 모습 그대로 굳혀(움직이지 않는 잔해) 블록 예산을 돌려받음.
         // 굳힌 잔해도 그려야 하니 양에 상한을 두고, 넘으면 오래된 것부터 낮은 잔해 더미로
         this.baked = [];
+        this.debris = [];
         this.bakedBlocks = 0;
-        this.bakeCap = Math.round(budget * 0.75);
+        this.bakeCap = Math.round(budget * 1.2);
     }
 
     clear() {
@@ -165,6 +166,7 @@ export class World {
         this.voxels = [];
         this.collapsing = [];
         this.baked = [];
+        this.debris = [];
         this.bakedBlocks = 0;
         this.root.traverse(o => { if (o.isMesh) o.geometry.dispose(); });
         this.scene.remove(this.root);
@@ -488,7 +490,7 @@ export class World {
 
     totalBlocks() {
         let n = 0;
-        for (const v of this.voxels) n += v.N;
+        for (const v of this.voxels) n += v.live;
         return n;
     }
 
@@ -514,6 +516,16 @@ export class World {
      * 회사 건물은 끝까지 부술 수 있게 굳히지 않음
      */
     tickBake(dt) {
+        // 반쯤 부서진 건물이라도 바닥에 4초 넘게 멈춘 잔해는 0.5초마다 조금씩 굳혀 감
+        this._settleT = (this._settleT || 0) - dt;
+        if (this._settleT <= 0) {
+            this._settleT = 0.5;
+            let room = 400;
+            for (const v of this.voxels) {
+                if (room <= 0) break;
+                room -= v.takeSettled(4, (m, c) => this._debris(v.mesh.geometry, m, c), room);
+            }
+        }
         for (const v of this.voxels) {
             const b = v.owner;
             if (!b || b.target) continue;
@@ -551,6 +563,38 @@ export class World {
         this.baked.push({ mesh, n, b });
         this.bakedBlocks += n;
         while (this.bakedBlocks > this.bakeCap && this.baked.length > 1) this._flatten(this.baked.shift());
+    }
+
+    /**
+     * 굳힌 잔해 블록 하나 더하기. 블록 크기(geometry)별로 덩어리를 나눠 담고, 덩어리가 차면 새로 만듦.
+     * 전체가 상한을 넘으면 가장 오래된 덩어리부터 치움 (아주 오래 놀았을 때만)
+     */
+    _debris(geo, m, c) {
+        const SIZE = 1024;
+        if (!this.debris) this.debris = [];
+        let d = this.debris.find(x => x.geo === geo && x.n < SIZE);
+        if (!d) {
+            const mesh = new THREE.InstancedMesh(geo, this.blockMaterial, SIZE);
+            mesh.count = 0;
+            mesh.receiveShadow = true;
+            mesh.frustumCulled = false;
+            this.root.add(mesh);
+            d = { geo, mesh, n: 0 };
+            this.debris.push(d);
+        }
+        d.mesh.setMatrixAt(d.n, m);
+        d.mesh.setColorAt(d.n, c);
+        d.n++;
+        d.mesh.count = d.n;
+        d.mesh.instanceMatrix.needsUpdate = true;
+        d.mesh.instanceColor.needsUpdate = true;
+        this.bakedBlocks++;
+        while (this.bakedBlocks > this.bakeCap && this.debris.length > 1) {
+            const o = this.debris.shift();
+            this.root.remove(o.mesh);
+            o.mesh.dispose();
+            this.bakedBlocks -= o.n;
+        }
     }
 
     /** 오래된 굳힌 잔해 → 바닥 모양 그대로 낮은 잔해 더미 하나 (그릴 블록 수를 줄임) */

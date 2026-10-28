@@ -34,6 +34,10 @@ export class VoxelBuilding {
         this.quat = new Float32Array(N * 4); this.ang = new Float32Array(N * 3);
         this.age = new Float32Array(N); this.restOn = new Int32Array(N); this.restCell = new Float64Array(N);
         this.burn = new Float32Array(N);
+        // 바닥에 멈춘 때 (초). 오래 멈춘 잔해는 world 가 굳혀 가져감
+        this.sleptAt = new Float32Array(N);
+        // 아직 이 블록 건물이 들고 있는 블록 수 (없어지거나 굳혀 넘긴 건 뺌). 블록 예산은 이걸로 셈
+        this.live = N;
         this.burning = new Set();
         this.grid = new Int32Array(this.W * this.H * this.D).fill(-1);
         this.shatter = [];
@@ -139,12 +143,36 @@ export class VoxelBuilding {
         if (st === ATTACHED) this._detachGrid(i);
         else if (st === SLEEP) this._unrest(i);
         else if (st === DYNAMIC) this.dynamicCount--;
+        if (st !== GONE) this.live--;
         this.state[i] = GONE;
         this._write(i);
         this.mesh.instanceMatrix.needsUpdate = true;
     }
 
     ratio() { return this.lost / this.N; }
+
+    /**
+     * 바닥(땅·잔해 위)에 sec 초 넘게 멈춘 블록을 넘겨줌: 모양·색을 out 에 담고 이 건물에선 지움.
+     * 땅 높이 기록은 남겨 둬서 다른 잔해가 그 위에 그대로 쌓임. 붙은 블록 위에 얹힌 건 그대로 둠
+     * (아래 블록이 부서지면 떨어져야 하니까). 반환: 넘긴 개수
+     */
+    takeSettled(sec, out, max) {
+        const now = performance.now() / 1000;
+        let n = 0;
+        for (let i = 0; i < this.N && n < max; i++) {
+            if (this.state[i] !== SLEEP || this.restOn[i] >= 0 || now - this.sleptAt[i] < sec) continue;
+            this.mesh.getMatrixAt(i, _m);
+            this.mesh.getColorAt(i, _c);
+            out(_m, _c);
+            this.restCell[i] = -1;
+            this.state[i] = GONE;
+            this.live--;
+            this._write(i);
+            n++;
+        }
+        if (n) this.mesh.instanceMatrix.needsUpdate = true;
+        return n;
+    }
 
     /** 아직 화면에 있는 블록인가 (부서져 없어진 건 빼고) */
     alive(i) { return this.state[i] !== GONE; }
@@ -379,6 +407,7 @@ export class VoxelBuilding {
 
     _sleep(i, cell, onBlock) {
         this.state[i] = SLEEP;
+        this.sleptAt[i] = performance.now() / 1000;
         this.dynamicCount--;
         this.vel.fill(0, i * 3, i * 3 + 3);
         this.restOn[i] = onBlock;
