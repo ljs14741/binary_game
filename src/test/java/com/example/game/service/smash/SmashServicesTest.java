@@ -219,9 +219,12 @@ class SmashServicesTest {
         verify(jdbc, never()).update(anyString(), any(Object[].class));
         assertTrue(s.submit("김철수", "부장님", 9_999, 30, "1.1.1.1"));
         // 횟수는 30초 × 4 로 잘림. 처음 본 사람이라 player +1
-        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장님"), eq(120), eq((Object) null), eq(1));
+        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장님"), eq(120), eq((Object) null), eq(1), eq(1));
         assertTrue(s.submit("김철수", "부장", 5, 30, "1.1.1.1"));
-        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장"), eq(5), eq((Object) null), eq(0));
+        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장"), eq(5), eq((Object) null), eq(1), eq(0));
+        // 결과를 본 뒤 더 때린 만큼: 15초 안 돼도 받고, 판 수는 안 늘림
+        assertTrue(s.submit("김철수", "부장님", 3, 5, "1.1.1.1", null, true));
+        verify(jdbc).update(anyString(), eq("김철수부장"), eq("김철수 부장님"), eq(3), eq((Object) null), eq(0), eq(0));
     }
 
     @Test

@@ -648,3 +648,29 @@
   .smash-share-card:has(#smash-share-tabs:not([hidden])) .smash-share-preview { width: clamp(84px, 15vh, 120px); }
   .smash-share-tabs button { padding: 4px 10px; font-size: 12px; }
 }
+/* 동네 찾기 칩 */
+.bw-smash-regions button.find { border-style: dashed; }
+/* 회사 랭킹 줄의 동네 표시 */
+.bw-smash-rank li span .bw-rg { display: inline-block; margin-left: 6px; padding: 1px 7px; border: 0; border-radius: 999px; background: rgba(127,127,127,.18); color: inherit; font: inherit; font-size: .7rem; font-weight: 800; vertical-align: 2px; cursor: pointer; opacity: .85; }
+.bw-smash-rank li span .bw-rg:hover { opacity: 1; background: rgba(216,51,58,.25); }
+/* 동네 찾기 창: 폰은 아래에서 올라오는 시트, PC 는 가운데 */
+.bw-regionfind { position: fixed; inset: 0; z-index: 1000; display: none; }
+.bw-regionfind.open { display: block; }
+.bw-regionfind-dim { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+.bw-regionfind-box {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); max-height: min(560px, 80vh);
+  display: flex; flex-direction: column; padding: 16px; border-radius: 16px; background: #fff; color: #14181f; box-shadow: 0 20px 50px rgba(0,0,0,.35);
+  font-family: "Pretendard", system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+.bw-regionfind-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 17px; }
+.bw-regionfind-head .x { border: 0; background: none; font-size: 18px; color: #6b7280; cursor: pointer; padding: 4px 6px; }
+.bw-regionfind-box input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #e5e7eb; background: #f8fafc; font: inherit; font-size: 15px; outline: none; }
+.bw-regionfind-box input:focus { border-color: #d8333a; background: #fff; }
+.bw-regionfind-list { margin-top: 10px; overflow-y: auto; font-size: 14px; color: #6b7280; }
+.bw-regionfind-list h4 { margin: 12px 0 6px; font-size: 13px; color: #374151; }
+.bw-regionfind-list div { display: flex; flex-wrap: wrap; gap: 6px; }
+.bw-regionfind-list button { padding: 7px 11px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; color: #14181f; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.bw-regionfind-list button:hover { border-color: #d8333a; color: #d8333a; }
+@media (max-width: 520px) {
+  .bw-regionfind-box { left: 0; right: 0; top: auto; bottom: 0; transform: none; width: auto; max-height: 75vh; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+}

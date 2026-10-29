@@ -42,7 +42,8 @@ public class SmashRankService {
     private final Set<String> seenToday = ConcurrentHashMap.newKeySet();
     private volatile LocalDate day = LocalDate.now();
 
-    public record Entry(int rank, String name, long damage, int plays, int players) {
+    /** region: 그 회사 동네 (모르면 null) */
+    public record Entry(int rank, String name, long damage, int plays, int players, String region) {
     }
 
     /** region·regionRank: 회사가 있는 동네("구로구")와 그 동네 안 순위 (동네 모르면 null) */
@@ -122,36 +123,44 @@ public class SmashRankService {
     }
 
     public Submit submit(String rawName, long damage, int seconds, String ip, String rawRegion) {
+        return submit(rawName, damage, seconds, ip, rawRegion, false);
+    }
+
+    /** extra: 결과를 본 뒤 더 부순 만큼만 더함 (판 수·사람 수는 안 늘림, 15초 조건 없음) */
+    public Submit submit(String rawName, long damage, int seconds, String ip, String rawRegion, boolean extra) {
         rollDay();
         String reg = region(rawRegion);
         String display = clean(rawName);
         if (display.length() > 30) display = display.substring(0, 30);
         String key = nameKey(display);
         if (!allowedName(display, key)) return new Submit(false, display, 0, 0, 0, null, "name");
-        if (seconds < 15) return new Submit(false, display, 0, 0, 0, null, "short");
+        if (!extra && seconds < 15) return new Submit(false, display, 0, 0, 0, null, "short");
         String who = hash(ip);
-        if (playsToday.merge(who, 1, Integer::sum) > MAX_PLAYS_PER_DAY) return new Submit(false, display, 0, 0, 0, null, "limit");
+        // 추가 기록도 같이 세되 한도는 두 배 (한 판에 결과를 여러 번 볼 수 있어서)
+        if (playsToday.merge(who, 1, Integer::sum) > MAX_PLAYS_PER_DAY * 2) return new Submit(false, display, 0, 0, 0, null, "limit");
         long d = plausible(damage, seconds);
-        int newPlayer = seenToday.add(who + "|" + key) ? 1 : 0;
+        if (extra && d < 1) return status(key, false);
+        int newPlayer = !extra && seenToday.add(who + "|" + key) ? 1 : 0;
+        int playInc = extra ? 0 : 1;
         // 있으면 더하고 없으면 만든다 — 한 문장이라 동시에 들어와도 안전
         if (!hasRegion()) {
             jdbc.update("""
                     INSERT INTO smash_company (name_key, display_name, total_damage, play_count, player_count)
                     VALUES (?, ?, ?, 1, 1)
                     ON DUPLICATE KEY UPDATE total_damage = total_damage + VALUES(total_damage),
-                                            play_count = play_count + 1,
+                                            play_count = play_count + ?,
                                             player_count = player_count + ?
-                    """, key, display.length() > 40 ? display.substring(0, 40) : display, d, newPlayer);
+                    """, key, display.length() > 40 ? display.substring(0, 40) : display, d, playInc, newPlayer);
             return status(key, true);
         }
         jdbc.update("""
                 INSERT INTO smash_company (name_key, display_name, total_damage, play_count, player_count, region)
                 VALUES (?, ?, ?, 1, 1, ?)
                 ON DUPLICATE KEY UPDATE total_damage = total_damage + VALUES(total_damage),
-                                        play_count = play_count + 1,
+                                        play_count = play_count + ?,
                                         player_count = player_count + ?,
                                         region = COALESCE(VALUES(region), region)
-                """, key, display.length() > 40 ? display.substring(0, 40) : display, d, reg, newPlayer);
+                """, key, display.length() > 40 ? display.substring(0, 40) : display, d, reg, playInc, newPlayer);
         return status(key, true);
     }
 
@@ -196,12 +205,13 @@ public class SmashRankService {
         int lim = Math.max(1, Math.min(limit, 50));
         List<Map<String, Object>> rows = reg == null
                 ? jdbc.queryForList("""
-                SELECT display_name, total_damage, play_count, player_count FROM smash_company
+                SELECT display_name, total_damage, play_count, player_count""" + (hasRegion() ? ", region" : "") + """
+                 FROM smash_company
                 WHERE hidden = 0 AND player_count >= ?
                 ORDER BY total_damage DESC LIMIT ?
                 """, MIN_PLAYERS, lim)
                 : jdbc.queryForList("""
-                SELECT display_name, total_damage, play_count, player_count FROM smash_company
+                SELECT display_name, total_damage, play_count, player_count, region FROM smash_company
                 WHERE hidden = 0 AND player_count >= ? AND region = ?
                 ORDER BY total_damage DESC LIMIT ?
                 """, MIN_PLAYERS, reg, lim);
@@ -209,7 +219,8 @@ public class SmashRankService {
         int i = 0;
         for (Map<String, Object> r : rows) {
             out.add(new Entry(++i, (String) r.get("display_name"), ((Number) r.get("total_damage")).longValue(),
-                    ((Number) r.get("play_count")).intValue(), ((Number) r.get("player_count")).intValue()));
+                    ((Number) r.get("play_count")).intValue(), ((Number) r.get("player_count")).intValue(),
+                    (String) r.get("region")));
         }
         return out;
     }
@@ -221,7 +232,7 @@ public class SmashRankService {
                 SELECT region, COUNT(*) AS companies, SUM(total_damage) AS damage FROM smash_company
                 WHERE hidden = 0 AND player_count >= ? AND region IS NOT NULL
                 GROUP BY region ORDER BY damage DESC LIMIT ?
-                """, MIN_PLAYERS, Math.max(1, Math.min(limit, 20)));
+                """, MIN_PLAYERS, Math.max(1, Math.min(limit, 300)));
         java.util.ArrayList<Region> out = new java.util.ArrayList<>();
         for (Map<String, Object> r : rows) {
             out.add(new Region((String) r.get("region"), ((Number) r.get("companies")).intValue(), ((Number) r.get("damage")).longValue()));

@@ -51,6 +51,12 @@ public class GameController {
         return "game/dodge";
     }
 
+    // 총알피하기 리뉴얼 검토용 (noindex, 사이트맵·메인 목록에 없음)
+    @GetMapping("/dodge2")
+    public String dodge2(Model model, HttpSession session) {
+        return "game/dodge2";
+    }
+
     @GetMapping("/kimchi")
     public String kimchi(Model model, HttpSession session) {
         return "game/kimchi";

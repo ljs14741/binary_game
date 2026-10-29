@@ -829,15 +829,21 @@ function naming(query, place, typed) {
     return { name: place.name, company: false, rankable: true };
 }
 
+/** 시·도 긴 이름 → 짧은 이름 (카카오는 짧게, 네이버는 길게 줌) */
+const SIDO = { 서울특별시: '서울', 부산광역시: '부산', 대구광역시: '대구', 인천광역시: '인천', 광주광역시: '광주', 대전광역시: '대전', 울산광역시: '울산',
+    세종특별자치시: '세종', 경기도: '경기', 강원도: '강원', 강원특별자치도: '강원', 충청북도: '충북', 충청남도: '충남', 전라북도: '전북', 전북특별자치도: '전북',
+    전라남도: '전남', 경상북도: '경북', 경상남도: '경남', 제주특별자치도: '제주' };
+
 /**
- * 주소 → 동네 ("서울 구로구 디지털로…" → "구로구", "경기 성남시 분당구 …" → "분당구", "경기 화성시 …" → "화성시").
- * 중구·동구처럼 여러 도시에 있는 이름은 앞에 시·도를 붙임 ("서울 중구")
+ * 주소 → 동네 "시·도 구·군·시" ("서울 구로구 디지털로…" → "서울 구로구", "경기 성남시 분당구 …" → "경기 분당구",
+ * "경기 화성시 …" → "경기 화성시", 세종은 "세종 세종시"). 동네 찾기에서 시·도로 묶을 때 앞 말을 씀
  */
 function regionOf(addr) {
     const t = String(addr || '').trim().split(/\s+/);
     if (t.length < 2) return null;
-    const sido = t[0].replace(/(특별자치시|특별자치도|특별시|광역시|자치시|도)$/, '');
-    if (/특별자치시$/.test(t[0])) return sido + '시';
+    const sido = SIDO[t[0]] || t[0];
+    if (!/^[가-힣]{2,4}$/.test(sido)) return null;
+    if (sido === '세종') return '세종 세종시';
     let r = null;
     for (let i = 1; i < Math.min(t.length, 4); i++) {
         const w = t[i];
@@ -845,8 +851,14 @@ function regionOf(addr) {
         if (/시$/.test(w)) { r = w; if (!/구$/.test(t[i + 1] || '')) break; }
     }
     if (!r || !/^[가-힣]+$/.test(r)) return null;
-    if (/^[중동서남북]구$/.test(r)) r = sido + ' ' + r;
+    r = sido + ' ' + r;
     return r.length <= 15 ? r : null;
+}
+/** 화면에 짧게: "서울 구로구" → "구로구" (중구·동구처럼 흔한 이름은 시·도까지) */
+function regionShort(r) {
+    const p = String(r || '').split(' ');
+    if (p.length < 2) return r || '';
+    return /^[중동서남북]구$/.test(p[1]) ? r : p[1];
 }
 
 /** 친구 도전장: 공유 링크에 담긴 친구 점수 (화면 점수 단위). 다른 회사로 가면 지움 */
@@ -990,7 +1002,7 @@ function setup(area, fake, placeName, preview = false) {
     Object.assign(stream, { on: !fake, area, loaded: new Set([world.cellOf(0, 0)]), failed: new Map(), busy: false, t: 0 });
     Object.assign(game, {
         phase: 'play', submitted: false, wscale: Math.min(2, Math.max(1, b.top / 55)), damage: 0, shown: 0, combo: 0, comboT: 0, rankIdx: 0, nuke: 0, nukeArmed: false,
-        ended: false, nearEnd: false, rankRes: null, bossOut: false, signPaid: false, bossCarPaid: false, endTimer: -1, idleT: 2, lineT: 0,
+        ended: false, nearEnd: false, rankRes: null, sent: null, bossOut: false, signPaid: false, bossCarPaid: false, endTimer: -1, idleT: 2, lineT: 0,
         stats: { buildings: new Set(), cars: 0, boss: 0 },
     });
     game.startAt = performance.now();
@@ -1085,14 +1097,29 @@ function bossPayload() {
 }
 
 function rankPayload() {
-    if (game.submitted || game.phase !== 'play' || !game.target) return null;
-    if (game.damage < 1 || playSeconds() < 15) return null;
+    if (game.phase !== 'play' || !game.target) return null;
     const name = (game.name || '').trim();
     const company = game.rankable && name && name !== T.defaultName ? name : null;
     const boss = bossPayload();
     if (!company && !boss) return null;
+    const region = company ? game.region || null : null;
+    if (game.submitted) {
+        // 결과를 본 뒤 "더 부수기"로 더 부순 만큼만 한 번 더 (판 수는 안 늘어남)
+        const s = game.sent;
+        if (!s) return null;
+        const d = Math.round(game.damage) - s.damage, h = (boss ? boss.bossHits : 0) - s.hits;
+        if (d < 1 && h < 1) return null;
+        const sec = Math.max(1, playSeconds() - s.sec);
+        game.sent = { damage: s.damage + Math.max(0, d), hits: s.hits + Math.max(0, h), sec: playSeconds() };
+        const extraBoss = boss && h > 0 ? { ...boss, bossHits: h } : {};
+        const c = d > 0 ? company : null;
+        if (!c && !extraBoss.bossTitle) return null;
+        return JSON.stringify({ company: c, damage: Math.max(0, d), seconds: sec, region, extra: true, ...extraBoss });
+    }
+    if (game.damage < 1 || playSeconds() < 15) return null;
     game.submitted = true;
-    return JSON.stringify({ company, damage: Math.round(game.damage), seconds: playSeconds(), region: company ? game.region || null : null, ...boss });
+    game.sent = { damage: Math.round(game.damage), hits: boss ? boss.bossHits : 0, sec: playSeconds() };
+    return JSON.stringify({ company, damage: Math.round(game.damage), seconds: playSeconds(), region, ...boss });
 }
 
 /** 기록하고 결과(누적·순위)를 돌려준다. 보낼 게 없으면 null */
@@ -1136,32 +1163,101 @@ async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false
     } catch (e) { /* 랭킹이 안 떠도 게임은 된다 */ }
 }
 
-/** 동네 대항전 칩: 전체 · 우리 동네(최근에 부순 회사 동네) · 많이 부서진 동네들 */
+/** 동네 대항전 칩: 전체 · 최근에 부순 동네 · 고른 동네 · 많이 부서진 동네들 · 🔍 동네 찾기 */
+const pickedRegions = [];
+function selectRegion(val) {
+    rankRegion = val || null;
+    if (val && !pickedRegions.includes(val)) pickedRegions.unshift(val);
+    if (pickedRegions.length > 3) pickedRegions.length = 3;
+    $('smash-pagerank-desc').textContent = val ? fmt(T.regionDesc, regionShort(val)) : pageRankDesc;
+    $('smash-pagerank').classList.remove('more');
+    loadRanking('smash-pagerank-ol', 10);
+    track('smash_region', { region: val || 'all' });
+}
 function regionChips(regions) {
     const box = $('smash-regions');
     const mine = store.get('smash.region');
+    const seen = new Set();
     const list = [];
-    if (mine) list.push([mine, T.regionMine]);
-    for (const g of regions) if (g.name !== mine) list.push([g.name, fmt(T.regionChip, g.name, g.companies)]);
+    const add = (v, label) => { if (v && !seen.has(v)) { seen.add(v); list.push([v, label]); } };
+    if (mine) add(mine, '📍 ' + regionShort(mine));
+    for (const v of pickedRegions) add(v, regionShort(v));
+    for (const g of regions.slice(0, 5)) add(g.name, fmt(T.regionChip, regionShort(g.name), g.companies));
     box.innerHTML = '';
-    box.hidden = !list.length;
-    if (!list.length) return;
-    const chip = (val, label) => {
+    box.hidden = !list.length && !regions.length;
+    if (box.hidden) return;
+    const chip = (val, label, cls) => {
         const b = document.createElement('button');
         b.type = 'button';
         b.textContent = label;
-        b.classList.toggle('on', (rankRegion || null) === val);
-        b.addEventListener('click', () => {
-            rankRegion = val;
-            $('smash-pagerank-desc').textContent = val ? fmt(T.regionDesc, val) : pageRankDesc;
-            $('smash-pagerank').classList.remove('more');
-            loadRanking('smash-pagerank-ol', 10);
-            track('smash_region', { region: val || 'all' });
-        });
+        if (cls) b.className = cls;
+        b.classList.toggle('on', val !== undefined && (rankRegion || null) === val);
+        b.addEventListener('click', () => (val === undefined ? openRegionFinder() : selectRegion(val)));
         box.appendChild(b);
     };
     chip(null, T.regionAll);
-    for (const [v, l] of list.slice(0, 7)) chip(v, l);
+    for (const [v, l] of list) chip(v, l);
+    chip(undefined, T.regionFind, 'find');
+}
+
+/** 동네 찾기 창: 기록 있는 동네 전부를 시·도로 묶어 보여 주고 검색 */
+function openRegionFinder() {
+    let dlg = $('smash-regionfind');
+    if (!dlg) {
+        dlg = document.createElement('div');
+        dlg.id = 'smash-regionfind';
+        dlg.className = 'bw-regionfind';
+        dlg.innerHTML = '<div class="bw-regionfind-dim"></div><div class="bw-regionfind-box" role="dialog" aria-modal="true">'
+            + '<div class="bw-regionfind-head"><b></b><button type="button" class="x" aria-label="닫기">✕</button></div>'
+            + '<input type="search" autocomplete="off" enterkeyhint="search"><div class="bw-regionfind-list"></div></div>';
+        document.body.appendChild(dlg);
+        dlg.querySelector('b').textContent = T.regionFindTitle;
+        const input = dlg.querySelector('input');
+        input.placeholder = T.regionFindPh;
+        const close = () => { dlg.classList.remove('open'); };
+        dlg.querySelector('.x').addEventListener('click', close);
+        dlg.querySelector('.bw-regionfind-dim').addEventListener('click', close);
+        input.addEventListener('input', () => drawRegionList(dlg));
+        dlg.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    }
+    dlg.classList.add('open');
+    const list = dlg.querySelector('.bw-regionfind-list');
+    list.textContent = T.regionFindLoading;
+    fetch('/api/smash/regions').then(r => (r.ok ? r.json() : [])).then(all => { dlg.all = all || []; drawRegionList(dlg); })
+        .catch(() => { list.textContent = T.regionFindEmpty; });
+    track('smash_region_find');
+}
+function drawRegionList(dlg) {
+    const list = dlg.querySelector('.bw-regionfind-list');
+    const q = dlg.querySelector('input').value.replace(/\s+/g, '');
+    const all = (dlg.all || []).filter(g => !q || g.name.replace(/\s+/g, '').includes(q));
+    list.innerHTML = '';
+    if (!all.length) { list.textContent = T.regionFindEmpty; return; }
+    // 시·도별로 (시·도 안은 많이 부서진 순 그대로)
+    const groups = new Map();
+    for (const g of all) {
+        const p = g.name.split(' ');
+        const sido = p.length > 1 ? p[0] : T.regionEtc;
+        if (!groups.has(sido)) groups.set(sido, []);
+        groups.get(sido).push(g);
+    }
+    for (const [sido, gs] of groups) {
+        const h = document.createElement('h4');
+        h.textContent = sido;
+        const row = document.createElement('div');
+        for (const g of gs) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = fmt(T.regionChip, g.name.split(' ').slice(1).join(' ') || g.name, g.companies);
+            b.addEventListener('click', () => {
+                dlg.classList.remove('open');
+                selectRegion(g.name);
+                $('smash-pagerank').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            row.appendChild(b);
+        }
+        list.append(h, row);
+    }
 }
 
 /** 랭킹 목록 한 개 그리기. detail: 페이지 아래 목록 (메달·부가 설명·폰 "더 보기") */
@@ -1172,6 +1268,15 @@ function fillRanking(olId, sectionId, detail, list, value, detailText, emptyText
         const li = document.createElement('li');
         const i = document.createElement('i'); i.textContent = detail && e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : e.rank;
         const s = document.createElement('span'); s.textContent = e.name;
+        // 회사 줄: 동네 표시 (누르면 그 동네 랭킹으로)
+        if (e.region && olId === 'smash-pagerank-ol' && !rankRegion) {
+            const rg = document.createElement('button');
+            rg.type = 'button';
+            rg.className = 'bw-rg';
+            rg.textContent = regionShort(e.region);
+            rg.addEventListener('click', () => selectRegion(e.region));
+            s.append(rg);
+        }
         if (detail) { const d = document.createElement('small'); d.textContent = fmt(detailText, e.players, e.plays); s.append(d); }
         const m = document.createElement('em'); m.textContent = value(e);
         li.append(i, s, m);
@@ -2206,10 +2311,11 @@ function frame() {
     }
     updateFinder();
     renderer.render(scene, camera);
+    clip.frame();
 }
 
 requestAnimationFrame(frame);
 // 자동 테스트용 손잡이. 주소에 ?debug 가 있을 때만 연다
 if (new URLSearchParams(location.search).has('debug')) {
-    window.__smash = { game, world, boss, street, landmarks, stream, orbit, camera, attack, setWeapon, setup, lineFor, timeKind, finish, drawCard, shareUrl, sfx, weapons, fx, dbg: () => ({ slowmo, slowK, trauma }) };
+    window.__smash = { game, world, boss, street, landmarks, stream, orbit, camera, attack, setWeapon, setup, lineFor, timeKind, finish, drawCard, shareUrl, sfx, weapons, fx, clip, dbg: () => ({ slowmo, slowK, trauma }) };
 }

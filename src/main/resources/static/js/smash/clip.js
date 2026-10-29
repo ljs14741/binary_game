@@ -1,6 +1,9 @@
 // 하이라이트 영상: 큰 장면(핵폭탄·필살기·트럭·블랙홀·붕괴)이 터질 때 6초를 녹화해 두고,
 // 한 판에서 가장 큰 장면 하나만 남김. 결과 공유 창에서 사진 대신 영상으로 저장·공유.
 // 브라우저가 캔버스 녹화를 못 하면 아무것도 안 함 (게임은 그대로)
+//
+// 끊김 줄이기: 녹화기는 미리 만들어 일시정지로 대기시키고, 장면이 터지면 이어 찍기만 함.
+// 캔버스는 프레임을 직접 넘길 때만 담기게(captureStream(0)) 해서 대기 중엔 부담이 없음.
 
 const CLIP_SEC = 6;
 
@@ -23,67 +26,104 @@ export class Clip {
         this.audio = audio;
         this.mime = canvas.captureStream ? pickMime() : null;
         this.ok = !!this.mime;
-        this.bps = mobile ? 2_200_000 : 4_000_000;
-        this.rec = null;
+        this.bps = mobile ? 1_600_000 : 3_500_000;
+        this.ready = null;  // 대기 중인 녹화기 { rec, stream, track, chunks }
+        this.cur = null;    // 찍는 중 { ...ready, weight, start }
         this.best = null;   // { blob, weight, ext, type }
+        this.gen = 0;
     }
 
-    /** 새 판: 남긴 영상 비움 */
+    /** 새 판: 남긴 영상 비우고 녹화기를 미리 준비 */
     reset() {
-        this._stop(true);
+        this.gen++;
+        this._drop(this.cur);
+        this._drop(this.ready);
+        this.cur = this.ready = null;
         this.best = null;
+        this._prepare();
+    }
+
+    _prepare() {
+        if (!this.ok || this.ready) return;
+        try {
+            let stream = this.canvas.captureStream(0);
+            let track = stream.getVideoTracks()[0];
+            // 프레임을 직접 못 넘기는 브라우저는 초당 30장 자동으로
+            if (!track || typeof track.requestFrame !== 'function') {
+                stream.getTracks().forEach(t => t.stop());
+                stream = this.canvas.captureStream(30);
+                track = stream.getVideoTracks()[0];
+            }
+            // 소리는 녹화기를 만들 때 붙여야 함 (찍는 도중에 트랙을 더하면 녹화가 멈춤)
+            try {
+                const a = this.audio && this.audio();
+                if (a) for (const t of a.getAudioTracks()) stream.addTrack(t.clone());
+            } catch (e) { /* 소리 없이 */ }
+            const rec = new MediaRecorder(stream, { mimeType: this.mime, videoBitsPerSecond: this.bps });
+            const r = { rec, stream, track, chunks: [] };
+            rec.ondataavailable = e => { if (e.data && e.data.size) r.chunks.push(e.data); };
+            rec.start(500);
+            rec.pause();
+            this.ready = r;
+        } catch (e) {
+            this.ok = false;
+        }
+    }
+
+    _drop(r) {
+        if (!r) return;
+        r.discard = true;
+        try { if (r.rec.state !== 'inactive') r.rec.stop(); } catch (e) { /* 이미 멈춤 */ }
+        r.stream.getTracks().forEach(t => t.stop());
+    }
+
+    /** 매 프레임 (그린 뒤): 찍는 중이면 이 프레임을 녹화기에 넘김 */
+    frame() {
+        if (this.cur && this.cur.track.requestFrame) this.cur.track.requestFrame();
     }
 
     /** 큰 장면. weight 가 클수록 더 볼만한 장면 (지금 녹화 중이면 무게만 올림) */
     trigger(weight) {
         if (!this.ok) return;
-        if (this.rec) { this.cur.weight = Math.max(this.cur.weight, weight); return; }
-        // 이미 더 큰 장면을 찍어 뒀으면 작은 장면은 안 찍음 (괜히 녹화로 무겁지 않게)
+        if (this.cur) { this.cur.weight = Math.max(this.cur.weight, weight); return; }
+        // 이미 더 큰 장면을 찍어 뒀으면 작은 장면은 안 찍음
         if (this.best && this.best.weight > weight) return;
-        let stream;
-        try {
-            stream = this.canvas.captureStream(30);
-            const a = this.audio && this.audio();
-            if (a) for (const t of a.getAudioTracks()) stream.addTrack(t);
-            this.rec = new MediaRecorder(stream, { mimeType: this.mime, videoBitsPerSecond: this.bps });
-        } catch (e) {
-            this.ok = false;
-            this.rec = null;
-            return;
-        }
-        const chunks = [];
-        const cur = this.cur = { weight, start: performance.now() };
-        this.rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-        this.rec.onstop = () => {
-            stream.getVideoTracks().forEach(t => t.stop());
-            if (cur.discard || !chunks.length) return;
-            // 2초도 안 찍혔으면 버림
-            if (performance.now() - cur.start < 2000) return;
-            if (!this.best || cur.weight >= this.best.weight) {
-                const type = this.mime.split(';')[0];
-                this.best = { blob: new Blob(chunks, { type }), weight: cur.weight, type, ext: type === 'video/mp4' ? 'mp4' : 'webm' };
-            }
-        };
-        this.rec.start(500);
-        this.timer = setTimeout(() => this._stop(false), CLIP_SEC * 1000);
+        if (!this.ready) this._prepare();
+        const r = this.ready;
+        if (!r) return;
+        this.ready = null;
+        r.weight = weight;
+        r.start = performance.now();
+        this.cur = r;
+        try { r.rec.resume(); } catch (e) { this.cur = null; return; }
+        this.timer = setTimeout(() => this._finishCur(), CLIP_SEC * 1000);
     }
 
-    /** 판이 끝날 때: 녹화 중이면 지금까지 찍은 걸로 마무리. 다 되면 resolve */
-    finish() {
-        if (!this.rec) return Promise.resolve(this.best);
+    _finishCur() {
+        clearTimeout(this.timer);
+        const r = this.cur;
+        if (!r) return Promise.resolve(this.best);
+        this.cur = null;
+        const gen = this.gen;
         return new Promise(res => {
-            const r = this.rec;
-            const prev = r.onstop;
-            r.onstop = (e) => { prev && prev(e); res(this.best); };
-            this._stop(false);
+            r.rec.onstop = () => {
+                r.stream.getTracks().forEach(t => t.stop());
+                if (!r.discard && gen === this.gen && r.chunks.length && performance.now() - r.start >= 2000) {
+                    if (!this.best || r.weight >= this.best.weight) {
+                        const type = this.mime.split(';')[0];
+                        this.best = { blob: new Blob(r.chunks, { type }), weight: r.weight, type, ext: type === 'video/mp4' ? 'mp4' : 'webm' };
+                    }
+                }
+                res(this.best);
+                // 다음 장면용 녹화기는 한숨 돌린 뒤 준비 (폭발 직후 끊기지 않게)
+                if (gen === this.gen) setTimeout(() => { if (gen === this.gen) this._prepare(); }, 1500);
+            };
+            try { r.rec.stop(); } catch (e) { res(this.best); }
         });
     }
 
-    _stop(discard) {
-        clearTimeout(this.timer);
-        if (!this.rec) return;
-        if (discard && this.cur) this.cur.discard = true;
-        try { if (this.rec.state !== 'inactive') this.rec.stop(); } catch (e) { /* 이미 멈춤 */ }
-        this.rec = null;
+    /** 판이 끝날 때: 녹화 중이면 지금까지 찍은 걸로 마무리 */
+    finish() {
+        return this.cur ? this._finishCur() : Promise.resolve(this.best);
     }
 }

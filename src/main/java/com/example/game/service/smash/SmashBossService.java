@@ -118,24 +118,29 @@ public class SmashBossService {
 
     /** look 은 가장 최근에 들어온 모습으로 덮어씀 */
     public boolean submit(String rawName, String rawTitle, int hits, int seconds, String ip, Map<String, String> look) {
+        return submit(rawName, rawTitle, hits, seconds, ip, look, false);
+    }
+
+    /** extra: 결과를 본 뒤 더 때린 만큼만 더함 (판 수·사람 수는 안 늘림, 15초 조건 없음) */
+    public boolean submit(String rawName, String rawTitle, int hits, int seconds, String ip, Map<String, String> look, boolean extra) {
         rollDay();
-        if (seconds < 15) return false;
+        if (!extra && seconds < 15) return false;
         int h = plausible(hits, seconds);
         if (h < 1) return false;
         String display = label(rawName, rawTitle);
         String key = labelKey(display);
         if (!allowedLabel(key)) return false;
         String who = SmashRankService.hash(ip);
-        if (playsToday.merge(who, 1, Integer::sum) > MAX_PLAYS_PER_DAY) return false;
-        int newPlayer = seenToday.add(who + "|" + key) ? 1 : 0;
+        if (playsToday.merge(who, 1, Integer::sum) > MAX_PLAYS_PER_DAY * 2) return false;
+        int newPlayer = !extra && seenToday.add(who + "|" + key) ? 1 : 0;
         jdbc.update("""
                 INSERT INTO smash_boss (label_key, display_label, total_hits, play_count, player_count, look)
                 VALUES (?, ?, ?, 1, 1, ?)
                 ON DUPLICATE KEY UPDATE total_hits = total_hits + VALUES(total_hits),
-                                        play_count = play_count + 1,
+                                        play_count = play_count + ?,
                                         player_count = player_count + ?,
                                         look = COALESCE(VALUES(look), look)
-                """, key, display, h, lookJson(look), newPlayer);
+                """, key, display, h, lookJson(look), extra ? 0 : 1, newPlayer);
         return true;
     }
 

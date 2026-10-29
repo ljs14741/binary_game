@@ -97,7 +97,8 @@ public class SmashController {
 
     /** bossName·bossTitle 은 상사 꾸미기 값, bossHits 는 이번 판 상사 날린 횟수. 회사 없이 상사만 와도 됨 */
     public record PlayReq(String company, long damage, int seconds, String bossName, String bossTitle, int bossHits, Map<String, String> bossLook,
-                          String region) {
+                          String region, Boolean extra) {
+        boolean isExtra() { return Boolean.TRUE.equals(extra); }
     }
 
     /**
@@ -112,16 +113,27 @@ public class SmashController {
         if (body.bossTitle() != null && body.bossHits() > 0) {
             // 상사 랭킹이 안 돼도 회사 기록은 남게
             try {
-                bosses.submit(body.bossName(), body.bossTitle(), body.bossHits(), body.seconds(), ip, body.bossLook());
+                bosses.submit(body.bossName(), body.bossTitle(), body.bossHits(), body.seconds(), ip, body.bossLook(), body.isExtra());
             } catch (DataAccessException e) {
                 log.warn("smash boss submit failed: {}", e.getMessage());
             }
         }
-        Object out = body.company() == null ? Map.of("counted", false) : ranks.submit(body.company(), body.damage(), body.seconds(), ip, body.region());
+        Object out = body.company() == null ? Map.of("counted", false) : ranks.submit(body.company(), body.damage(), body.seconds(), ip, body.region(), body.isExtra());
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(out);
     }
 
     /** 누적 랭킹 TOP N (회사·상사), company 를 주면 그 회사의 누적·순위도 */
+    /** 동네 찾기: 기록 있는 동네 전부 (많이 부서진 순) */
+    @GetMapping("/regions")
+    public ResponseEntity<?> regions() {
+        try {
+            return ResponseEntity.ok().cacheControl(CacheControl.maxAge(Duration.ofSeconds(60))).body(ranks.regions(300));
+        } catch (DataAccessException e) {
+            log.warn("smash regions failed: {}", e.getMessage());
+            return ResponseEntity.ok().body(List.of());
+        }
+    }
+
     @GetMapping("/rankings")
     public ResponseEntity<?> rankings(@RequestParam(value = "company", required = false) String company,
                                       @RequestParam(value = "limit", defaultValue = "10") int limit,
