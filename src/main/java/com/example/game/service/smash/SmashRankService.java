@@ -45,7 +45,41 @@ public class SmashRankService {
     public record Entry(int rank, String name, long damage, int plays, int players) {
     }
 
-    public record Submit(boolean counted, String name, long totalDamage, int plays, int players, Integer rank, String reason) {
+    /** region·regionRank: 회사가 있는 동네("구로구")와 그 동네 안 순위 (동네 모르면 null) */
+    public record Submit(boolean counted, String name, long totalDamage, int plays, int players, Integer rank, String reason,
+                         String region, Integer regionRank) {
+        Submit(boolean counted, String name, long totalDamage, int plays, int players, Integer rank, String reason) {
+            this(counted, name, totalDamage, plays, players, rank, reason, null, null);
+        }
+    }
+
+    /** 동네 대항전 한 줄: 동네 이름, 회사 수, 누적 피해 */
+    public record Region(String name, int companies, long damage) {
+    }
+
+    /** 동네 칸(region)이 DB 에 있는지. 칸을 만들기 전에 배포돼도 예전처럼 돌게 처음 한 번 확인 */
+    private volatile Boolean regionCol;
+
+    boolean hasRegion() {
+        Boolean v = regionCol;
+        if (v == null) {
+            try {
+                jdbc.queryForList("SELECT region FROM smash_company LIMIT 1");
+                v = true;
+            } catch (org.springframework.dao.DataAccessException e) {
+                v = false;
+            }
+            regionCol = v;
+        }
+        return v;
+    }
+
+    /** 동네 이름 거르기: 한글·띄어쓰기만, 구·군·시로 끝나는 짧은 말 ("구로구", "서울 중구", "화성시"). 아니면 null */
+    static String region(String raw) {
+        if (raw == null) return null;
+        String s = raw.replaceAll("\\s+", " ").trim();
+        if (s.length() < 2 || s.length() > 15 || !s.matches("[가-힣 ]+") || !s.matches(".*[구군시]$")) return null;
+        return s;
     }
 
     /** 묶음용 이름: ㈜·주식회사·괄호·공백·기호를 빼고 소문자로. "(주)삼성 전자" = "삼성전자" */
@@ -81,7 +115,12 @@ public class SmashRankService {
     }
 
     public Submit submit(String rawName, long damage, int seconds, String ip) {
+        return submit(rawName, damage, seconds, ip, null);
+    }
+
+    public Submit submit(String rawName, long damage, int seconds, String ip, String rawRegion) {
         rollDay();
+        String reg = region(rawRegion);
         String display = clean(rawName);
         if (display.length() > 30) display = display.substring(0, 30);
         String key = nameKey(display);
@@ -92,13 +131,24 @@ public class SmashRankService {
         long d = plausible(damage, seconds);
         int newPlayer = seenToday.add(who + "|" + key) ? 1 : 0;
         // 있으면 더하고 없으면 만든다 — 한 문장이라 동시에 들어와도 안전
+        if (!hasRegion()) {
+            jdbc.update("""
+                    INSERT INTO smash_company (name_key, display_name, total_damage, play_count, player_count)
+                    VALUES (?, ?, ?, 1, 1)
+                    ON DUPLICATE KEY UPDATE total_damage = total_damage + VALUES(total_damage),
+                                            play_count = play_count + 1,
+                                            player_count = player_count + ?
+                    """, key, display.length() > 40 ? display.substring(0, 40) : display, d, newPlayer);
+            return status(key, true);
+        }
         jdbc.update("""
-                INSERT INTO smash_company (name_key, display_name, total_damage, play_count, player_count)
-                VALUES (?, ?, ?, 1, 1)
+                INSERT INTO smash_company (name_key, display_name, total_damage, play_count, player_count, region)
+                VALUES (?, ?, ?, 1, 1, ?)
                 ON DUPLICATE KEY UPDATE total_damage = total_damage + VALUES(total_damage),
                                         play_count = play_count + 1,
-                                        player_count = player_count + ?
-                """, key, display.length() > 40 ? display.substring(0, 40) : display, d, newPlayer);
+                                        player_count = player_count + ?,
+                                        region = COALESCE(VALUES(region), region)
+                """, key, display.length() > 40 ? display.substring(0, 40) : display, d, reg, newPlayer);
         return status(key, true);
     }
 
@@ -109,33 +159,69 @@ public class SmashRankService {
 
     private Submit status(String key, boolean counted) {
         List<Map<String, Object>> rows = jdbc.queryForList(
-                "SELECT display_name, total_damage, play_count, player_count, hidden FROM smash_company WHERE name_key = ?", key);
+                "SELECT display_name, total_damage, play_count, player_count, hidden" + (hasRegion() ? ", region" : "") + " FROM smash_company WHERE name_key = ?", key);
         if (rows.isEmpty()) return new Submit(counted, null, 0, 0, 0, null, null);
         Map<String, Object> r = rows.get(0);
         long total = ((Number) r.get("total_damage")).longValue();
         int players = ((Number) r.get("player_count")).intValue();
         Object h = r.get("hidden");
         boolean hidden = h instanceof Boolean bo ? bo : h instanceof Number n && n.intValue() != 0;
-        Integer rank = null;
+        Integer rank = null, regionRank = null;
+        String reg = (String) r.get("region");
         if (!hidden && players >= MIN_PLAYERS) {
             Integer above = jdbc.queryForObject(
                     "SELECT COUNT(*) FROM smash_company WHERE hidden = 0 AND player_count >= ? AND total_damage > ?", Integer.class, MIN_PLAYERS, total);
             rank = (above == null ? 0 : above) + 1;
+            if (reg != null) {
+                Integer ra = jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM smash_company WHERE hidden = 0 AND player_count >= ? AND region = ? AND total_damage > ?",
+                        Integer.class, MIN_PLAYERS, reg, total);
+                regionRank = (ra == null ? 0 : ra) + 1;
+            }
         }
-        return new Submit(counted, (String) r.get("display_name"), total, ((Number) r.get("play_count")).intValue(), players, rank, null);
+        return new Submit(counted, (String) r.get("display_name"), total, ((Number) r.get("play_count")).intValue(), players, rank, null,
+                reg, regionRank);
     }
 
     public List<Entry> top(int limit) {
-        List<Map<String, Object>> rows = jdbc.queryForList("""
+        return top(limit, null);
+    }
+
+    /** region 을 주면 그 동네 회사끼리 */
+    public List<Entry> top(int limit, String rawRegion) {
+        String reg = hasRegion() ? region(rawRegion) : null;
+        int lim = Math.max(1, Math.min(limit, 50));
+        List<Map<String, Object>> rows = reg == null
+                ? jdbc.queryForList("""
                 SELECT display_name, total_damage, play_count, player_count FROM smash_company
                 WHERE hidden = 0 AND player_count >= ?
                 ORDER BY total_damage DESC LIMIT ?
-                """, MIN_PLAYERS, Math.max(1, Math.min(limit, 50)));
+                """, MIN_PLAYERS, lim)
+                : jdbc.queryForList("""
+                SELECT display_name, total_damage, play_count, player_count FROM smash_company
+                WHERE hidden = 0 AND player_count >= ? AND region = ?
+                ORDER BY total_damage DESC LIMIT ?
+                """, MIN_PLAYERS, reg, lim);
         java.util.ArrayList<Entry> out = new java.util.ArrayList<>();
         int i = 0;
         for (Map<String, Object> r : rows) {
             out.add(new Entry(++i, (String) r.get("display_name"), ((Number) r.get("total_damage")).longValue(),
                     ((Number) r.get("play_count")).intValue(), ((Number) r.get("player_count")).intValue()));
+        }
+        return out;
+    }
+
+    /** 동네 대항전: 회사들이 가장 많이 부서진 동네 순 */
+    public List<Region> regions(int limit) {
+        if (!hasRegion()) return List.of();
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT region, COUNT(*) AS companies, SUM(total_damage) AS damage FROM smash_company
+                WHERE hidden = 0 AND player_count >= ? AND region IS NOT NULL
+                GROUP BY region ORDER BY damage DESC LIMIT ?
+                """, MIN_PLAYERS, Math.max(1, Math.min(limit, 20)));
+        java.util.ArrayList<Region> out = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            out.add(new Region((String) r.get("region"), ((Number) r.get("companies")).intValue(), ((Number) r.get("damage")).longValue()));
         }
         return out;
     }

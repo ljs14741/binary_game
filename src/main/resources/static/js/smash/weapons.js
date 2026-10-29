@@ -361,6 +361,7 @@ export class Weapons {
                 this.truck.lookAt(_v.copy(from).sub(fwd));
                 this.truck.visible = true;
                 this.active.push({ kind: 'truck', from, to, fwd, dir: dir.clone(), t: 0, dur: 1.7, hitT: 0, sc, honk: false });
+                if (this.game.clip) this.game.clip(3);
                 sfx.whoosh(1.4);
                 break;
             }
@@ -399,6 +400,7 @@ export class Weapons {
                 this.hole.visible = true;
                 this.hole.scale.setScalar(0.01);
                 this.active.push({ kind: 'hole', at, t: 0, dur: 3.4, dir: dir.clone() });
+                if (this.game.clip) this.game.clip(3);
                 sfx.vortex(3.4);
                 break;
             }

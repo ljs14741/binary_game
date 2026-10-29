@@ -5,9 +5,10 @@ import { Boss, Sign, Banner, FONT, BOSS_LOOK, BOSS_COLORS } from './props.js';
 import { Street } from './street.js';
 import { Landmarks } from './landmarks.js';
 import { Labels } from './labels.js';
+import { Clip } from './clip.js';
 import { Weapons, WEAPONS, NUKE } from './weapons.js';
 import { fakeArea } from './fallback.js';
-import { initAudio, sfx, setMuted, isMuted, setBgmVolume, bgmVolume } from './audio.js';
+import { initAudio, sfx, setMuted, isMuted, setBgmVolume, bgmVolume, audioStream } from './audio.js';
 import T, { fmt, score, RANKS, LINES } from './text.js';
 
 const $ = id => document.getElementById(id);
@@ -16,7 +17,7 @@ const box = $('smash-canvas');
 const ui = {
     start: $('smash-start'), name: $('smash-name'), go: $('smash-go'), results: $('smash-results'), msg: $('smash-msg'), fake: $('smash-fake'),
     loading: $('smash-loading'), skip: $('smash-skip'), loadingText: $('smash-loading-text'), loadingTip: $('smash-loading-tip'),
-    corp: $('smash-corp'), money: $('smash-money'), ratio: $('smash-ratio'), bar: $('smash-bar'),
+    corp: $('smash-corp'), money: $('smash-money'), goal: $('smash-goal'), ratio: $('smash-ratio'), bar: $('smash-bar'),
     rank: $('smash-rank'), combo: $('smash-combo'), toast: $('smash-toast'), bubble: $('smash-bubble'),
     pops: $('smash-pops'), weapons: $('smash-weapons'), wname: $('smash-wname'), mute: $('smash-mute'), full: $('smash-full'), home: $('smash-home'),
     nuke: $('smash-nuke'), aim: $('smash-aim'), flash: $('smash-flash'), osm: $('smash-osm'), finishBtn: $('smash-finish'), bgm: $('smash-bgm'),
@@ -258,6 +259,8 @@ renderer.setPixelRatio(Math.min(devicePixelRatio || 1, coarse ? 1.6 : 2));
 renderer.shadowMap.enabled = !coarse;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 box.appendChild(renderer.domElement);
+// 하이라이트 영상 녹화기 (못 쓰는 브라우저면 아무것도 안 함)
+const clip = new Clip(renderer.domElement, audioStream, coarse);
 
 const scene = new THREE.Scene();
 const SKY = 0xb5dcf3;
@@ -531,6 +534,7 @@ function wake(p, r) {
 }
 
 function onFlatten(b) {
+    clip.trigger(2);
     const v = addDamage(b.area * b.h * 0.025, new THREE.Vector3(b.cx, b.top * 0.6, b.cz), null, true);
     if (v) pop(new THREE.Vector3(b.cx, b.top, b.cz), fmt(T.flattened, score(v, false)), 'big');
     game.stats.buildings.add(b.id);
@@ -655,6 +659,7 @@ function pull(point, r0, strength, dt) {
 }
 
 function nukeBlast(p, dir) {
+    clip.trigger(5);
     sfx.nuke();
     trauma = 1;
     ui.flash.classList.remove('go'); void ui.flash.offsetWidth; ui.flash.classList.add('go');
@@ -707,6 +712,7 @@ function hitStop(sec) {
 
 /** 핵폭탄(무기): 필살기의 작은 판. 섬광 → 불덩이 → 충격파 → 버섯구름, 가까운 작은 건물은 주저앉힘 */
 function miniNuke(p, dir) {
+    clip.trigger(4);
     sfx.boom(true);
     sfx.rumble(10);
     trauma = Math.min(1, trauma + 0.85);
@@ -740,6 +746,7 @@ function cheer() {
 
 const weapons = new Weapons(scene, fx, {
     hit, ignite, pull, nukeBlast, miniNuke, hitStop,
+    clip: w => clip.trigger(w),
     // 초고층 사옥은 무기 범위를 키우니(wscale) 폭발 그림도 같이 키움
     fxScale: () => Math.min(2.2, Math.max(1, game.wscale)),
     shake: n => { trauma = Math.min(1, trauma + n); },
@@ -822,6 +829,29 @@ function naming(query, place, typed) {
     return { name: place.name, company: false, rankable: true };
 }
 
+/**
+ * 주소 → 동네 ("서울 구로구 디지털로…" → "구로구", "경기 성남시 분당구 …" → "분당구", "경기 화성시 …" → "화성시").
+ * 중구·동구처럼 여러 도시에 있는 이름은 앞에 시·도를 붙임 ("서울 중구")
+ */
+function regionOf(addr) {
+    const t = String(addr || '').trim().split(/\s+/);
+    if (t.length < 2) return null;
+    const sido = t[0].replace(/(특별자치시|특별자치도|특별시|광역시|자치시|도)$/, '');
+    if (/특별자치시$/.test(t[0])) return sido + '시';
+    let r = null;
+    for (let i = 1; i < Math.min(t.length, 4); i++) {
+        const w = t[i];
+        if (/[구군]$/.test(w)) { r = w; break; }
+        if (/시$/.test(w)) { r = w; if (!/구$/.test(t[i + 1] || '')) break; }
+    }
+    if (!r || !/^[가-힣]+$/.test(r)) return null;
+    if (/^[중동서남북]구$/.test(r)) r = sido + ' ' + r;
+    return r.length <= 15 ? r : null;
+}
+
+/** 친구 도전장: 공유 링크에 담긴 친구 점수 (화면 점수 단위). 다른 회사로 가면 지움 */
+let challenge = null;
+
 /** 상사 꾸미기 창을 "회사 고른 뒤" 모드로 여는 함수 (창 설정 때 채움) */
 let bossAsk = null, bossAsked = false;
 
@@ -834,6 +864,9 @@ async function choose(query, place, typed) {
     }
     Object.assign(game, naming(query, place, typed));
     game.place = place;
+    game.region = (place.shared && place.shared.region) || regionOf(place.address);
+    if (game.region) store.set('smash.region', game.region);
+    if (!place.shared) challenge = null;
     store.set('smash.name', query);
     showLoading(fmt(T.loadingMap, place.name));
     let area = null, skipped = false, limited = false;
@@ -892,6 +925,12 @@ function showLoading(text) {
 
 /** preview: 시작 화면 뒤에 깔리는 미리보기. 게임 상태·화면은 건드리지 않는다 */
 function setup(area, fake, placeName, preview = false) {
+    if (!preview) clip.reset();
+    // 도전장 목표 줄: 친구 링크로 들어온 판에만
+    ui.goal.hidden = !challenge || preview;
+    ui.goal.classList.remove('won');
+    ui.goal.textContent = '';
+    if (challenge) challenge.beaten = false;
     clearInterval(tipTimer);
     game.area = area;
     game.fake = fake;
@@ -1053,7 +1092,7 @@ function rankPayload() {
     const boss = bossPayload();
     if (!company && !boss) return null;
     game.submitted = true;
-    return JSON.stringify({ company, damage: Math.round(game.damage), seconds: playSeconds(), ...boss });
+    return JSON.stringify({ company, damage: Math.round(game.damage), seconds: playSeconds(), region: company ? game.region || null : null, ...boss });
 }
 
 /** 기록하고 결과(누적·순위)를 돌려준다. 보낼 게 없으면 null */
@@ -1076,12 +1115,18 @@ function beaconPlay() {
  * 랭킹을 목록(ol)에 그린다. 시작 화면은 TOP 5, 🏆 창·페이지 아래는 TOP 10.
  * fresh: 방금 기록을 보낸 뒤 — 응답이 20초 캐시되니 브라우저 캐시를 건너뛴다
  */
+/** 페이지 회사 랭킹에서 고른 동네 (null = 전체) */
+let rankRegion = null;
+const pageRankDesc = $('smash-pagerank-desc').textContent;
+
 async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false) {
     try {
-        const r = await fetch('/api/smash/rankings?limit=' + limit, fresh ? { cache: 'no-cache' } : undefined);
+        const detail = olId === 'smash-pagerank-ol';
+        const reg = detail && rankRegion ? '&region=' + encodeURIComponent(rankRegion) : '';
+        const r = await fetch('/api/smash/rankings?limit=' + limit + reg, fresh ? { cache: 'no-cache' } : undefined);
         if (!r.ok) return;
         const data = await r.json();
-        const detail = olId === 'smash-pagerank-ol';
+        if (detail) regionChips(data.regions || []);
         fillRanking(olId, 'smash-pagerank', detail, data.top || [], e => score(e.damage), T.rankDetail, fmt(T.rankEmpty, data.minPlayers || 2));
         // 상사 응징 랭킹은 페이지 아래 목록에만
         if (detail) {
@@ -1089,6 +1134,34 @@ async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false
             bossFaces('smash-bossrank-ol', data.bosses || []);
         }
     } catch (e) { /* 랭킹이 안 떠도 게임은 된다 */ }
+}
+
+/** 동네 대항전 칩: 전체 · 우리 동네(최근에 부순 회사 동네) · 많이 부서진 동네들 */
+function regionChips(regions) {
+    const box = $('smash-regions');
+    const mine = store.get('smash.region');
+    const list = [];
+    if (mine) list.push([mine, T.regionMine]);
+    for (const g of regions) if (g.name !== mine) list.push([g.name, fmt(T.regionChip, g.name, g.companies)]);
+    box.innerHTML = '';
+    box.hidden = !list.length;
+    if (!list.length) return;
+    const chip = (val, label) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.classList.toggle('on', (rankRegion || null) === val);
+        b.addEventListener('click', () => {
+            rankRegion = val;
+            $('smash-pagerank-desc').textContent = val ? fmt(T.regionDesc, val) : pageRankDesc;
+            $('smash-pagerank').classList.remove('more');
+            loadRanking('smash-pagerank-ol', 10);
+            track('smash_region', { region: val || 'all' });
+        });
+        box.appendChild(b);
+    };
+    chip(null, T.regionAll);
+    for (const [v, l] of list.slice(0, 7)) chip(v, l);
 }
 
 /** 랭킹 목록 한 개 그리기. detail: 페이지 아래 목록 (메달·부가 설명·폰 "더 보기") */
@@ -1192,12 +1265,23 @@ function showEndRank(res, skip) {
     if (!hint) { hint = document.createElement('p'); hint.id = 'smash-end-bosshint'; hint.className = 'smash-end-rank'; el.after(hint); }
     hint.textContent = T.bossRankHint;
     hint.hidden = !(game.stats.boss > 0 && !(bossLook.name || '').trim() && bossLook.title === BOSS_DEFAULT.title);
+    // 도전장 결과
+    let vs = $('smash-end-vs');
+    if (!vs) { vs = document.createElement('p'); vs.id = 'smash-end-vs'; vs.className = 'smash-end-rank vs'; el.before(vs); }
+    if (challenge) {
+        const me = Math.floor(game.damage * 10);
+        vs.textContent = me > challenge.score ? fmt(T.challengeWin, challenge.score.toLocaleString(), me.toLocaleString())
+            : fmt(T.challengeLose, (challenge.score - me + 1).toLocaleString());
+        vs.classList.toggle('won', me > challenge.score);
+        vs.hidden = false;
+    } else vs.hidden = true;
     if (res && res.counted === false && res.reason) skip = res.reason;
     if (skip && T.rankSkip[skip]) { el.textContent = T.rankSkip[skip]; el.hidden = false; return; }
     if (!res || !res.name) { el.hidden = true; return; }
-    el.textContent = res.rank
+    el.textContent = (res.rank
         ? fmt(T.rankLine, res.name, score(res.totalDamage), res.rank)
-        : fmt(T.rankPending, res.name, score(res.totalDamage), 2, res.players);
+        : fmt(T.rankPending, res.name, score(res.totalDamage), 2, res.players))
+        + (res.region && res.regionRank ? fmt(T.rankRegionLine, res.region, res.regionRank) : '');
     el.hidden = false;
 }
 
@@ -1283,7 +1367,10 @@ function shareUrl() {
         q.set('lng', (+p.lng).toFixed(5));
         q.set('p', p.shared ? p.shared.place : p.name);
         q.set('k', game.company ? '1' : '0');
+        if (game.region) q.set('r', game.region);
     }
+    // 도전장: 내 점수를 담아 보냄 (받은 친구 화면에 목표로 뜸)
+    if (game.damage > 0) q.set('s', String(Math.floor(game.damage * 10)));
     return 'https://game.binaryworld.kr/smash?' + q.toString();
 }
 
@@ -1456,7 +1543,25 @@ function drawCard(kind) {
 
 const toBlob = c => new Promise((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('blob'))), 'image/png'));
 
-const sheet = { box: $('smash-sharesheet'), img: $('smash-share-img'), blob: null, file: null, kakaoImg: null, objUrl: '' };
+const sheet = { box: $('smash-sharesheet'), img: $('smash-share-img'), blob: null, file: null, kakaoImg: null, objUrl: '',
+    vid: $('smash-share-vid'), tabs: $('smash-share-tabs'), vfile: null, vurl: '', mode: 'img' };
+/** 지금 공유 창에 보이는 것 (사진 또는 영상) */
+function shareMedia() {
+    return sheet.mode === 'vid' && sheet.vfile ? { file: sheet.vfile, url: sheet.vurl, vid: true } : { file: sheet.file, url: sheet.objUrl, vid: false };
+}
+function setShareMode(m) {
+    sheet.mode = m === 'vid' && sheet.vfile ? 'vid' : 'img';
+    const v = sheet.mode === 'vid';
+    sheet.img.hidden = v;
+    sheet.vid.hidden = !v;
+    if (v) sheet.vid.play().catch(() => {}); else sheet.vid.pause();
+    sheet.tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === sheet.mode));
+    const save = sheet.box.querySelector('[data-act="save"]');
+    if (!save.dataset.text) save.dataset.text = save.textContent;
+    save.textContent = v ? T.shareSaveVid : save.dataset.text;
+    const f = shareMedia().file;
+    sheet.native.hidden = !(f && navigator.canShare && navigator.canShare({ files: [f] }));
+}
 const KAKAO_KEY = '8b68c737be6b8e9a8007c61ee6f9b8da';
 let kakaoLoading = null;
 function loadKakao() {
@@ -1498,11 +1603,21 @@ async function openShare() {
         if (sheet.objUrl) URL.revokeObjectURL(sheet.objUrl);
         sheet.objUrl = URL.createObjectURL(sheet.blob);
         sheet.img.src = sheet.objUrl;
-        sheet.native.hidden = !(navigator.canShare && navigator.canShare({ files: [sheet.file] }));
     } catch (e) {
         sheet.blob = sheet.file = null;
         toast(T.shareFail);
     }
+    // 하이라이트 영상 (찍힌 게 있으면 영상을 먼저 보여 줌)
+    const best = await clip.finish();
+    if (sheet.vurl) { URL.revokeObjectURL(sheet.vurl); sheet.vurl = ''; }
+    sheet.vfile = null;
+    if (best) {
+        sheet.vfile = new File([best.blob], `smash-${Date.now()}.${best.ext}`, { type: best.type });
+        sheet.vurl = URL.createObjectURL(best.blob);
+        sheet.vid.src = sheet.vurl;
+    }
+    sheet.tabs.hidden = !best;
+    setShareMode(best ? 'vid' : 'img');
     sheet.box.classList.remove('busy');
     prepareKakao();
 }
@@ -1521,14 +1636,15 @@ function copyText(text) {
 }
 
 function saveImage() {
-    if (!sheet.blob) return;
+    const m = shareMedia();
+    if (!m.file) return;
     const a = document.createElement('a');
-    a.href = sheet.objUrl;
-    a.download = sheet.file.name;
+    a.href = m.url;
+    a.download = m.file.name;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast(T.shareSaved);
+    toast(m.vid ? T.shareSavedVid : T.shareSaved);
 }
 
 function shareAct(act) {
@@ -1540,12 +1656,13 @@ function shareAct(act) {
     else if (act === 'instagram') {
         // 인스타는 웹 공유 주소가 없음: 폰은 결과 이미지로 공유 창(여기서 인스타 스토리·피드 고름), 안 되면 이미지 저장 + 링크 복사
         copyText(url).catch(() => {});
-        if (sheet.file && navigator.canShare && navigator.canShare({ files: [sheet.file] })) {
-            navigator.share({ files: [sheet.file], text: text + '\n' + url }).catch(e => { if (!e || e.name !== 'AbortError') { saveImage(); toast(T.shareInsta); } });
+        const mf = shareMedia().file;
+        if (mf && navigator.canShare && navigator.canShare({ files: [mf] })) {
+            navigator.share({ files: [mf], text: text + '\n' + url }).catch(e => { if (!e || e.name !== 'AbortError') { saveImage(); toast(T.shareInsta); } });
         } else { saveImage(); toast(T.shareInsta); }
     }
     else if (act === 'native') {
-        navigator.share({ files: [sheet.file], text: text + '\n' + url }).catch(e => { if (!e || e.name !== 'AbortError') saveImage(); });
+        navigator.share({ files: [shareMedia().file], text: text + '\n' + url }).catch(e => { if (!e || e.name !== 'AbortError') saveImage(); });
     } else if (act === 'kakao') {
         loadKakao().then(() => {
             if (!Kakao.isInitialized()) Kakao.init(KAKAO_KEY);
@@ -1569,10 +1686,11 @@ function shareAct(act) {
 }
 
 sheet.native = sheet.box.querySelector('[data-act="native"]');
+sheet.tabs.addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) { setShareMode(b.dataset.m); track('smash_share_mode', { mode: b.dataset.m }); } });
 sheet.box.addEventListener('click', e => {
     const b = e.target.closest('[data-act]');
     if (!b) return;
-    if (b.dataset.act === 'close') { sheet.box.hidden = true; return; }
+    if (b.dataset.act === 'close') { sheet.box.hidden = true; sheet.vid.pause(); return; }
     shareAct(b.dataset.act);
 });
 const share = openShare;
@@ -1599,8 +1717,13 @@ if (qName && qLat > 33 && qLat < 39 && qLng > 124 && qLng < 132) {
     // 친구가 공유한 링크: 같은 곳을 결과 하나로 띄워 둔다. 누르면 바로 시작 (소리는 눌러야 켜진다)
     const placeName = (qs.get('p') || qName).replace(/[<>]/g, '').slice(0, 40);
     const company = qs.get('k') !== '0';
-    const place = { name: placeName, lat: qLat, lng: qLng, category: '', shared: { name: qName, company, place: placeName } };
-    showMsg(T.shareFriend);
+    const qReg = (qs.get('r') || '').replace(/[^가-힣 ]/g, '').slice(0, 15) || null;
+    const place = { name: placeName, lat: qLat, lng: qLng, category: '', shared: { name: qName, company, place: placeName, region: qReg } };
+    const qScore = Math.floor(+qs.get('s') || 0);
+    if (qScore > 0 && qScore < 1e9) {
+        challenge = { score: qScore, beaten: false };
+        showMsg(fmt(T.challengeIntro, qName, qScore.toLocaleString()));
+    } else showMsg(T.shareFriend);
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'smash-result friend';
@@ -2028,6 +2151,16 @@ function frame() {
         game.shown += (game.damage - game.shown) * Math.min(1, dt * 8);
         if (game.damage - game.shown < 0.5) game.shown = game.damage;
         ui.money.textContent = score(game.shown);
+        if (challenge && game.phase === 'play') {
+            const me = Math.floor(game.damage * 10);
+            if (!challenge.beaten && me > challenge.score) {
+                challenge.beaten = true;
+                toast(T.challengeBeat); sfx.fanfare(); cheer();
+                ui.goal.classList.add('won');
+            }
+            const txt = challenge.beaten ? T.challengeWonHud : fmt(T.challengeHud, challenge.score.toLocaleString());
+            if (ui.goal.textContent !== txt) ui.goal.textContent = txt;
+        }
         const ratio = targetRatio();
         ui.ratio.textContent = Math.floor(ratio * 100) + '%';
         ui.bar.style.width = Math.min(100, ratio * 100) + '%';

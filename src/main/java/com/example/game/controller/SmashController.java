@@ -96,7 +96,8 @@ public class SmashController {
     }
 
     /** bossName·bossTitle 은 상사 꾸미기 값, bossHits 는 이번 판 상사 날린 횟수. 회사 없이 상사만 와도 됨 */
-    public record PlayReq(String company, long damage, int seconds, String bossName, String bossTitle, int bossHits, Map<String, String> bossLook) {
+    public record PlayReq(String company, long damage, int seconds, String bossName, String bossTitle, int bossHits, Map<String, String> bossLook,
+                          String region) {
     }
 
     /**
@@ -116,16 +117,24 @@ public class SmashController {
                 log.warn("smash boss submit failed: {}", e.getMessage());
             }
         }
-        Object out = body.company() == null ? Map.of("counted", false) : ranks.submit(body.company(), body.damage(), body.seconds(), ip);
+        Object out = body.company() == null ? Map.of("counted", false) : ranks.submit(body.company(), body.damage(), body.seconds(), ip, body.region());
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(out);
     }
 
     /** 누적 랭킹 TOP N (회사·상사), company 를 주면 그 회사의 누적·순위도 */
     @GetMapping("/rankings")
     public ResponseEntity<?> rankings(@RequestParam(value = "company", required = false) String company,
-                                      @RequestParam(value = "limit", defaultValue = "10") int limit) {
+                                      @RequestParam(value = "limit", defaultValue = "10") int limit,
+                                      @RequestParam(value = "region", required = false) String region) {
         Map<String, Object> out = new java.util.LinkedHashMap<>();
-        out.put("top", ranks.top(limit));
+        out.put("top", ranks.top(limit, region));
+        // 동네 대항전 (동네 칸이 아직 없으면 빈 목록)
+        try {
+            out.put("regions", ranks.regions(8));
+        } catch (DataAccessException e) {
+            log.warn("smash regions failed: {}", e.getMessage());
+            out.put("regions", List.of());
+        }
         out.put("bosses", bossTop(limit));
         out.put("minPlayers", SmashRankService.MIN_PLAYERS);
         if (company != null && !company.isBlank()) out.put("company", ranks.status(company));

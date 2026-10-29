@@ -31,6 +31,14 @@ function loadVoices() {
         .catch(() => {});
 }
 
+let outNode = null, recDest = null;
+/** 하이라이트 영상에 넣을 게임 소리 (소리를 아직 안 켰으면 null) */
+export function audioStream() {
+    if (!ctx || !outNode || !ctx.createMediaStreamDestination) return null;
+    if (!recDest) { recDest = ctx.createMediaStreamDestination(); outNode.connect(recDest); }
+    return recDest.stream;
+}
+
 export function initAudio() {
     if (ctx) {
         if (ctx.state === 'suspended') ctx.resume();
@@ -46,6 +54,7 @@ export function initAudio() {
     const comp = ctx.createDynamicsCompressor();
     master.connect(comp);
     comp.connect(ctx.destination);
+    outNode = comp;
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;

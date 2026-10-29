@@ -188,6 +188,16 @@ class SmashServicesTest {
     }
 
     @Test
+    void regionNamesAreFiltered() {
+        assertEquals("구로구", SmashRankService.region(" 구로구 "));
+        assertEquals("서울 중구", SmashRankService.region("서울  중구"));
+        assertEquals("화성시", SmashRankService.region("화성시"));
+        assertNull(SmashRankService.region("구로동"), "구·군·시로 끝나야 함");
+        assertNull(SmashRankService.region("<b>구"), "한글만");
+        assertNull(SmashRankService.region(null));
+    }
+
+    @Test
     void bossLookIsFilteredAndRoundTrips() {
         java.util.Map<String, String> in = new java.util.LinkedHashMap<>();
         in.put("outfit", "golf"); in.put("hat", "crown"); in.put("evil", "x"); in.put("suit", "<b>"); in.put("gender", "f");

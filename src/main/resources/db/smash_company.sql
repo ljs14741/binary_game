@@ -15,3 +15,6 @@ CREATE TABLE IF NOT EXISTS smash_company (
   UNIQUE KEY uq_smash_company_name_key (name_key),
   KEY idx_smash_company_rank (hidden, total_damage)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='회사 부수기 3D 회사별 누적';
+
+-- 2026-10-29 동네 대항전: 회사가 있는 동네(구·군·시)
+-- ALTER TABLE smash_company ADD COLUMN region varchar(15) NULL COMMENT '동네(구로구, 서울 중구 등)' AFTER hidden, ADD KEY idx_smash_company_region (region, hidden, total_damage);
