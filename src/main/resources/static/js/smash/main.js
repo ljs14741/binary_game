@@ -666,7 +666,7 @@ function nukeBlast(p, dir) {
     fx.blast(p.x, p.y + 2, p.z, 26, 0xfff3c4);
     fx.ring(p.x, 0.3, p.z, 70, 0xffffff);
     fx.mushroom(p.x, p.y, p.z, 2 * Math.min(2, Math.max(1, game.wscale)), game.target ? game.target.top * 1.1 : 0);
-    slowmo = 0.45; slowK = 0.3;
+    slowmo = slowTot = 0.45; slowK = 0.3;
     say('nuke', true);
     // 가까운 곳은 블록으로 날리고, 그 바깥은 통째로 주저앉힌다
     hit(p, NUKE, dir);
@@ -702,11 +702,27 @@ function nukeBlast(p, dir) {
     cheer();
     track('smash_nuke');
 }
+/**
+ * 첫 판 시작 때 한 번: 폭발·무기 효과를 그리는 법(셰이더)을 미리 준비.
+ * 안 하면 처음 핵폭탄·트럭이 나오는 순간 그래픽 카드가 준비하느라 멈칫함 (하이라이트 영상 첫머리가 끊겨 보임)
+ */
+let warmed = false;
+function warmUp() {
+    if (warmed) return;
+    warmed = true;
+    fx.warm();
+    const hidden = [];
+    scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+    try { renderer.compile(scene, camera); } catch (e) { /* 못 해도 게임은 됨 */ }
+    for (const o of hidden) o.visible = false;
+}
+
 /** 큰 폭발 직후 잠깐 느리게 (남은 초, 그동안 시간 배율). 세게 때린 순간의 짧은 멈춤(hitStop)도 같은 걸 씀 */
-let slowmo = 0, slowK = 0.3;
+let slowmo = 0, slowK = 0.3, slowTot = 0;
 function hitStop(sec) {
     if (slowmo > 0 && slowK > 0.1) return;
     slowmo = Math.max(slowmo, sec);
+    slowTot = 0;
     slowK = 0.06;
 }
 
@@ -718,7 +734,7 @@ function miniNuke(p, dir) {
     trauma = Math.min(1, trauma + 0.85);
     ui.flash.classList.remove('go'); void ui.flash.offsetWidth; ui.flash.classList.add('go');
     fx.mushroom(p.x, p.y, p.z, 1.2 * Math.min(2, Math.max(1, game.wscale)), game.target ? game.target.top : 0);
-    slowmo = 0.35; slowK = 0.3;
+    slowmo = slowTot = 0.35; slowK = 0.3;
     fx.blast(p.x, p.y + 1, p.z, 14, 0xfff3c4);
     fx.pow(p.x, p.y + 10, p.z, '콰광!!', 5, '#ffd23f');
     const w = WEAPONS[5];
@@ -1009,7 +1025,11 @@ function setup(area, fake, placeName, preview = false) {
     ui.rank.textContent = RANKS[0][1];
     ui.corp.textContent = corpName();
     ui.end.hidden = true;
+    // 회사 건물은 첫 타격 때 블록으로 바뀌는데, 그 순간이 큰 폭발(=하이라이트 녹화 시작)과 겹치면 멈칫함.
+    // 어차피 바로 부서질 건물이라 로딩 화면이 걷히기 전에 미리 바꿔 둠
+    if (!preview && b && b.state === 'intact') world.voxelize(b);
     ui.loading.hidden = true;
+    warmUp();
     ui.osm.hidden = fake;
     ui.finishBtn.classList.remove('ready');
     if (!fake) {
@@ -2140,7 +2160,12 @@ function frame() {
     const raw = Math.min(clock.getDelta(), 1 / 30);
     // 핵폭탄이 터진 순간 잠깐 슬로모션 (터지는 맛)
     let dt = raw;
-    if (slowmo > 0) { slowmo -= raw; dt = raw * slowK; }
+    if (slowmo > 0) {
+        // 큰 폭발 슬로모션은 갑자기 풀리지 않고 서서히 원래 속도로 (영상에서 끊겨 보이지 않게)
+        const k = slowTot > 0.2 ? Math.min(1, 1 - slowmo / slowTot) : 0;
+        dt = raw * (slowK + (1 - slowK) * k * k * (3 - 2 * k));
+        slowmo -= raw;
+    }
     if (!visible || document.hidden) return;
     time += dt;
     const now = performance.now();

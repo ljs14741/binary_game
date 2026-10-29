@@ -392,6 +392,20 @@ export class FX {
         this.dust(x, Math.max(0.5, y - 1), z, Math.round(4 + r * 2), r, r / 3);
     }
 
+    /**
+     * 처음 터질 때 멈칫하지 않게 미리 만들어 둠: 불덩이·버섯구름·자주 쓰는 만화 글자.
+     * (그리는 법은 main 이 한 번에 미리 준비시킴)
+     */
+    warm() {
+        for (let i = 0; i < 2; i++) this._fireball();
+        this._cloudMesh();
+        for (const [w, c] of [['퍽!', '#ffd23f'], ['쾅!', '#ffd23f'], ['빡!', '#ffd23f'], ['팍!', '#ffd23f'], ['퍽퍽!', '#ffd23f'],
+            ['펑!', '#ffffff'], ['쾅!', '#fee500'], ['쿵!', '#ffd23f'], ['콰광!!', '#ffd23f'], ['와르르!', '#ffffff'], ['쾅!!', '#f2b630'], ['펑!!', '#e9d5ff']]) {
+            this.pow(0, -500, 0, w, 1, c);
+        }
+        if (this._pows) for (const p of this._pows) p.visible = false;
+    }
+
     /** 만화 글자 ("쾅!" "퍽!") 가 튀어나왔다 사라짐 */
     pow(x, y, z, text, size = 3, color = '#ffd23f') {
         if (!this._pows) {
