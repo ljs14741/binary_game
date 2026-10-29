@@ -59,10 +59,13 @@ public class SmashRankService {
 
     /** 동네 칸(region)이 DB 에 있는지. 칸을 만들기 전에 배포돼도 예전처럼 돌게 처음 한 번 확인 */
     private volatile Boolean regionCol;
+    private volatile long regionCheckedAt;
 
     boolean hasRegion() {
         Boolean v = regionCol;
-        if (v == null) {
+        // 없다고 본 뒤에도 10분마다 다시 봄 (재시작 없이 칸을 추가해도 켜지게)
+        if (v == null || (!v && System.currentTimeMillis() - regionCheckedAt > 600_000)) {
+            regionCheckedAt = System.currentTimeMillis();
             try {
                 jdbc.queryForList("SELECT region FROM smash_company LIMIT 1");
                 v = true;
