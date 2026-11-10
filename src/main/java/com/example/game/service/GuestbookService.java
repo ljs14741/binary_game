@@ -36,6 +36,8 @@ public class GuestbookService {
                         .nickname(g.getNickname())
                         .content(g.getContent())
                         .createdAt(g.getCreatedAt())
+                        .reply(g.getReply())
+                        .repliedAt(g.getRepliedAt())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -59,6 +61,8 @@ public class GuestbookService {
                         .nickname(g.getNickname())
                         .content(g.getContent())
                         .createdAt(g.getCreatedAt())
+                        .reply(g.getReply())
+                        .repliedAt(g.getRepliedAt())
                         .build());
     }
 }

@@ -16,4 +16,6 @@ public class GuestbookDTO {
     private String password;   // POST에서만 사용
     private String content;
     private LocalDateTime createdAt;
+    private String reply;      // 개발자 답변 (조회에서만 내려감)
+    private LocalDateTime repliedAt;
 }

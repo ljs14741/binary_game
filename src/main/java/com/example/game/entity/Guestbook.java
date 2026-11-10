@@ -30,4 +30,11 @@ public class Guestbook {
     @CreatedDate
     @Column(updatable = false, name = "created_at")
     private LocalDateTime createdAt;
+
+    // 개발자 답변 (binaryworld.kr/admin 에서 작성)
+    @Column(columnDefinition = "TEXT")
+    private String reply;
+
+    @Column(name = "replied_at")
+    private LocalDateTime repliedAt;
 }
