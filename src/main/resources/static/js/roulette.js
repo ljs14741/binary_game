@@ -29,7 +29,7 @@
     // 화면 문구. 템플릿(roulette.html)이 messages*.properties 에서 읽어 window.ROULETTE_I18N 으로 넘긴다.
     // 없으면(검증 하네스 등) 한국어 기본값. 문구를 고칠 땐 properties 를 고친다.
     var T = Object.assign({
-        dangerSure: '확정', danger0: '여유', danger1: '슬슬', danger2: '조심', danger3: '위험',
+        dangerMax: '초위험', danger0: '여유', danger1: '슬슬', danger2: '조심', danger3: '위험',
         resultTitle: '{0}번 물벼락!',
         resultDetail: '응 너야~ ㅋㅋ 벌칙 확정입니다.',
         capSafe: '휴, 살았다~',
@@ -137,7 +137,8 @@
 
     /** 위험도 문구. 숫자는 안 보여주고 이걸로만 말한다. */
     function dangerLabel(p) {
-        if (p >= 1) { return T.dangerSure; }
+        // 마지막 차례는 실제로 100% 지만 '확정'이라고 쓰지 않는다. 남은 횟수를 모르는 사람에겐 버그처럼 보이고 긴장도 걷어간다 (압력프레스와 같음)
+        if (p >= 1) { return T.dangerMax; }
         if (p <= 0.17) { return T.danger0; }
         if (p <= 0.26) { return T.danger1; }
         if (p <= 0.40) { return T.danger2; }
