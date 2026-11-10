@@ -27,7 +27,7 @@ import java.util.Map;
  * 카카오맵에 장소로 등록 안 된 회사가 많아 키워드 결과가 비면 네이버 지역 검색으로 한 번 더 찾는다
  * (네이버 플레이스에만 있는 회사가 많다. 2026-07 부터 NAVER API HUB(네이버 클라우드)로 옮겨감.
  * 하루 25,000건, 다 쓰면 그날은 건너뛴다).
- * 키가 없거나 앱에 카카오맵이 꺼져 있으면 OSM Nominatim 으로 대신 찾는다.
+ * 카카오가 에러(하루 한도 초과 등)면 네이버로 찾고, 네이버도 못 찾으면 OSM Nominatim 으로 대신 찾는다.
  * Nominatim 은 초당 1건 제한이라 전역으로 간격을 두고, 결과는 하루 캐시한다 (Nominatim 정책상 허용).
  */
 @Slf4j
@@ -75,13 +75,20 @@ public class SmashPlaceService {
         if (!kakaoKey.isEmpty() && System.currentTimeMillis() > kakaoOffUntil) {
             try {
                 return new Result("kakao", kakao(q));
+            } catch (KakaoQuota e) {
+                // 하루 한도 초과: 한국 시간 자정까지 카카오를 쉰다 (출구 번호도 같이 쉼)
+                kakaoOffUntil = nextKstMidnight();
+                log.warn("kakao local quota exceeded, off until midnight: {}", e.getMessage());
             } catch (KakaoUnavailable e) {
                 kakaoOffUntil = System.currentTimeMillis() + Duration.ofMinutes(10).toMillis();
-                log.warn("kakao local unavailable, falling back to nominatim for 10m: {}", e.getMessage());
+                log.warn("kakao local unavailable, off for 10m: {}", e.getMessage());
             } catch (IOException e) {
                 log.warn("kakao local failed: {}", e.getMessage());
             }
         }
+        // 카카오가 없거나 에러면 네이버 먼저. OSM 에는 한국 회사가 거의 없어서 마지막에
+        List<Place> nv = looksLikeAddress(q) ? List.of() : naver(q);
+        if (!nv.isEmpty()) return new Result("naver", nv);
         return new Result("osm", nominatim(q));
     }
 
@@ -136,6 +143,17 @@ public class SmashPlaceService {
         }
     }
 
+    static final class KakaoQuota extends IOException {
+        KakaoQuota(String m) {
+            super(m);
+        }
+    }
+
+    private static long nextKstMidnight() {
+        java.time.ZoneId kst = java.time.ZoneId.of("Asia/Seoul");
+        return java.time.ZonedDateTime.now(kst).toLocalDate().plusDays(1).atStartOfDay(kst).toInstant().toEpochMilli();
+    }
+
     /**
      * 장소(키워드) 검색과 주소 검색을 함께 부른다. 카카오맵에 장소로 등록되지 않은 회사도
      * 도로명·지번 주소를 치면 그 건물로 갈 수 있게. 주소처럼 생긴 검색어면 주소 결과를 위에 둔다.
@@ -151,6 +169,8 @@ public class SmashPlaceService {
             throw new IOException("kakao " + e.getCause());
         }
         if (res.statusCode() == 401 || res.statusCode() == 403) throw new KakaoUnavailable("HTTP " + res.statusCode() + " " + res.body());
+        // 한도 초과는 429 가 아니라 400 + "API limit has been exceeded" 로 온다
+        if (res.statusCode() == 429 || (res.statusCode() == 400 && res.body().contains("limit"))) throw new KakaoQuota("HTTP " + res.statusCode() + " " + res.body());
         if (res.statusCode() != 200) throw new IOException("kakao HTTP " + res.statusCode());
         List<Place> places = parseKakao(om.readTree(res.body()));
         List<Place> addrs = List.of();
@@ -175,8 +195,7 @@ public class SmashPlaceService {
             HttpResponse<String> res = send(req);
             if (res.statusCode() == 429) {
                 // 하루 한도 초과: 한국 시간 자정까지 쉰다
-                naverOffUntil = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul")).toLocalDate().plusDays(1)
-                        .atStartOfDay(java.time.ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
+                naverOffUntil = nextKstMidnight();
                 log.warn("naver local quota exceeded, off until midnight: {}", res.body());
                 return List.of();
             }
