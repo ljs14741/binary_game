@@ -14,6 +14,11 @@
     var DEFAULT_THEME = 'dark';
 
     function readTheme() {
+        // .binaryworld.kr 공용 쿠키 먼저 (header.js 가 저장, 다른 서브도메인에서 고른 테마 유지)
+        var cookie = document.cookie.match(/(?:^|;\s*)bw_theme=(light|dark)/);
+        if (cookie) {
+            return cookie[1];
+        }
         try {
             var saved = localStorage.getItem(STORAGE_KEY);
             if (saved === 'light' || saved === 'dark') {
