@@ -233,6 +233,13 @@ class SmashServicesTest {
     }
 
     @Test
+    void exitsStopAtDailyCap() {
+        assertTrue(SmashPlaceService.exitsAllowed(0));
+        assertTrue(SmashPlaceService.exitsAllowed(SmashPlaceService.EXIT_DAILY_CAP - SmashPlaceService.EXIT_CALLS));
+        assertFalse(SmashPlaceService.exitsAllowed(SmashPlaceService.EXIT_DAILY_CAP - SmashPlaceService.EXIT_CALLS + 1), "14건 더 부르면 상한 넘음");
+    }
+
+    @Test
     void parsesKakaoSubwayExit() throws Exception {
         String json = """
                 {"documents":[{"place_name":"인덕원역 4호선 2번출구","category_name":"교통,수송 > 지하철,전철 > 지하철출구","x":"126.97747","y":"37.40115"},

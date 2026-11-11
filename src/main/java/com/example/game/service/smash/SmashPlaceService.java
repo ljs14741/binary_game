@@ -50,6 +50,12 @@ public class SmashPlaceService {
     private volatile long kakaoOffUntil = 0;
     private final String naverId, naverSecret;
     private volatile long naverOffUntil = 0;
+    /** 출구 번호는 카카오 키워드 하루 쿼터(10만) 중 이만큼까지만 씀. 나머지는 회사 검색 몫 */
+    static final int EXIT_DAILY_CAP = 70_000;
+    static final int EXIT_CALLS = 14;
+    /** 오늘(한국 시간) 이 서버가 부른 카카오 키워드 검색 수. 재시작하면 0부터 다시 셈 */
+    private final java.util.concurrent.atomic.AtomicInteger keywordToday = new java.util.concurrent.atomic.AtomicInteger();
+    private volatile java.time.LocalDate keywordDay = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
     private long lastNominatim = 0;
     private final Map<String, CachedPlaces> osmCache = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
@@ -101,6 +107,9 @@ public class SmashPlaceService {
      */
     public List<Exit> exits(String station, double lat, double lng) {
         if (kakaoKey.isEmpty() || System.currentTimeMillis() < kakaoOffUntil) return List.of();
+        // 상한 넘으면 출구 번호는 쉼 (출구 위치는 OSM 이라 그대로 보임)
+        if (!exitsAllowed(keywordUsed())) return List.of();
+        countKeyword(EXIT_CALLS);
         String st = station.replaceAll("역$", "").trim();
         List<java.util.concurrent.CompletableFuture<Exit>> jobs = new ArrayList<>();
         for (int n = 1; n <= 14; n++) {
@@ -125,6 +134,33 @@ public class SmashPlaceService {
             if (e != null) out.add(e);
         }
         return out;
+    }
+
+    /** 이번 역 출구 14건을 더 불러도 출구 상한 안인지 */
+    static boolean exitsAllowed(int usedToday) {
+        return usedToday + EXIT_CALLS <= EXIT_DAILY_CAP;
+    }
+
+    private int keywordUsed() {
+        rollKeywordDay();
+        return keywordToday.get();
+    }
+
+    private void countKeyword(int n) {
+        rollKeywordDay();
+        keywordToday.addAndGet(n);
+    }
+
+    private void rollKeywordDay() {
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+        if (!today.equals(keywordDay)) {
+            synchronized (keywordToday) {
+                if (!today.equals(keywordDay)) {
+                    keywordToday.set(0);
+                    keywordDay = today;
+                }
+            }
+        }
     }
 
     static Exit parseExit(JsonNode root, String station, int no) {
@@ -160,6 +196,7 @@ public class SmashPlaceService {
      */
     private List<Place> kakao(String q) throws IOException {
         String enc = URLEncoder.encode(q, StandardCharsets.UTF_8);
+        countKeyword(1);
         var kw = http.sendAsync(kakaoReq("https://dapi.kakao.com/v2/local/search/keyword.json?size=8&query=" + enc), HttpResponse.BodyHandlers.ofString());
         var ad = http.sendAsync(kakaoReq("https://dapi.kakao.com/v2/local/search/address.json?size=5&query=" + enc), HttpResponse.BodyHandlers.ofString());
         HttpResponse<String> res;
