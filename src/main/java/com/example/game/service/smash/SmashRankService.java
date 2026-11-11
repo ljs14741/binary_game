@@ -34,8 +34,12 @@ public class SmashRankService {
     static final int MAX_PLAYS_PER_DAY = 40;
 
     private static final List<String> BANNED = List.of(
-            "씨발", "시발", "ㅅㅂ", "병신", "ㅂㅅ", "개새", "좆", "존나", "fuck", "shit", "sex", "섹스", "보지", "자지", "니미", "느금", "애미", "애비",
-            "새끼", "지랄", "꺼져", "죽어", "자살", "살인", "일베", "메갈", "한남", "김치녀");
+            "씨발", "시발", "ㅅㅂ", "병신", "ㅂㅅ", "개새", "좆", "존나", "fuck", "shit", "sex", "섹스", "보지", "자지", "니미럴", "느금", "애미",
+            "니애비", "느그애비", "새끼", "지랄", "꺼져", "죽어", "자살", "살인", "일베충", "메갈년", "한남충", "김치녀");
+    /** 정상 이름에도 흔히 들어가는 짧은 말. 이름 전체가 이 말일 때만 거름 ("한남동", "제일베이커리", "롯데애비뉴엘", "유니미디어") */
+    private static final List<String> BANNED_WHOLE = List.of("한남", "일베", "메갈", "애비", "니미");
+    /** 금칙어를 품은 정상 낱말. 빼고 나서 금칙어를 찾음 ("essex" 의 sex) */
+    private static final List<String> SAFE_WORDS = List.of("essex", "ussex", "lesex", "sexton");
 
     private final JdbcTemplate jdbc;
     private final Map<String, Integer> playsToday = new ConcurrentHashMap<>();
@@ -106,7 +110,10 @@ public class SmashRankService {
 
     /** 금칙어 들었는지 (상사 랭킹도 같이 씀) */
     static boolean banned(String key) {
-        for (String b : BANNED) if (key.contains(b)) return true;
+        if (BANNED_WHOLE.contains(key)) return true;
+        String s = key;
+        for (String w : SAFE_WORDS) s = s.replace(w, "");
+        for (String b : BANNED) if (s.contains(b)) return true;
         return false;
     }
 

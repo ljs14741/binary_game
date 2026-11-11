@@ -142,6 +142,11 @@ class SmashServicesTest {
         assertEquals("lg트윈타워", SmashRankService.nameKey("LG 트윈타워"));
         assertTrue(SmashRankService.allowedName("가족같은 회사", SmashRankService.nameKey("가족같은 회사")));
         assertFalse(SmashRankService.allowedName("ㅅㅂ회사", SmashRankService.nameKey("ㅅㅂ회사")), "금칙어");
+        // 금칙어를 품은 정상 이름은 통과
+        for (String ok : List.of("롯데 애비뉴엘", "한남더힐", "한남대학교", "제일베이커리", "유니미디어", "Essex Partners", "Middlesex"))
+            assertTrue(SmashRankService.allowedName(ok, SmashRankService.nameKey(ok)), ok);
+        for (String bad : List.of("한남", "애비", "한남충", "니애비회사", "sex shop"))
+            assertFalse(SmashRankService.allowedName(bad, SmashRankService.nameKey(bad)), bad);
         assertFalse(SmashRankService.allowedName("a", "a"), "너무 짧음");
         assertFalse(SmashRankService.allowedName("12345", "12345"), "숫자만");
         assertEquals("abc", SmashRankService.clean("  a<b>c  ").replace(" ", ""));
