@@ -688,3 +688,25 @@
 /* 회사 랭킹 줄의 동네 표시 */
 .bw-smash-rank li span .bw-rg { display: inline-block; margin-left: 6px; padding: 1px 7px; border: 0; border-radius: 999px; background: rgba(127,127,127,.18); color: inherit; font: inherit; font-size: .7rem; font-weight: 800; vertical-align: 2px; cursor: pointer; opacity: .85; }
 .bw-smash-rank li span .bw-rg:hover { opacity: 1; background: rgba(216,51,58,.25); }
+/* ── 라이트 테마: 랭킹을 흰 카드로, 점수는 진한 색으로 (노랑 바탕 + 회색 카드는 흐려 보임) ── */
+html[data-theme="light"] .bw-smash-rank { background: #fff; border: 1px solid #ebedf1; box-shadow: 0 8px 28px rgba(20, 24, 31, .07); color: #14181f; }
+html[data-theme="light"] .bw-smash-rank > p { color: #6b7280; opacity: 1; }
+html[data-theme="light"] .bw-smash-rank li { background: #f7f8fa; border: 1px solid #eef0f3; }
+html[data-theme="light"] .bw-smash-rank li span small { color: #6b7280; opacity: 1; }
+html[data-theme="light"] .bw-smash-rank li i { color: #9aa1ad; }
+html[data-theme="light"] .bw-smash-rank li em { color: #e8590c; }
+html[data-theme="light"] #smash-bossrank li em { color: #6d28d9; }
+/* 1~3위는 메달 색으로 살짝 물들임 */
+html[data-theme="light"] .bw-smash-rank li:nth-child(1):not(.empty) { background: linear-gradient(90deg, #fff6d6, #fffbeb); border-color: #fbe3a0; }
+html[data-theme="light"] .bw-smash-rank li:nth-child(2):not(.empty) { background: linear-gradient(90deg, #eef1f6, #f8f9fb); border-color: #dde2ea; }
+html[data-theme="light"] .bw-smash-rank li:nth-child(3):not(.empty) { background: linear-gradient(90deg, #fcebdd, #fff7f0); border-color: #f4d3b8; }
+html[data-theme="light"] .bw-smash-rank li span .bw-rg { background: #fff; border: 1px solid #e3e6eb; color: #4b5563; opacity: 1; }
+html[data-theme="light"] .bw-smash-rank li span .bw-rg:hover { border-color: #d8333a; color: #d8333a; background: #fff; }
+html[data-theme="light"] .bw-smash-rank-more { border-color: #d5d9e0; color: #374151; }
+html[data-theme="light"] .bw-rgn-search { background: #f3f4f6; }
+html[data-theme="light"] .bw-rgn-search:focus-within { background: #fff; }
+html[data-theme="light"] .bw-smash-regions button:not(.x):not([role]) { background: #fff; border-color: #e3e6eb; color: #1f2937; box-shadow: 0 1px 2px rgba(20, 24, 31, .04); }
+html[data-theme="light"] .bw-smash-regions button small { color: #9aa1ad; opacity: 1; }
+html[data-theme="light"] .bw-smash-regions button.on { color: #fff; }
+html[data-theme="light"] .bw-smash-regions button.on small { color: #ffd9db; }
+html[data-theme="light"] .bw-rgn-gu { background: #fff5f5; border-color: #fbdada; }
