@@ -208,9 +208,21 @@ public class SmashRankService {
 
     /** region 을 주면 그 동네 회사끼리 */
     public List<Entry> top(int limit, String rawRegion) {
+        return top(limit, rawRegion, null);
+    }
+
+    /** region 을 주면 그 동네, 없고 sido("대구")를 주면 그 시·도 회사끼리 */
+    public List<Entry> top(int limit, String rawRegion, String rawSido) {
         String reg = hasRegion() ? region(rawRegion) : null;
+        String sido = hasRegion() && reg == null && rawSido != null && rawSido.trim().matches("[가-힣]{2,4}") ? rawSido.trim() : null;
         int lim = Math.max(1, Math.min(limit, 50));
-        List<Map<String, Object>> rows = reg == null
+        List<Map<String, Object>> rows = sido != null
+                ? jdbc.queryForList("""
+                SELECT display_name, total_damage, play_count, player_count, region FROM smash_company
+                WHERE hidden = 0 AND player_count >= ? AND region LIKE ?
+                ORDER BY total_damage DESC LIMIT ?
+                """, MIN_PLAYERS, sido + " %", lim)
+                : reg == null
                 ? jdbc.queryForList("""
                 SELECT display_name, total_damage, play_count, player_count""" + (hasRegion() ? ", region" : "") + """
                  FROM smash_company

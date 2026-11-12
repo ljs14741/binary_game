@@ -1162,18 +1162,26 @@ function beaconPlay() {
  * 랭킹을 목록(ol)에 그린다. 시작 화면은 TOP 5, 🏆 창·페이지 아래는 TOP 10.
  * fresh: 방금 기록을 보낸 뒤 — 응답이 20초 캐시되니 브라우저 캐시를 건너뛴다
  */
-/** 페이지 회사 랭킹에서 고른 동네 (null = 전체) */
-let rankRegion = null;
+/** 페이지 회사 랭킹에서 고른 동네 (null = 전체). rankRegion 없이 rankSido 만 있으면 그 시·도 전체 */
+let rankRegion = null, rankSido = null;
+/** 기록 있는 동네 전부 [{name, companies, damage}] — 처음 한 번 받아 둠 */
+let allRegions = null;
+let rankSeq = 0;
 const pageRankDesc = $('smash-pagerank-desc').textContent;
 
 async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false) {
     try {
         const detail = olId === 'smash-pagerank-ol';
-        const reg = detail && rankRegion ? '&region=' + encodeURIComponent(rankRegion) : '';
+        const reg = !detail ? '' : rankRegion ? '&region=' + encodeURIComponent(rankRegion) : rankSido ? '&sido=' + encodeURIComponent(rankSido) : '';
+        // 동네를 빨리 바꿔 누르면 늦게 온 옛 응답은 버림
+        const seq = detail ? ++rankSeq : 0;
+        if (detail) $(olId).classList.add('loading');
         const r = await fetch('/api/smash/rankings?limit=' + limit + reg, fresh ? { cache: 'no-cache' } : undefined);
-        if (!r.ok) return;
-        const data = await r.json();
-        if (detail) regionChips(data.regions || []);
+        const data = r.ok ? await r.json() : null;
+        if (detail && seq !== rankSeq) return;
+        $(olId).classList.remove('loading');
+        if (!data) return;
+        if (detail && !allRegions) loadRegions(data.regions || []);
         fillRanking(olId, 'smash-pagerank', detail, data.top || [], e => score(e.damage), T.rankDetail, fmt(T.rankEmpty, data.minPlayers || 2));
         // 상사 응징 랭킹은 페이지 아래 목록에만
         if (detail) {
@@ -1183,101 +1191,140 @@ async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false
     } catch (e) { /* 랭킹이 안 떠도 게임은 된다 */ }
 }
 
-/** 동네 대항전 칩: 전체 · 최근에 부순 동네 · 고른 동네 · 많이 부서진 동네들 · 🔍 동네 찾기 */
-const pickedRegions = [];
-function selectRegion(val) {
-    rankRegion = val || null;
-    if (val && !pickedRegions.includes(val)) pickedRegions.unshift(val);
-    if (pickedRegions.length > 3) pickedRegions.length = 3;
-    $('smash-pagerank-desc').textContent = val ? fmt(T.regionDesc, regionShort(val)) : pageRankDesc;
-    $('smash-pagerank').classList.remove('more');
-    loadRanking('smash-pagerank-ol', 10);
-    track('smash_region', { region: val || 'all' });
-}
-function regionChips(regions) {
-    const box = $('smash-regions');
-    const mine = store.get('smash.region');
-    const seen = new Set();
-    const list = [];
-    const add = (v, label) => { if (v && !seen.has(v)) { seen.add(v); list.push([v, label]); } };
-    if (mine) add(mine, '📍 ' + regionShort(mine));
-    for (const v of pickedRegions) add(v, regionShort(v));
-    for (const g of regions.slice(0, 5)) add(g.name, fmt(T.regionChip, regionShort(g.name), g.companies));
-    box.innerHTML = '';
-    box.hidden = !list.length && !regions.length;
-    if (box.hidden) return;
-    const chip = (val, label, cls) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = label;
-        if (cls) b.className = cls;
-        b.classList.toggle('on', val !== undefined && (rankRegion || null) === val);
-        b.addEventListener('click', () => (val === undefined ? openRegionFinder() : selectRegion(val)));
-        box.appendChild(b);
-    };
-    chip(null, T.regionAll);
-    for (const [v, l] of list) chip(v, l);
-    chip(undefined, T.regionFind, 'find');
+/** 동네 전부 받기. 실패하면 랭킹이 같이 준 상위 동네만으로 */
+let regionsLoading = false;
+function loadRegions(seed) {
+    if (regionsLoading) return;
+    regionsLoading = true;
+    allRegions = seed;
+    drawRegions();
+    fetch('/api/smash/regions').then(r => (r.ok ? r.json() : null)).then(all => {
+        if (all && all.length) { allRegions = all; drawRegions(); }
+    }).catch(() => {});
 }
 
-/** 동네 찾기 창: 기록 있는 동네 전부를 시·도로 묶어 보여 주고 검색 */
-function openRegionFinder() {
-    let dlg = $('smash-regionfind');
-    if (!dlg) {
-        dlg = document.createElement('div');
-        dlg.id = 'smash-regionfind';
-        dlg.className = 'bw-regionfind';
-        dlg.innerHTML = '<div class="bw-regionfind-dim"></div><div class="bw-regionfind-box" role="dialog" aria-modal="true">'
-            + '<div class="bw-regionfind-head"><b></b><button type="button" class="x" aria-label="닫기">✕</button></div>'
-            + '<input type="search" autocomplete="off" enterkeyhint="search"><div class="bw-regionfind-list"></div></div>';
-        document.body.appendChild(dlg);
-        dlg.querySelector('b').textContent = T.regionFindTitle;
-        const input = dlg.querySelector('input');
-        input.placeholder = T.regionFindPh;
-        const close = () => { dlg.classList.remove('open'); };
-        dlg.querySelector('.x').addEventListener('click', close);
-        dlg.querySelector('.bw-regionfind-dim').addEventListener('click', close);
-        input.addEventListener('input', () => drawRegionList(dlg));
-        dlg.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-    }
-    dlg.classList.add('open');
-    const list = dlg.querySelector('.bw-regionfind-list');
-    list.textContent = T.regionFindLoading;
-    fetch('/api/smash/regions').then(r => (r.ok ? r.json() : [])).then(all => { dlg.all = all || []; drawRegionList(dlg); })
-        .catch(() => { list.textContent = T.regionFindEmpty; });
-    track('smash_region_find');
+const sidoOf = name => { const p = String(name || '').split(' '); return p.length > 1 ? p[0] : T.regionEtc; };
+const guOf = name => { const p = String(name || '').split(' '); return p.length > 1 ? p.slice(1).join(' ') : name; };
+
+/** 동네 고르기. val = "대구 수성구" 같은 동네, sido 만 주면 그 시·도 전체, 둘 다 없으면 전체 */
+function selectRegion(val, sido) {
+    rankRegion = val || null;
+    rankSido = val ? sidoOf(val) : sido || null;
+    $('smash-pagerank-desc').textContent = rankRegion ? fmt(T.regionDesc, rankRegion) : rankSido ? fmt(T.regionDesc, rankSido) : pageRankDesc;
+    $('smash-pagerank').classList.remove('more');
+    drawRegions();
+    loadRanking('smash-pagerank-ol', 10);
+    track('smash_region', { region: rankRegion || rankSido || 'all' });
 }
-function drawRegionList(dlg) {
-    const list = dlg.querySelector('.bw-regionfind-list');
-    const q = dlg.querySelector('input').value.replace(/\s+/g, '');
-    const all = (dlg.all || []).filter(g => !q || g.name.replace(/\s+/g, '').includes(q));
-    list.innerHTML = '';
-    if (!all.length) { list.textContent = T.regionFindEmpty; return; }
-    // 시·도별로 (시·도 안은 많이 부서진 순 그대로)
+
+/** 칩 하나 (count 는 작은 숫자로) */
+function regionChip(label, count, on, onClick, cls) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    if (cls) b.className = cls;
+    if (count != null) { const n = document.createElement('small'); n.textContent = count.toLocaleString(); b.append(n); }
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.addEventListener('click', onClick);
+    return b;
+}
+
+/** 고른 칩이 줄 안에서 보이게 가로로만 굴림 (페이지는 안 움직임) */
+function centerChip(row) {
+    const on = row.querySelector('.on');
+    if (!on || row.scrollWidth <= row.clientWidth) return;
+    row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2, behavior: 'smooth' });
+}
+
+/**
+ * 동네 고르기 판: 검색칸 + 시·도 줄(전체·내 동네·시·도들) + 고른 시·도의 구·군 줄.
+ * 구를 골라도 같은 시·도의 다른 구가 그대로 보여서 바로 옆 동네로 넘어갈 수 있음
+ */
+function drawRegions() {
+    const box = $('smash-regions');
+    const all = allRegions || [];
+    if (!all.length) { box.hidden = true; return; }
+    box.hidden = false;
+    if (!box.firstChild) buildRegionBox(box);
+    // 시·도별로 묶고 많이 부서진 순
     const groups = new Map();
     for (const g of all) {
-        const p = g.name.split(' ');
-        const sido = p.length > 1 ? p[0] : T.regionEtc;
-        if (!groups.has(sido)) groups.set(sido, []);
-        groups.get(sido).push(g);
+        const s = sidoOf(g.name);
+        if (!groups.has(s)) groups.set(s, { name: s, companies: 0, damage: 0, list: [] });
+        const o = groups.get(s);
+        o.companies += g.companies; o.damage += g.damage || 0; o.list.push(g);
     }
-    for (const [sido, gs] of groups) {
-        const h = document.createElement('h4');
-        h.textContent = sido;
-        const row = document.createElement('div');
-        for (const g of gs) {
+    const sidos = [...groups.values()].sort((a, b) => b.damage - a.damage);
+
+    const sidoRow = box.querySelector('.bw-rgn-sido');
+    sidoRow.innerHTML = '';
+    sidoRow.append(regionChip(T.regionAll, null, !rankSido, () => selectRegion(null)));
+    const mine = store.get('smash.region');
+    if (mine) sidoRow.append(regionChip('📍 ' + regionShort(mine), null, rankRegion === mine, () => selectRegion(mine), 'mine'));
+    for (const s of sidos) sidoRow.append(regionChip(s.name, s.companies, rankSido === s.name, () => selectRegion(null, s.name)));
+
+    const guRow = box.querySelector('.bw-rgn-gu');
+    const cur = rankSido && groups.get(rankSido);
+    guRow.innerHTML = '';
+    guRow.hidden = !cur;
+    if (cur) {
+        guRow.append(regionChip(fmt(T.regionSidoAll, cur.name), null, !rankRegion, () => selectRegion(null, cur.name), 'all'));
+        for (const g of cur.list) guRow.append(regionChip(guOf(g.name), g.companies, rankRegion === g.name, () => selectRegion(g.name)));
+    }
+    requestAnimationFrame(() => { centerChip(sidoRow); centerChip(guRow); });
+}
+
+/** 판 뼈대 (한 번만). 검색은 칸 아래 작은 목록으로 바로 보여 줌 — 창을 따로 띄우지 않음 */
+function buildRegionBox(box) {
+    box.innerHTML = '<div class="bw-rgn-search"><span aria-hidden="true">🔍</span><input type="search" autocomplete="off" enterkeyhint="search">'
+        + '<button type="button" class="x" hidden aria-label="지우기">✕</button><div class="bw-rgn-suggest" role="listbox" hidden></div></div>'
+        + '<div class="bw-rgn-sido"></div><div class="bw-rgn-gu" hidden></div>';
+    const input = box.querySelector('input');
+    const x = box.querySelector('.x');
+    const sug = box.querySelector('.bw-rgn-suggest');
+    input.placeholder = T.regionFindPh;
+    input.setAttribute('aria-label', T.regionFindTitle);
+    let hits = [];
+    const pick = h => {
+        input.value = ''; x.hidden = true; sug.hidden = true;
+        input.blur();
+        if (h.gu) selectRegion(h.gu); else selectRegion(null, h.sido);
+        track('smash_region_find');
+    };
+    const draw = () => {
+        const q = input.value.replace(/\s+/g, '');
+        x.hidden = !input.value;
+        sug.innerHTML = '';
+        if (!q) { sug.hidden = true; return; }
+        const all = allRegions || [];
+        const sidos = [...new Set(all.map(g => sidoOf(g.name)))].filter(s => s.includes(q));
+        hits = sidos.map(s => ({ sido: s, label: fmt(T.regionSidoAll, s) }))
+            .concat(all.filter(g => g.name.replace(/\s+/g, '').includes(q)).map(g => ({ gu: g.name, label: g.name, count: g.companies })))
+            .slice(0, 8);
+        sug.hidden = false;
+        if (!hits.length) { const p = document.createElement('p'); p.textContent = T.regionFindEmpty; sug.append(p); return; }
+        for (const h of hits) {
             const b = document.createElement('button');
             b.type = 'button';
-            b.textContent = fmt(T.regionChip, g.name.split(' ').slice(1).join(' ') || g.name, g.companies);
-            b.addEventListener('click', () => {
-                dlg.classList.remove('open');
-                selectRegion(g.name);
-                $('smash-pagerank').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-            row.appendChild(b);
+            b.setAttribute('role', 'option');
+            b.textContent = h.label;
+            if (h.count != null) { const n = document.createElement('small'); n.textContent = fmt(T.regionCount, h.count.toLocaleString()); b.append(n); }
+            // 누르는 순간 칸이 blur 돼 목록이 닫히지 않게 mousedown 에서 막음
+            b.addEventListener('mousedown', e => e.preventDefault());
+            b.addEventListener('click', () => pick(h));
+            sug.append(b);
         }
-        list.append(h, row);
-    }
+    };
+    input.addEventListener('input', draw);
+    input.addEventListener('focus', draw);
+    input.addEventListener('blur', () => setTimeout(() => { sug.hidden = true; }, 120));
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && hits.length && input.value.trim()) { e.preventDefault(); pick(hits[0]); }
+        if (e.key === 'Escape') { input.value = ''; draw(); input.blur(); }
+    });
+    x.addEventListener('mousedown', e => e.preventDefault());
+    x.addEventListener('click', () => { input.value = ''; draw(); input.focus(); });
 }
 
 /** 랭킹 목록 한 개 그리기. detail: 페이지 아래 목록 (메달·부가 설명·폰 "더 보기") */

@@ -137,9 +137,10 @@ public class SmashController {
     @GetMapping("/rankings")
     public ResponseEntity<?> rankings(@RequestParam(value = "company", required = false) String company,
                                       @RequestParam(value = "limit", defaultValue = "10") int limit,
-                                      @RequestParam(value = "region", required = false) String region) {
+                                      @RequestParam(value = "region", required = false) String region,
+                                      @RequestParam(value = "sido", required = false) String sido) {
         Map<String, Object> out = new java.util.LinkedHashMap<>();
-        out.put("top", ranks.top(limit, region));
+        out.put("top", ranks.top(limit, region, sido));
         // 동네 대항전 (동네 칸이 아직 없으면 빈 목록)
         try {
             out.put("regions", ranks.regions(8));
