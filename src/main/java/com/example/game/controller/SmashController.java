@@ -2,6 +2,7 @@ package com.example.game.controller;
 
 import com.example.game.service.smash.OsmConverter;
 import com.example.game.service.smash.SmashBossService;
+import com.example.game.service.smash.SmashMonthService;
 import com.example.game.service.smash.SmashAreaService;
 import com.example.game.service.smash.SmashPlaceService;
 import com.example.game.service.smash.SmashRankService;
@@ -42,6 +43,7 @@ public class SmashController {
     private final SmashVWorldService vworld;
     private final SmashRankService ranks;
     private final SmashBossService bosses;
+    private final SmashMonthService months;
     private final Map<String, Deque<Long>> hits = new ConcurrentHashMap<>();
 
     @GetMapping("/search")
@@ -138,9 +140,13 @@ public class SmashController {
     public ResponseEntity<?> rankings(@RequestParam(value = "company", required = false) String company,
                                       @RequestParam(value = "limit", defaultValue = "10") int limit,
                                       @RequestParam(value = "region", required = false) String region,
-                                      @RequestParam(value = "sido", required = false) String sido) {
+                                      @RequestParam(value = "sido", required = false) String sido,
+                                      @RequestParam(value = "period", required = false) String period,
+                                      @RequestParam(value = "bossPeriod", required = false) String bossPeriod) {
         Map<String, Object> out = new java.util.LinkedHashMap<>();
-        out.put("top", ranks.top(limit, region, sido));
+        // period=month 면 이달 랭킹 (회사·상사 따로 고름)
+        out.put("top", "month".equals(period) ? monthTop(limit, region, sido) : ranks.top(limit, region, sido));
+        out.put("month", SmashMonthService.month());
         // 동네 대항전 (동네 칸이 아직 없으면 빈 목록)
         try {
             out.put("regions", ranks.regions(8));
@@ -148,10 +154,28 @@ public class SmashController {
             log.warn("smash regions failed: {}", e.getMessage());
             out.put("regions", List.of());
         }
-        out.put("bosses", bossTop(limit));
+        out.put("bosses", "month".equals(bossPeriod) ? monthBossTop(limit) : bossTop(limit));
         out.put("minPlayers", SmashRankService.MIN_PLAYERS);
         if (company != null && !company.isBlank()) out.put("company", ranks.status(company));
         return ResponseEntity.ok().cacheControl(CacheControl.maxAge(Duration.ofSeconds(20))).body(out);
+    }
+
+    private List<SmashRankService.Entry> monthTop(int limit, String region, String sido) {
+        try {
+            return months.topCompanies(limit, region, sido);
+        } catch (DataAccessException e) {
+            log.warn("smash month top failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<SmashBossService.Entry> monthBossTop(int limit) {
+        try {
+            return months.topBosses(limit);
+        } catch (DataAccessException e) {
+            log.warn("smash month boss top failed: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     private List<SmashBossService.Entry> bossTop(int limit) {

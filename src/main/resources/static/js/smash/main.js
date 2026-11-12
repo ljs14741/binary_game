@@ -1168,24 +1168,34 @@ let rankRegion = null, rankSido = null;
 let allRegions = null;
 let rankSeq = 0;
 const pageRankDesc = $('smash-pagerank-desc').textContent;
+const bossRankDesc = $('smash-bossrank-desc').textContent;
+/** 기간 탭: 'all' = 전체 누적, 'month' = 이달 (회사·상사 따로) */
+let rankPeriod = 'all', bossPeriod = 'all';
+/** 한국 시간 기준 이번 달 (탭 이름용, 서버가 준 값으로 맞춤) */
+let curMonth = new Date(Date.now() + 9 * 3600e3).getUTCMonth() + 1;
 
 async function loadRanking(olId = 'smash-pagerank-ol', limit = 10, fresh = false) {
     try {
         const detail = olId === 'smash-pagerank-ol';
         const reg = !detail ? '' : rankRegion ? '&region=' + encodeURIComponent(rankRegion) : rankSido ? '&sido=' + encodeURIComponent(rankSido) : '';
+        const per = !detail ? '' : (rankPeriod === 'month' ? '&period=month' : '') + (bossPeriod === 'month' ? '&bossPeriod=month' : '');
         // 동네를 빨리 바꿔 누르면 늦게 온 옛 응답은 버림
         const seq = detail ? ++rankSeq : 0;
         if (detail) $(olId).classList.add('loading');
-        const r = await fetch('/api/smash/rankings?limit=' + limit + reg, fresh ? { cache: 'no-cache' } : undefined);
+        const r = await fetch('/api/smash/rankings?limit=' + limit + reg + per, fresh ? { cache: 'no-cache' } : undefined);
         const data = r.ok ? await r.json() : null;
         if (detail && seq !== rankSeq) return;
         $(olId).classList.remove('loading');
+        if (detail) $('smash-bossrank-ol').classList.remove('loading');
         if (!data) return;
         if (detail && !allRegions) loadRegions(data.regions || []);
-        fillRanking(olId, 'smash-pagerank', detail, data.top || [], e => score(e.damage), T.rankDetail, fmt(T.rankEmpty, data.minPlayers || 2));
+        if (detail && data.month && data.month !== curMonth) { curMonth = data.month; rankDesc(); }
+        if (detail) { drawPeriod('smash-pagerank-period', rankPeriod); drawPeriod('smash-bossrank-period', bossPeriod); }
+        const monthOn = detail && rankPeriod === 'month';
+        fillRanking(olId, 'smash-pagerank', detail, data.top || [], e => score(e.damage), T.rankDetail, monthOn ? T.monthEmpty : fmt(T.rankEmpty, data.minPlayers || 2));
         // 상사 응징 랭킹은 페이지 아래 목록에만
         if (detail) {
-            fillRanking('smash-bossrank-ol', 'smash-bossrank', true, data.bosses || [], e => fmt(T.bossHitsUnit, e.hits.toLocaleString()), T.bossRankDetail, T.bossRankEmpty);
+            fillRanking('smash-bossrank-ol', 'smash-bossrank', true, data.bosses || [], e => fmt(T.bossHitsUnit, e.hits.toLocaleString()), T.bossRankDetail, bossPeriod === 'month' ? T.monthEmpty : T.bossRankEmpty);
             bossFaces('smash-bossrank-ol', data.bosses || []);
         }
     } catch (e) { /* 랭킹이 안 떠도 게임은 된다 */ }
@@ -1210,11 +1220,48 @@ const guOf = name => { const p = String(name || '').split(' '); return p.length 
 function selectRegion(val, sido) {
     rankRegion = val || null;
     rankSido = val ? sidoOf(val) : sido || null;
-    $('smash-pagerank-desc').textContent = rankRegion ? fmt(T.regionDesc, rankRegion) : rankSido ? fmt(T.regionDesc, rankSido) : pageRankDesc;
+    rankDesc();
     $('smash-pagerank').classList.remove('more');
     drawRegions();
     loadRanking('smash-pagerank-ol', 10);
     track('smash_region', { region: rankRegion || rankSido || 'all' });
+}
+
+/** 랭킹 설명 줄: 기간 + 동네에 맞게 */
+function rankDesc() {
+    const where = rankRegion || rankSido;
+    $('smash-pagerank-desc').textContent = rankPeriod === 'month'
+        ? (where ? fmt(T.monthRegionDesc, curMonth, where) : fmt(T.monthDesc, curMonth))
+        : (where ? fmt(T.regionDesc, where) : pageRankDesc);
+    $('smash-bossrank-desc').textContent = bossPeriod === 'month' ? fmt(T.monthBossDesc, curMonth) : bossRankDesc;
+}
+
+/** 기간 탭 [전체 | 11월] 그리기 */
+function drawPeriod(id, cur) {
+    const box = $(id);
+    box.hidden = false;
+    box.innerHTML = '';
+    for (const [val, label] of [['all', T.periodAll], ['month', fmt(T.periodMonth, curMonth)]]) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-selected', val === cur ? 'true' : 'false');
+        b.textContent = label;
+        b.classList.toggle('on', val === cur);
+        b.addEventListener('click', () => selectPeriod(id === 'smash-pagerank-period' ? 'rank' : 'boss', val));
+        box.append(b);
+    }
+}
+
+/** 기간 바꾸기. 회사·상사 탭은 따로 */
+function selectPeriod(which, val) {
+    if (which === 'rank') { if (rankPeriod === val) return; rankPeriod = val; $('smash-pagerank').classList.remove('more'); }
+    else { if (bossPeriod === val) return; bossPeriod = val; $('smash-bossrank').classList.remove('more'); $('smash-bossrank-ol').classList.add('loading'); }
+    drawPeriod('smash-pagerank-period', rankPeriod);
+    drawPeriod('smash-bossrank-period', bossPeriod);
+    rankDesc();
+    loadRanking('smash-pagerank-ol', 10);
+    track('smash_period', { which, period: val });
 }
 
 /** 칩 하나 (count 는 작은 숫자로) */

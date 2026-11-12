@@ -42,6 +42,7 @@ public class SmashRankService {
     private static final List<String> SAFE_WORDS = List.of("essex", "ussex", "lesex", "sexton");
 
     private final JdbcTemplate jdbc;
+    private final SmashMonthService month;
     private final Map<String, Integer> playsToday = new ConcurrentHashMap<>();
     private final Set<String> seenToday = ConcurrentHashMap.newKeySet();
     private volatile LocalDate day = LocalDate.now();
@@ -149,6 +150,8 @@ public class SmashRankService {
         if (extra && d < 1) return status(key, false);
         int newPlayer = !extra && seenToday.add(who + "|" + key) ? 1 : 0;
         int playInc = extra ? 0 : 1;
+        // 이달 랭킹에도 같은 값
+        month.addCompany(key, d, playInc, newPlayer);
         // 있으면 더하고 없으면 만든다 — 한 문장이라 동시에 들어와도 안전
         if (!hasRegion()) {
             jdbc.update("""

@@ -216,7 +216,7 @@ class SmashServicesTest {
     @Test
     void bossSubmitSkipsDefaultShortAndBadAndClampsHits() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        SmashBossService s = new SmashBossService(jdbc);
+        SmashBossService s = new SmashBossService(jdbc, mock(SmashMonthService.class));
         assertFalse(s.submit("", "사장님", 30, 60, "1.1.1.1"), "기본 상사");
         assertFalse(s.submit("김", "부장님", 30, 10, "1.1.1.1"), "15초 안 됨");
         assertFalse(s.submit("김", "부장님", 0, 60, "1.1.1.1"), "안 날림");

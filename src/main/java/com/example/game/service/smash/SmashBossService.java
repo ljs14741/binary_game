@@ -41,6 +41,7 @@ public class SmashBossService {
             "걸레", "창녀", "틀딱", "bitch");
 
     private final JdbcTemplate jdbc;
+    private final SmashMonthService month;
     private final Map<String, Integer> playsToday = new ConcurrentHashMap<>();
     private final Set<String> seenToday = ConcurrentHashMap.newKeySet();
     private volatile LocalDate day = LocalDate.now();
@@ -141,6 +142,8 @@ public class SmashBossService {
                                         player_count = player_count + ?,
                                         look = COALESCE(VALUES(look), look)
                 """, key, display, h, lookJson(look), extra ? 0 : 1, newPlayer);
+        // 이달 랭킹에도 같은 값
+        month.addBoss(key, h, extra ? 0 : 1, newPlayer);
         return true;
     }
 
